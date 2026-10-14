@@ -1,4 +1,4 @@
-﻿---
+---
 name: security-standards
 description: >-
   Comprehensive Application Security Standards grounded in NIST SSDF SP 800-218 v1.1 and OWASP ASVS 5.0.
@@ -23,8 +23,15 @@ trigger: model_decision
 
 ## 0 - Before You Write: Security Interview
 
-Ask once per project before writing security-sensitive code.
-Record answers in docs/security-assumptions.md.
+### Operational Modes: Greenfield vs. Incremental Modification
+
+Determine your operating mode before proceeding:
+- **Mode A: Greenfield / New Security Baseline**: If establishing security architecture, initial compliance, or auth infrastructure for a project, ask once per project and record answers in `docs/security-assumptions.md`.
+- **Mode B: Incremental Modification / Patch**: If modifying code or applying bugfixes, **DO NOT** run the security questionnaire. Enforce all NIST SSDF, OWASP ASVS Level 2, input validation, constant-time comparisons, and secret zero-leakage rules directly on the modified code.
+
+---
+
+### Security Posture Checklist
 
 | # | Topic | ASK |
 |---|-------|-----|

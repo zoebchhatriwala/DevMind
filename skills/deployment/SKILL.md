@@ -22,7 +22,15 @@ trigger: model_decision
 
 ## 0 - Before You Write: Interview the User
 
-Before generating Dockerfiles, pipeline workflows, or infrastructure configs, resolve deployment requirements with the user in a single turn. Skip any item already answered by existing repository files.
+### Operational Modes: Greenfield vs. Incremental Modification
+
+Determine your operating mode before proceeding:
+- **Mode A: Greenfield / New Infrastructure Scaffolding**: If creating Dockerfiles, CI/CD pipelines, or IaC configs from scratch, resolve deployment requirements with the user in a single turn.
+- **Mode B: Incremental Modification / Patch**: If editing existing workflows, fixing Docker builds, or tuning deployment scripts, **DO NOT** ask the interview questionnaire. Conform to existing CI/CD and container platforms. Enforce rootless multi-stage builds, non-root users, secret protection, and vulnerability scanning on all changes.
+
+---
+
+### Infrastructure & Deployment Checklist
 
 | # | Topic | ASK | Recommended Default |
 |---|-------|-----|---------------------|

@@ -24,8 +24,15 @@ trigger: model_decision
 
 ## 0 - Before You Write: Interview the User
 
-Ask in a single, friendly conversation turn. Group by theme.
-Skip anything already answered by the existing codebase.
+### Operational Modes: Greenfield vs. Incremental Modification
+
+Determine your operating mode before proceeding:
+- **Mode A: Greenfield / New Service Scaffolding**: If building a new service, major domain module, or repository from scratch, ask the questions below in a single, friendly conversation turn. Group by theme.
+- **Mode B: Incremental Modification / Patch**: If modifying, bugfixing, or adding endpoints to an existing backend, **DO NOT** ask the interview questionnaire. Automatically detect runtime, ORM, framework, and logging conventions from the repository. All architectural layers (clean architecture, DTOs, RFC 7807 errors, Pino logging, and integration tests) remain strictly mandatory.
+
+---
+
+### Backend Stack Alignment Checklist
 
 | # | Topic | ASK |
 |---|-------|-----|

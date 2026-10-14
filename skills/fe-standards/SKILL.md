@@ -22,9 +22,15 @@ trigger: model_decision
 
 ## 0  -  Before You Write a Single Line: Interview the User
 
-Run through the **ASK** checklist below in a single, friendly conversation turn.
-Group the questions logically. Do **not** ask about things already decided in
-the existing codebase.
+### Operational Modes: Greenfield vs. Incremental Modification
+
+Determine your operating mode before proceeding:
+- **Mode A: Greenfield / New Feature Scaffolding**: If creating a new app, route, or major component from scratch, run through the **ASK** checklist below in a single, friendly conversation turn. Group questions logically.
+- **Mode B: Incremental Modification / Patch**: If modifying, bugfixing, or extending existing code, **DO NOT** run the interview questionnaire. Automatically inspect and conform to existing codebase patterns, libraries, and design tokens. All technical, accessibility (WCAG 2.2 AA), and security baselines below remain strictly mandatory.
+
+---
+
+### Stack Alignment Checklist
 
 | # | Topic | ASK |
 |---|-------|-----|

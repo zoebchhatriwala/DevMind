@@ -21,7 +21,15 @@ trigger: model_decision
 
 ## 0 - Before You Write: Interview the User
 
-Before generating authentication code, verify identity requirements with the user in a single turn. Skip any item already answered by existing repository dependencies or configurations.
+### Operational Modes: Greenfield vs. Incremental Modification
+
+Determine your operating mode before proceeding:
+- **Mode A: Greenfield / New Auth System**: If building authentication/authorization architecture, OAuth integrations, or session infrastructure from scratch, verify identity requirements with the user in a single turn.
+- **Mode B: Incremental Modification / Patch**: If adding protected routes, permissions, or fixing login/auth bugs, **DO NOT** ask the interview questionnaire. Automatically detect the existing auth model and session storage. Enforce refresh token rotation, secure cookie flags, and timing-safe checks on all changes.
+
+---
+
+### Authentication Architecture Checklist
 
 | # | Topic | ASK | Recommended Default |
 |---|-------|-----|---------------------|

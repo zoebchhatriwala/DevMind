@@ -22,7 +22,15 @@ trigger: model_decision
 
 ## 0 - Before You Write: Interview the User
 
-Before writing prompts, initializing vector stores, or scaffolding AI orchestration code, resolve architecture requirements with the user in a single turn. Skip any item already answered by existing repository code.
+### Operational Modes: Greenfield vs. Incremental Modification
+
+Determine your operating mode before proceeding:
+- **Mode A: Greenfield / New AI Pipeline Scaffolding**: If designing initial RAG pipelines, LLM agent workflows, or prompt orchestration systems from scratch, resolve architecture requirements with the user in a single turn.
+- **Mode B: Incremental Modification / Patch**: If adding prompts, refining tools, or tuning existing AI chains, **DO NOT** ask the interview questionnaire. Conform to existing model wrappers, evaluation harnesses, and vector configurations. Enforce untrusted document delimiters, structured Zod schemas, and tool authorization gates on all changes.
+
+---
+
+### AI Architecture Checklist
 
 | # | Topic | ASK | Recommended Default |
 |---|-------|-----|---------------------|

@@ -21,7 +21,15 @@ trigger: model_decision
 
 ## 0 - Before You Write: Interview the User
 
-Before defining routes, designing schemas, or drafting API documentation, resolve contract requirements with the user in a single turn. Skip any item already answered by existing repository endpoints.
+### Operational Modes: Greenfield vs. Incremental Modification
+
+Determine your operating mode before proceeding:
+- **Mode A: Greenfield / New API Contract Scaffolding**: If establishing a new API, major route hierarchy, or contract architecture from scratch, resolve contract requirements with the user in a single turn.
+- **Mode B: Incremental Modification / Patch**: If adding endpoints to existing routers or updating schema definitions, **DO NOT** ask the interview questionnaire. Conform to existing URI structure, versioning, and validation conventions. Enforce RFC 7807 problem details, pagination/filtering rules, and idempotent mutations on all new endpoints.
+
+---
+
+### API Contract Alignment Checklist
 
 | # | Topic | ASK | Recommended Default |
 |---|-------|-----|---------------------|

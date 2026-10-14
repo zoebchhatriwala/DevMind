@@ -6,6 +6,21 @@
 
 ---
 
+## 0. Operating Modes: Greenfield vs. Incremental Modification
+
+Coding agents MUST determine their operating mode before taking any action:
+
+### Mode A: Greenfield / New Architecture (Scaffolding)
+- **Scope**: Creating a new repository, service, major subsystem, or greenfield feature where architectural decisions are uncommitted.
+- **Protocol**: Conduct the relevant domain skill's Section 0 interview in a single, friendly turn. Present recommended defaults. Await user confirmation before authoring files.
+
+### Mode B: Incremental Modification / Patch (Bugfix, Refactor, or Feature Extension)
+- **Scope**: Modifying, extending, or fixing existing code in an established project.
+- **Protocol**: **DO NOT** run the Section 0 interview. Automatically inspect the repository to identify existing stack decisions, frameworks, and conventions.
+- **Non-Negotiable Invariant**: Skipping the interview does **NOT** waive any quality standards. All simplicity (YAGNI), typing, security, error handling, and verification requirements strictly apply to every modified or newly introduced line of code.
+
+---
+
 ## 1. Mandatory Pre-Coding Review
 
 Before writing or modifying any code, the AI agent **MUST** evaluate the proposed solution against the following questions:
@@ -84,6 +99,8 @@ Once the pre-coding review is complete:
 8. **Handle errors, edge cases, and resource limits explicitly.**
 9. **Add or update tests** that verify the intended behavior and relevant failure scenarios.
 10. **Document meaningful design decisions, security assumptions, and unavoidable trade-offs.**
+11. **Anchor to affirmative templates over training priors**: Actively consult the concrete code patterns in the active skill (e.g., RFC 7807 problem details, Pino structured logging, WCAG states) rather than reverting to statistical default implementations.
+12. **Mitigate context drift on long tasks**: Re-verify the active changes against the skill's execution checklist before concluding, ensuring secondary constraints were not dropped during execution.
 
 ---
 

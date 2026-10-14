@@ -1,4 +1,4 @@
-﻿---
+---
 name: db-standards
 description: >-
   Database and Migration Engineering Standards for fullstack projects.
@@ -21,7 +21,15 @@ trigger: model_decision
 
 ## 0 - Before You Write: Interview the User
 
-Before writing schemas, migration files, or database queries, ask the user these architectural questions in a single friendly turn. Skip any already explicitly answered by repository configuration or environment files.
+### Operational Modes: Greenfield vs. Incremental Modification
+
+Determine your operating mode before proceeding:
+- **Mode A: Greenfield / New Schema Scaffolding**: If designing initial database schemas, selecting ORMs, or initializing a database, ask the user these architectural questions in a single friendly turn.
+- **Mode B: Incremental Modification / Patch**: If adding migrations, columns, or querying an existing database, **DO NOT** run the questionnaire. Automatically detect the ORM/migration tool from configuration. Enforce zero-downtime expand-contract rules, indexed foreign keys, keyset pagination, and N+1 elimination on all changes.
+
+---
+
+### Database Architecture Checklist
 
 | # | Topic | ASK | Recommended Default |
 |---|-------|-----|---------------------|
