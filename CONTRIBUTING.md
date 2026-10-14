@@ -35,7 +35,7 @@ Be kind, constructive, and focused on engineering excellence. We follow the [Con
 
 ## Reporting Issues
 
-Use the issue templates in `.github/ISSUE_TEMPLATE/`. When reporting agent deviations:
+Use the issue templates in `.github/ISSUE_TEMPLATE/` or open an issue on [GitHub Issues](https://github.com/zoebchhatriwala/DevMind/issues). When reporting agent deviations:
 
 1. Specify the skill name and exact section number violated.
 2. Provide the agent prompt and the agent's actual output.

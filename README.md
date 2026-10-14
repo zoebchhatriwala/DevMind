@@ -1,5 +1,9 @@
 # DevMind
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
+[![GitHub Repository](https://img.shields.io/badge/GitHub-zoebchhatriwala%2FDevMind-black?logo=github)](https://github.com/zoebchhatriwala/DevMind)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
+
 > **The Shared Brain for AI Coding Agents**  
 > _Production-grade engineering standards, security controls, and architectural patterns for Antigravity, Cursor, Windsurf, Claude Code, and GitHub Copilot._
 
@@ -95,6 +99,11 @@ devmind/
 ---
 
 ## Quick Install
+
+```bash
+git clone https://github.com/zoebchhatriwala/DevMind.git
+cd DevMind
+```
 
 ### 1. Google Antigravity & Gemini
 
