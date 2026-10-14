@@ -70,35 +70,66 @@ devmind compiles into drop-in configurations for all major AI coding agents and 
 
 ```
 devmind/
-├── skills/                     # Canonical Antigravity skills
-├── AGENTS.md                   # Universal engineering baseline
-├── dist/                       # Compiled target artifacts (generated via npm run build)
-│   ├── antigravity/devmind/    # Antigravity plugin package (single-folder copy)
-│   ├── cursor/                 # Cursor IDE (.cursorrules & .cursor/rules/*.mdc)
-│   ├── windsurf/               # Windsurf / Cascade (.windsurfrules)
-│   ├── claude-code/            # Claude Code (CLAUDE.md)
-│   ├── github-copilot/         # GitHub Copilot (.github/copilot-instructions.md)
-│   └── bundles/                # JSON manifest & compiled devmind-full.md handbook
+├── skills/                          # Canonical source skills (with root SKILL.md)
+├── AGENTS.md                        # Universal engineering baseline
+├── dist/                            # Compiled target artifacts (npm run build)
+│   ├── antigravity/
+│   │   ├── skills/                  # Direct Antigravity skills (root SKILL.md per folder)
+│   │   │   ├── devmind/             # Master orchestrator skill with references/
+│   │   │   └── <domain>/            # 8 individual domain skills
+│   │   ├── plugins/devmind/         # Antigravity plugin package (plugin.json, rules, skills)
+│   │   ├── devmind/                 # Universal drop-in (works in skills/ or plugins/)
+│   │   └── rules/                   # Project & workspace rules (AGENTS.md & GEMINI.md)
+│   ├── cursor/                      # Cursor IDE (.cursorrules & .cursor/rules/*.mdc)
+│   ├── windsurf/                    # Windsurf / Cascade (.windsurfrules & .windsurf/rules/)
+│   ├── claude-code/                 # Claude Code (CLAUDE.md & .claude/skills/)
+│   ├── github-copilot/              # GitHub Copilot (.github/copilot-instructions.md & scoped)
+│   ├── cline/                       # Cline & Roo Code (.clinerules)
+│   ├── agents/                      # Universal AGENTS.md baseline
+│   └── bundles/                     # JSON manifest & compiled devmind-full.md handbook
 ```
 
 ---
 
 ## Quick Install
 
-### 1. Google Antigravity (Single-Folder Copy)
+### 1. Google Antigravity & Gemini
 
-Run `npm run build` to compile the distribution bundle. To install devmind in Antigravity, **you only need to copy the `devmind` folder**:
+Antigravity requires every skill in `skills/` to have `SKILL.md` directly at its root directory. devmind builds 100% compliant artifacts for every Antigravity workflow:
 
+#### Option A: One-Click Local Install (Global)
+Install all devmind skills directly into your global `~/.gemini/config/skills/`:
 ```bash
-# Option A: Project-level (shared with your team in Git)
-cp -r dist/antigravity/devmind your-project/.agents/plugins/
+npm run install:gemini
+```
 
-# Option B: Global (available across all projects on your workstation)
-# macOS / Linux
-cp -r dist/antigravity/devmind ~/.gemini/config/plugins/
+#### Option B: Master Orchestrator Skill (Single Folder in `skills/`)
+Copy the master `devmind` skill (includes root `SKILL.md` and progressive disclosure `references/`):
+```bash
+# Global
+cp -r dist/antigravity/skills/devmind ~/.gemini/config/skills/
 
-# Windows PowerShell
-Copy-Item -Recurse dist\antigravity\devmind $env:USERPROFILE\.gemini\config\plugins\
+# Project-level (.agents/)
+cp -r dist/antigravity/skills/devmind your-project/.agents/skills/
+```
+
+#### Option C: Universal Drop-in Folder
+`dist/antigravity/devmind` contains both `SKILL.md` and `plugin.json` at root. You can drop it into either `skills/` or `plugins/`:
+```bash
+# As a Skill
+cp -r dist/antigravity/devmind ~/.gemini/config/skills/devmind
+
+# As a Plugin
+cp -r dist/antigravity/devmind ~/.gemini/config/plugins/devmind
+```
+
+#### Option D: Individual Domain Skills
+Copy any specific domain skill (each contains root `SKILL.md`):
+```bash
+cp -r dist/antigravity/skills/fe-standards ~/.gemini/config/skills/
+cp -r dist/antigravity/skills/be-standards ~/.gemini/config/skills/
+# or all 8 domains:
+cp -r dist/antigravity/skills/* ~/.gemini/config/skills/
 ```
 
 ### 2. Cursor IDE
@@ -114,19 +145,34 @@ cp dist/cursor/.cursorrules your-project/
 ### 3. Windsurf / Cascade
 
 ```bash
+# Option A: Unified rule file
 cp dist/windsurf/.windsurfrules your-project/
+
+# Option B: Modular rules
+cp -r dist/windsurf/.windsurf your-project/
 ```
 
 ### 4. Claude Code (Anthropic CLI)
 
 ```bash
+# Main instructions
 cp dist/claude-code/CLAUDE.md your-project/
+
+# Modular skills
+cp -r dist/claude-code/.claude your-project/
 ```
 
 ### 5. GitHub Copilot (VS Code / Visual Studio)
 
 ```bash
+# Includes copilot-instructions.md and scoped instructions (.github/instructions/*.instructions.md)
 cp -r dist/github-copilot/.github your-project/
+```
+
+### 6. Cline & Roo Code
+
+```bash
+cp dist/cline/.clinerules your-project/
 ```
 
 ---

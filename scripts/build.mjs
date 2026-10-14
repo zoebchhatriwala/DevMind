@@ -2,13 +2,14 @@
 import { readdir, readFile, writeFile, mkdir, rm, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { homedir } from 'node:os';
 
 const ROOT_DIR = resolve('.');
 const SKILLS_DIR = join(ROOT_DIR, 'skills');
 const DIST_DIR = join(ROOT_DIR, 'dist');
 const AGENTS_MD_PATH = join(ROOT_DIR, 'AGENTS.md');
 
-// Globs mapping for Cursor rules (.mdc)
+// Globs mapping for Cursor rules (.mdc) and Copilot instructions
 const SKILL_GLOBS = {
   'fe-standards': '**/*.{tsx,jsx,css,scss,html,vue,svelte}',
   'be-standards': '**/*.{ts,js,mjs,cjs,go,py,rs}',
@@ -95,6 +96,79 @@ async function loadSkills() {
   return skills;
 }
 
+function generateMasterSkillMd(skills, agentsMd) {
+  return `---
+name: devmind
+description: >-
+  Universal fullstack engineering standards, architecture reviewer, and quality baseline for AI coding agents. Governed by AGENTS.md. Activates when designing, implementing, refactoring, or auditing frontend, backend, security, databases, authentication, CI/CD, APIs, and AI/RAG systems.
+trigger: model_decision
+---
+
+# devmind: The Universal Engineering Brain
+
+You are operating under **devmind**, a production-grade engineering baseline and curated collection of architectural standards. devmind ensures that every generated line of code is simple (YAGNI), secure, maintainable, verified, and production-ready.
+
+---
+
+## 0 - Before You Write: Pre-Coding Review & Architecture Alignment
+
+Before writing or modifying any code, the AI agent **MUST** evaluate the proposed solution against the universal AGENTS.md baseline:
+
+### A. Simplicity and Overengineering (YAGNI)
+- Is this implementation unnecessarily complex or overengineered?
+- Can the requirement be fulfilled with a simpler, more readable, and maintainable solution?
+- Am I introducing premature abstractions, unnecessary wrappers, or complex design patterns?
+- Prefer the simplest solution that meets functional, security, performance, and maintainability requirements.
+
+### B. Existing Functionality and Reusability
+- Does equivalent functionality already exist in the codebase, framework, or shared utilities?
+- Can an existing function, service, component, helper, or hook be reused or extended?
+- Zero duplicate logic. Inspect the system before creating new code.
+
+### C. Dependency and Library Justification
+- Is the dependency genuinely necessary?
+- Can the requirement be implemented using built-in language features, standard libraries, or existing dependencies?
+- Compare complete maintenance, security, and operational costs.
+
+### D. Security and Vulnerability Prevention
+- Proactively mitigate injection, auth bypasses, exposed secrets, and unhandled errors.
+- Never invent cryptography or weaken security controls.
+- Grounded in NIST SP 800-218 (SSDF) and OWASP ASVS 5.0.
+
+---
+
+## Continuous Feedback Loop
+
+$$\\text{Understand} \\longrightarrow \\text{Inspect} \\longrightarrow \\text{Evaluate} \\longrightarrow \\text{Implement} \\longrightarrow \\text{Verify} \\longrightarrow \\text{Review} \\longrightarrow \\text{Learn}$$
+
+> **Crucial Rule:** A check or test must never be reported as successful unless it was actually executed and its result was verified.
+
+---
+
+## Domain Standards Catalog & Progressive Disclosure
+
+devmind provides 8 specialized domain guides. When working in any of these areas, consult the referenced guide:
+
+| Skill | Domain | Standards & Baseline | Reference Guide |
+| :--- | :--- | :--- | :--- |
+${skills.map(s => `| **${s.name}** | ${s.description.split('.')[0]} | Governed by AGENTS.md | [${s.name}](./references/${s.name}.md) |`).join('\n')}
+
+For universal engineering baseline directives, consult [AGENTS.md](./references/AGENTS.md).
+
+---
+
+## Execution Checklist
+
+- [ ] Evaluated requirement against Section 0 Pre-Coding Review questions.
+- [ ] Conducted Section 0 interview if architectural decisions or stack choices exist.
+- [ ] Inspected existing codebase patterns and utilities before adding code.
+- [ ] Consulted relevant domain reference file(s) for technical specifications.
+- [ ] Ran automated tests, linter, and type checks.
+- [ ] Verified that error paths and edge cases are handled gracefully.
+- [ ] Confirmed zero sensitive data leaks in logs, errors, or client payloads.
+`;
+}
+
 async function build() {
   console.log('Building devmind skills for all coding agents and IDEs...\n');
 
@@ -105,36 +179,112 @@ async function build() {
   await mkdir(DIST_DIR, { recursive: true });
 
   const agentsMd = existsSync(AGENTS_MD_PATH) ? await readFile(AGENTS_MD_PATH, 'utf8') : '';
+  const readmeMd = existsSync(join(ROOT_DIR, 'README.md')) ? await readFile(join(ROOT_DIR, 'README.md'), 'utf8') : '';
   const skills = await loadSkills();
   console.log(`Loaded ${skills.length} skills: ${skills.map(s => s.name).join(', ')}\n`);
 
-  // 1. Antigravity Build (dist/antigravity/devmind/* — copy 'devmind' directly)
-  console.log('1. Building Antigravity bundle (dist/antigravity/devmind)...');
-  const agDir = join(DIST_DIR, 'antigravity', 'devmind');
-  await mkdir(agDir, { recursive: true });
-  await cp(SKILLS_DIR, join(agDir, 'skills'), { recursive: true });
-  if (agentsMd) {
-    await writeFile(join(agDir, 'AGENTS.md'), agentsMd, 'utf8');
+  const masterSkillMd = generateMasterSkillMd(skills, agentsMd);
+
+  // =========================================================================
+  // 1. Antigravity / Gemini Suite (dist/antigravity/...)
+  // =========================================================================
+  console.log('1. Building Antigravity / Gemini Suite (dist/antigravity)...');
+  const agBaseDir = join(DIST_DIR, 'antigravity');
+  await mkdir(agBaseDir, { recursive: true });
+
+  // 1A. Direct Skills Format (dist/antigravity/skills/*)
+  // Each directory in skills/ MUST have SKILL.md at its root per Antigravity spec.
+  const agSkillsDir = join(agBaseDir, 'skills');
+  await mkdir(agSkillsDir, { recursive: true });
+
+  // 1A.1 Master devmind Skill (dist/antigravity/skills/devmind/)
+  const devmindSkillDir = join(agSkillsDir, 'devmind');
+  const devmindSkillRefsDir = join(devmindSkillDir, 'references');
+  await mkdir(devmindSkillRefsDir, { recursive: true });
+  await writeFile(join(devmindSkillDir, 'SKILL.md'), masterSkillMd, 'utf8');
+  await writeFile(join(devmindSkillDir, 'README.md'), readmeMd, 'utf8');
+  await writeFile(join(devmindSkillRefsDir, 'AGENTS.md'), agentsMd, 'utf8');
+  for (const s of skills) {
+    await writeFile(join(devmindSkillRefsDir, `${s.name}.md`), s.content, 'utf8');
   }
-  const readmeMd = existsSync(join(ROOT_DIR, 'README.md')) ? await readFile(join(ROOT_DIR, 'README.md'), 'utf8') : '';
-  if (readmeMd) {
-    await writeFile(join(agDir, 'README.md'), readmeMd, 'utf8');
+
+  // 1A.2 Individual Domain Skills (dist/antigravity/skills/<skill-name>/)
+  for (const s of skills) {
+    const targetDir = join(agSkillsDir, s.name);
+    await mkdir(targetDir, { recursive: true });
+    await writeFile(join(targetDir, 'SKILL.md'), s.content, 'utf8');
+    if (s.readme) {
+      await writeFile(join(targetDir, 'README.md'), s.readme, 'utf8');
+    }
   }
+
+  // 1B. Antigravity Plugin Format (dist/antigravity/plugins/devmind/)
+  const agPluginDir = join(agBaseDir, 'plugins', 'devmind');
+  const agPluginSkillsDir = join(agPluginDir, 'skills');
+  const agPluginRulesDir = join(agPluginDir, 'rules');
+  await mkdir(agPluginSkillsDir, { recursive: true });
+  await mkdir(agPluginRulesDir, { recursive: true });
+
   const pluginJson = {
     name: 'devmind',
     version: '1.0.0',
-    description: 'Curated Antigravity and AI coding agent skills.',
-    skills: skills.map(s => `skills/${s.name}`),
+    description: 'Curated Antigravity and AI coding agent skills and engineering baseline.',
+    skills: ['skills/devmind', ...skills.map(s => `skills/${s.name}`)],
   };
-  await writeFile(join(agDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2), 'utf8');
+  await writeFile(join(agPluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2), 'utf8');
+  await writeFile(join(agPluginDir, 'README.md'), readmeMd, 'utf8');
+  await writeFile(join(agPluginRulesDir, 'AGENTS.md'), agentsMd, 'utf8');
 
+  // Copy master devmind skill into plugin skills
+  await cp(devmindSkillDir, join(agPluginSkillsDir, 'devmind'), { recursive: true });
+  // Copy all domain skills into plugin skills
+  for (const s of skills) {
+    await cp(join(agSkillsDir, s.name), join(agPluginSkillsDir, s.name), { recursive: true });
+  }
+
+  // 1C. Antigravity Universal Drop-in Package (dist/antigravity/devmind/)
+  // This hybrid package works whether copied into ~/.gemini/config/skills/devmind OR plugins/devmind!
+  const agUniversalDir = join(agBaseDir, 'devmind');
+  await cp(devmindSkillDir, agUniversalDir, { recursive: true });
+  await writeFile(join(agUniversalDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2), 'utf8');
+  await cp(agPluginSkillsDir, join(agUniversalDir, 'skills'), { recursive: true });
+  await mkdir(join(agUniversalDir, 'rules'), { recursive: true });
+  await writeFile(join(agUniversalDir, 'rules', 'AGENTS.md'), agentsMd, 'utf8');
+  await writeFile(join(agUniversalDir, 'AGENTS.md'), agentsMd, 'utf8');
+
+  // 1D. Antigravity Rules Format (dist/antigravity/rules/)
+  const agRulesDir = join(agBaseDir, 'rules');
+  await mkdir(agRulesDir, { recursive: true });
+  await writeFile(join(agRulesDir, 'AGENTS.md'), agentsMd, 'utf8');
+  await writeFile(join(agRulesDir, 'GEMINI.md'), agentsMd, 'utf8');
+  for (const s of skills) {
+    await writeFile(join(agRulesDir, `${s.name}.md`), `# ${s.name}\n\n${s.body}`, 'utf8');
+  }
+
+  // 1E. Antigravity JSON Configs (dist/antigravity/skills.json & plugins.json)
+  const skillsJson = {
+    entries: [
+      { path: '.agents/skills/devmind' },
+      ...skills.map(s => ({ path: `.agents/skills/${s.name}` })),
+    ],
+  };
+  const pluginsJson = {
+    entries: [
+      { path: '.agents/plugins/devmind' },
+    ],
+  };
+  await writeFile(join(agBaseDir, 'skills.json'), JSON.stringify(skillsJson, null, 2), 'utf8');
+  await writeFile(join(agBaseDir, 'plugins.json'), JSON.stringify(pluginsJson, null, 2), 'utf8');
+
+  // =========================================================================
   // 2. Cursor IDE Build (.cursorrules & .cursor/rules/*.mdc)
+  // =========================================================================
   console.log('2. Building Cursor IDE rules (dist/cursor)...');
   const cursorDir = join(DIST_DIR, 'cursor');
   const cursorRulesDir = join(cursorDir, '.cursor', 'rules');
   await mkdir(cursorRulesDir, { recursive: true });
 
-  // Unified .cursorrules
+  // Unified .cursorrules fallback
   let cursorRulesContent = `# devmind Cursor Rules\n\n`;
   cursorRulesContent += `> Automatically generated from devmind. Governed by AGENTS.md.\n\n`;
   cursorRulesContent += agentsMd + '\n\n---\n\n## Available Domain Skills\n\n';
@@ -162,10 +312,14 @@ ${s.body}
     await writeFile(join(cursorRulesDir, `${s.name}.mdc`), mdcContent, 'utf8');
   }
 
-  // 3. Windsurf / Cascade Build (.windsurfrules)
+  // =========================================================================
+  // 3. Windsurf / Cascade Build (.windsurfrules & .windsurf/rules/*.md)
+  // =========================================================================
   console.log('3. Building Windsurf / Cascade rules (dist/windsurf)...');
   const windsurfDir = join(DIST_DIR, 'windsurf');
-  await mkdir(windsurfDir, { recursive: true });
+  const windsurfModularDir = join(windsurfDir, '.windsurf', 'rules');
+  await mkdir(windsurfModularDir, { recursive: true });
+
   let windsurfRules = `# Windsurf / Cascade Agent Rules\n\n`;
   windsurfRules += `You are an expert fullstack coding agent. You strictly adhere to the devmind engineering baseline:\n\n`;
   windsurfRules += agentsMd + '\n\n---\n\n# Domain Standards & Skills\n\n';
@@ -174,10 +328,19 @@ ${s.body}
   }
   await writeFile(join(windsurfDir, '.windsurfrules'), windsurfRules, 'utf8');
 
-  // 4. Claude Code Build (CLAUDE.md)
+  await writeFile(join(windsurfModularDir, '00-agents-baseline.md'), agentsMd, 'utf8');
+  for (const s of skills) {
+    await writeFile(join(windsurfModularDir, `${s.name}.md`), `# ${s.name}\n\n${s.body}`, 'utf8');
+  }
+
+  // =========================================================================
+  // 4. Claude Code Build (CLAUDE.md & .claude/skills/*)
+  // =========================================================================
   console.log('4. Building Claude Code guidelines (dist/claude-code)...');
   const claudeDir = join(DIST_DIR, 'claude-code');
-  await mkdir(claudeDir, { recursive: true });
+  const claudeSkillsDir = join(claudeDir, '.claude', 'skills');
+  await mkdir(claudeSkillsDir, { recursive: true });
+
   let claudeMd = `# CLAUDE.md — devmind Agent Guidelines\n\n`;
   claudeMd += `This repository uses devmind fullstack engineering standards.\n\n`;
   claudeMd += agentsMd + '\n\n---\n\n# Engineering Skills Catalog\n\n';
@@ -185,16 +348,26 @@ ${s.body}
     claudeMd += `## Skill: ${s.name}\n\n`;
     claudeMd += `**Description**: ${s.description}\n\n`;
     claudeMd += `### Core Directives\n\n`;
-    // Extract first 150 lines or key headings
     const snippet = s.body.split(/\r?\n/).slice(0, 100).join('\n');
     claudeMd += snippet + '\n\n...\n\n';
   }
   await writeFile(join(claudeDir, 'CLAUDE.md'), claudeMd, 'utf8');
 
-  // 5. GitHub Copilot Build (.github/copilot-instructions.md)
+  // Modular skills for Claude Code
+  for (const s of skills) {
+    const sDir = join(claudeSkillsDir, s.name);
+    await mkdir(sDir, { recursive: true });
+    await writeFile(join(sDir, 'SKILL.md'), s.content, 'utf8');
+  }
+
+  // =========================================================================
+  // 5. GitHub Copilot Build (.github/copilot-instructions.md & scoped instructions)
+  // =========================================================================
   console.log('5. Building GitHub Copilot instructions (dist/github-copilot)...');
   const copilotDir = join(DIST_DIR, 'github-copilot', '.github');
-  await mkdir(copilotDir, { recursive: true });
+  const copilotInstructionsDir = join(copilotDir, 'instructions');
+  await mkdir(copilotInstructionsDir, { recursive: true });
+
   let copilotMd = `# GitHub Copilot Custom Instructions\n\n`;
   copilotMd += `Follow the devmind engineering baseline on all generated code and refactorings:\n\n`;
   copilotMd += agentsMd + '\n\n---\n\n## Standards By Domain\n\n';
@@ -203,8 +376,44 @@ ${s.body}
   }
   await writeFile(join(copilotDir, 'copilot-instructions.md'), copilotMd, 'utf8');
 
-  // 6. Distribution Bundles & Manifest
-  console.log('6. Creating distribution bundles and manifest (dist/bundles)...');
+  // Scoped instructions format (.github/instructions/*.instructions.md)
+  for (const s of skills) {
+    const scopedContent = `---
+applyTo: "${s.globs}"
+---
+
+# ${s.name} Instructions
+
+${s.body}
+`;
+    await writeFile(join(copilotInstructionsDir, `${s.name}.instructions.md`), scopedContent, 'utf8');
+  }
+
+  // =========================================================================
+  // 6. Cline & Roo Code Build (dist/cline)
+  // =========================================================================
+  console.log('6. Building Cline / Roo Code rules (dist/cline)...');
+  const clineDir = join(DIST_DIR, 'cline');
+  await mkdir(clineDir, { recursive: true });
+  let clineRules = `# Cline / Roo Code System Rules\n\n`;
+  clineRules += agentsMd + '\n\n---\n\n# Domain Standards\n\n';
+  for (const s of skills) {
+    clineRules += `## ${s.name}\n${s.body}\n\n---\n\n`;
+  }
+  await writeFile(join(clineDir, '.clinerules'), clineRules, 'utf8');
+
+  // =========================================================================
+  // 7. Universal Agent Baseline (dist/agents)
+  // =========================================================================
+  console.log('7. Building Universal Agent Baseline (dist/agents)...');
+  const agentsOutDir = join(DIST_DIR, 'agents');
+  await mkdir(agentsOutDir, { recursive: true });
+  await writeFile(join(agentsOutDir, 'AGENTS.md'), agentsMd, 'utf8');
+
+  // =========================================================================
+  // 8. Distribution Bundles & Manifest (dist/bundles)
+  // =========================================================================
+  console.log('8. Creating distribution bundles and manifest (dist/bundles)...');
   const bundlesDir = join(DIST_DIR, 'bundles');
   await mkdir(bundlesDir, { recursive: true });
 
@@ -214,13 +423,21 @@ ${s.body}
     description: 'Curated Antigravity and AI coding agent skills.',
     updatedAt: new Date().toISOString(),
     skillsCount: skills.length,
-    targets: ['antigravity', 'cursor', 'windsurf', 'claude-code', 'github-copilot'],
-    skills: skills.map(s => ({
-      name: s.name,
-      description: s.description,
-      trigger: s.trigger,
-      globs: s.globs,
-    })),
+    targets: ['antigravity', 'cursor', 'windsurf', 'claude-code', 'github-copilot', 'cline', 'agents'],
+    skills: [
+      {
+        name: 'devmind',
+        description: 'Master fullstack engineering standards and architecture reviewer.',
+        trigger: 'model_decision',
+        globs: '**/*',
+      },
+      ...skills.map(s => ({
+        name: s.name,
+        description: s.description,
+        trigger: s.trigger,
+        globs: s.globs,
+      })),
+    ],
   };
 
   await writeFile(join(bundlesDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
@@ -232,16 +449,57 @@ ${s.body}
   }
   await writeFile(join(bundlesDir, 'devmind-full.md'), fullHandbook, 'utf8');
 
-  console.log('Successfully built devmind skills for:');
-  console.log('  ✔ Antigravity     -> dist/antigravity/devmind/ (copy "devmind" directly)');
-  console.log('  ✔ Cursor IDE      -> dist/cursor/ (.cursorrules & .cursor/rules/*.mdc)');
-  console.log('  ✔ Windsurf        -> dist/windsurf/ (.windsurfrules)');
-  console.log('  ✔ Claude Code     -> dist/claude-code/ (CLAUDE.md)');
-  console.log('  ✔ GitHub Copilot  -> dist/github-copilot/ (.github/copilot-instructions.md)');
-  console.log('  ✔ Unified Bundles -> dist/bundles/ (manifest.json & devmind-full.md)\n');
+  console.log('\n=============================================================');
+  console.log('Successfully built devmind for all target AI agent standards:');
+  console.log('=============================================================');
+  console.log('  ✔ Antigravity Skills  -> dist/antigravity/skills/ (each folder has root SKILL.md)');
+  console.log('  ✔ Antigravity Plugin  -> dist/antigravity/plugins/devmind/ (plugin.json bundle)');
+  console.log('  ✔ Antigravity Drop-In -> dist/antigravity/devmind/ (universal skills/ or plugins/ copy)');
+  console.log('  ✔ Antigravity Rules   -> dist/antigravity/rules/ (AGENTS.md & GEMINI.md)');
+  console.log('  ✔ Cursor IDE          -> dist/cursor/ (.cursorrules & .cursor/rules/*.mdc)');
+  console.log('  ✔ Windsurf            -> dist/windsurf/ (.windsurfrules & .windsurf/rules/)');
+  console.log('  ✔ Claude Code         -> dist/claude-code/ (CLAUDE.md & .claude/skills/)');
+  console.log('  ✔ GitHub Copilot      -> dist/github-copilot/ (.github/copilot-instructions.md & scoped)');
+  console.log('  ✔ Cline / Roo Code    -> dist/cline/ (.clinerules)');
+  console.log('  ✔ Universal AGENTS    -> dist/agents/ (AGENTS.md)');
+  console.log('  ✔ Unified Bundles     -> dist/bundles/ (manifest.json & devmind-full.md)\n');
+
+  // Check for --install-gemini or --install flag
+  const args = process.argv.slice(2);
+  if (args.includes('--install-gemini') || args.includes('--install')) {
+    await installToGemini(devmindSkillDir, agSkillsDir, skills);
+  }
+}
+
+async function installToGemini(devmindSkillDir, agSkillsDir, skills) {
+  const geminiConfigDir = join(homedir(), '.gemini', 'config');
+  const targetSkillsDir = join(geminiConfigDir, 'skills');
+
+  if (!existsSync(targetSkillsDir)) {
+    console.log(`Creating Gemini skills directory at: ${targetSkillsDir}`);
+    await mkdir(targetSkillsDir, { recursive: true });
+  }
+
+  console.log(`\nInstalling devmind to Gemini skills: ${targetSkillsDir}...`);
+
+  // Install master devmind skill (has SKILL.md on root!)
+  const destDevmind = join(targetSkillsDir, 'devmind');
+  await cp(devmindSkillDir, destDevmind, { recursive: true });
+  console.log(`  ✔ Installed master skill: devmind/SKILL.md`);
+
+  // Install individual domain skills (each has SKILL.md on root!)
+  for (const s of skills) {
+    const src = join(agSkillsDir, s.name);
+    const dest = join(targetSkillsDir, s.name);
+    await cp(src, dest, { recursive: true });
+    console.log(`  ✔ Installed domain skill: ${s.name}/SKILL.md`);
+  }
+
+  console.log('\nInstallation complete! Antigravity/Gemini agent will automatically discover all skills.\n');
 }
 
 build().catch(err => {
   console.error('Build failed:', err);
   process.exit(1);
 });
+

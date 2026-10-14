@@ -11,6 +11,7 @@
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate.mjs",
     "test": "node scripts/validate.mjs",
+    "install:gemini": "node scripts/build.mjs --install-gemini",
     "prepack": "npm run build"
   },
   "files": [
