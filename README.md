@@ -1,17 +1,18 @@
-# devmind
+# DevMind
 
 > **The Shared Brain for AI Coding Agents**  
-> *Production-grade engineering standards, security controls, and architectural patterns for Antigravity, Cursor, Windsurf, Claude Code, and GitHub Copilot.*
+> _Production-grade engineering standards, security controls, and architectural patterns for Antigravity, Cursor, Windsurf, Claude Code, and GitHub Copilot._
 
 ---
 
-## What is devmind?
+## What is DevMind?
 
 When you ask an AI coding agent to implement an authentication flow, a database migration, or a data table, you get wildly inconsistent results: speculative abstractions, unpaginated queries that blow up production databases, leaked SQL exceptions, or insecure token storage.
 
-**devmind solves this by equipping your agents with a shared, codified engineering brain.**
+**DevMind solves this by equipping your agents with a shared, codified engineering brain.**
 
-Every domain in devmind is an authoritative skill that instructs the agent to:
+Every domain in DevMind is an authoritative skill that instructs the agent to:
+
 1. **Interview you first** on architectural decisions with sensible defaults.
 2. **Enforce the simplest maintainable solution (YAGNI)** before introducing any code or dependencies.
 3. **Adhere to battle-tested standards** — WCAG 2.2 AA accessibility, NIST SSDF, OWASP ASVS 5.0, and RFC 7807 problem details.
@@ -21,16 +22,16 @@ Every domain in devmind is an authoritative skill that instructs the agent to:
 
 ## Available Skills
 
-| Skill | Domain | Standards & Baseline | Status |
-|-------|--------|----------------------|--------|
-| **[fe-standards](./skills/fe-standards/)** | Frontend Engineering | WCAG 2.2 AA (30 UX areas), 8-state interaction matrix, design tokens (`tokens.css`), TypeScript strict, SWR mutations, human UX copy with zero technical leaks | `Stable` |
-| **[be-standards](./skills/be-standards/)** | Backend Engineering | Clean architecture, DTO allowlists, RFC 7807 typed errors, Pino structured logging, mandatory pagination & filters, Vitest/Supertest integration tests | `Stable` |
-| **[security-standards](./skills/security-standards/)** | Application Security | NIST SP 800-218 v1.1 (SSDF) and OWASP ASVS 5.0, Argon2id, AES-GCM crypto, RBAC/ABAC authorization, secret zero-leakage, Gitleaks, npm audit | `Stable` |
-| **[db-standards](./skills/db-standards/)** | Database & Migrations | PostgreSQL/MySQL/SQLite, zero-downtime expand-contract migrations, strict auto-generation rule (Drizzle/Prisma), keyset cursor pagination, N+1 elimination | `Stable` |
-| **[auth-patterns](./skills/auth-patterns/)** | Auth & Permissions | Refresh token rotation with reuse detection, OAuth 2.0 / OIDC PKCE, WebAuthn Passkeys, TOTP 2FA, session lifecycle, CSRF & secure cookie flags | `Stable` |
-| **[deployment](./skills/deployment/)** | CI/CD & Cloud Infrastructure | GitHub Actions pipelines, Docker multi-stage rootless builds, Terraform IaC, semantic versioning, zero-downtime rolling deploys, Trivy scans | `Stable` |
-| **[api-design](./skills/api-design/)** | API Contracts & Protocols | RESTful URI semantics, OpenAPI 3.1 code-first from Zod, IETF Idempotency-Key with Redis locks, mandatory dynamic list pagination & filters, weak ETags | `Stable` |
-| **[ai-standards](./skills/ai-standards/)** | AI, LLM & RAG Engineering | OWASP Top 10 for LLMs, RAG Triad evaluation, structured Zod output validation, untrusted document delimiters, independent tool authorization gates | `Stable` |
+| Skill                                                  | Domain                       | Standards & Baseline                                                                                                                                           | Status   |
+| ------------------------------------------------------ | ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| **[fe-standards](./skills/fe-standards/)**             | Frontend Engineering         | WCAG 2.2 AA (30 UX areas), 8-state interaction matrix, design tokens (`tokens.css`), TypeScript strict, SWR mutations, human UX copy with zero technical leaks | `Stable` |
+| **[be-standards](./skills/be-standards/)**             | Backend Engineering          | Clean architecture, DTO allowlists, RFC 7807 typed errors, Pino structured logging, mandatory pagination & filters, Vitest/Supertest integration tests         | `Stable` |
+| **[security-standards](./skills/security-standards/)** | Application Security         | NIST SP 800-218 v1.1 (SSDF) and OWASP ASVS 5.0, Argon2id, AES-GCM crypto, RBAC/ABAC authorization, secret zero-leakage, Gitleaks, npm audit                    | `Stable` |
+| **[db-standards](./skills/db-standards/)**             | Database & Migrations        | PostgreSQL/MySQL/SQLite, zero-downtime expand-contract migrations, strict auto-generation rule (Drizzle/Prisma), keyset cursor pagination, N+1 elimination     | `Stable` |
+| **[auth-patterns](./skills/auth-patterns/)**           | Auth & Permissions           | Refresh token rotation with reuse detection, OAuth 2.0 / OIDC PKCE, WebAuthn Passkeys, TOTP 2FA, session lifecycle, CSRF & secure cookie flags                 | `Stable` |
+| **[deployment](./skills/deployment/)**                 | CI/CD & Cloud Infrastructure | GitHub Actions pipelines, Docker multi-stage rootless builds, Terraform IaC, semantic versioning, zero-downtime rolling deploys, Trivy scans                   | `Stable` |
+| **[api-design](./skills/api-design/)**                 | API Contracts & Protocols    | RESTful URI semantics, OpenAPI 3.1 code-first from Zod, IETF Idempotency-Key with Redis locks, mandatory dynamic list pagination & filters, weak ETags         | `Stable` |
+| **[ai-standards](./skills/ai-standards/)**             | AI, LLM & RAG Engineering    | OWASP Top 10 for LLMs, RAG Triad evaluation, structured Zod output validation, untrusted document delimiters, independent tool authorization gates             | `Stable` |
 
 ---
 
@@ -40,6 +41,7 @@ All 8 skills are governed by the universal standards defined in **[`AGENTS.md`](
 Every coding agent operating in this repository or consuming these skills automatically enforces:
 
 ### 1. Mandatory Pre-Coding Review
+
 - **Simplicity & YAGNI**: Implement only what the requirement needs. Reject premature abstractions, unnecessary wrappers, or complex design patterns without clear benefit.
 - **Existing Functionality & Reuse**: Inspect the codebase, shared utilities, and libraries before authoring new code. Zero duplicate logic.
 - **Dependency Evaluation**: Justify every dependency. Prefer native language features and standard libraries over third-party packages.
@@ -60,13 +62,14 @@ Understand ───► Inspect ───► Evaluate ───► Implement ─
 - **Learn**: Document reusable patterns and confirmed fixes for future turns.
 
 ### 3. Non-Negotiable Rule of Verification
+
 > **Crucial Rule:** A check or test must never be reported as successful unless it was actually executed and its result was verified.
 
 ---
 
 ## Multi-IDE & Agent Support
 
-devmind compiles into drop-in configurations for all major AI coding agents and IDEs:
+DevMind compiles into drop-in configurations for all major AI coding agents and IDEs:
 
 ```
 devmind/
@@ -95,16 +98,20 @@ devmind/
 
 ### 1. Google Antigravity & Gemini
 
-Antigravity requires every skill in `skills/` to have `SKILL.md` directly at its root directory. devmind builds 100% compliant artifacts for every Antigravity workflow:
+Antigravity requires every skill in `skills/` to have `SKILL.md` directly at its root directory. DevMind builds 100% compliant artifacts for every Antigravity workflow:
 
 #### Option A: One-Click Local Install (Global)
-Install all devmind skills directly into your global `~/.gemini/config/skills/`:
+
+Install all DevMind skills directly into your global `~/.gemini/config/skills/`:
+
 ```bash
 npm run install:gemini
 ```
 
 #### Option B: Master Orchestrator Skill (Single Folder in `skills/`)
+
 Copy the master `devmind` skill (includes root `SKILL.md` and progressive disclosure `references/`):
+
 ```bash
 # Global
 cp -r dist/antigravity/skills/devmind ~/.gemini/config/skills/
@@ -114,7 +121,9 @@ cp -r dist/antigravity/skills/devmind your-project/.agents/skills/
 ```
 
 #### Option C: Universal Drop-in Folder
+
 `dist/antigravity/devmind` contains both `SKILL.md` and `plugin.json` at root. You can drop it into either `skills/` or `plugins/`:
+
 ```bash
 # As a Skill
 cp -r dist/antigravity/devmind ~/.gemini/config/skills/devmind
@@ -124,7 +133,9 @@ cp -r dist/antigravity/devmind ~/.gemini/config/plugins/devmind
 ```
 
 #### Option D: Individual Domain Skills
+
 Copy any specific domain skill (each contains root `SKILL.md`):
+
 ```bash
 cp -r dist/antigravity/skills/fe-standards ~/.gemini/config/skills/
 cp -r dist/antigravity/skills/be-standards ~/.gemini/config/skills/
@@ -207,7 +218,7 @@ graph TD
 
 ## Build & Validation Tooling
 
-devmind uses native Node.js 18+ (zero external dependencies) to build and validate all skill bundles:
+DevMind uses native Node.js 18+ (zero external dependencies) to build and validate all skill bundles:
 
 ```bash
 # Validate frontmatter, Section 0 interview tables, and checklists
@@ -239,4 +250,4 @@ We welcome contributions to expand and refine agent skills. Please review [CONTR
 
 ## License
 
-[MIT](./LICENSE) — © 2026 devmind contributors.
+[MIT](./LICENSE) — © 2026 DevMind contributors.
