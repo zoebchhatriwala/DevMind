@@ -467,11 +467,11 @@ ${s.body}
   // Check for --install-gemini or --install flag
   const args = process.argv.slice(2);
   if (args.includes('--install-gemini') || args.includes('--install')) {
-    await installToGemini(devmindSkillDir, agSkillsDir, skills);
+    await installToGemini(agUniversalDir, skills);
   }
 }
 
-async function installToGemini(devmindSkillDir, agSkillsDir, skills) {
+async function installToGemini(agUniversalDir, skills) {
   const geminiConfigDir = join(homedir(), '.gemini', 'config');
   const targetSkillsDir = join(geminiConfigDir, 'skills');
 
@@ -480,22 +480,26 @@ async function installToGemini(devmindSkillDir, agSkillsDir, skills) {
     await mkdir(targetSkillsDir, { recursive: true });
   }
 
-  console.log(`\nInstalling devmind to Gemini skills: ${targetSkillsDir}...`);
+  console.log(`\nInstalling DevMind to Gemini skills: ${targetSkillsDir}...`);
 
-  // Install master devmind skill (has SKILL.md on root!)
-  const destDevmind = join(targetSkillsDir, 'devmind');
-  await cp(devmindSkillDir, destDevmind, { recursive: true });
-  console.log(`  ✔ Installed master skill: devmind/SKILL.md`);
-
-  // Install individual domain skills (each has SKILL.md on root!)
+  // Proactively remove any loose direct domain skill folders from previous installs
   for (const s of skills) {
-    const src = join(agSkillsDir, s.name);
-    const dest = join(targetSkillsDir, s.name);
-    await cp(src, dest, { recursive: true });
-    console.log(`  ✔ Installed domain skill: ${s.name}/SKILL.md`);
+    const looseDir = join(targetSkillsDir, s.name);
+    if (existsSync(looseDir)) {
+      await rm(looseDir, { recursive: true, force: true });
+      console.log(`  🧹 Removed loose domain folder: ${s.name}`);
+    }
   }
 
-  console.log('\nInstallation complete! Antigravity/Gemini agent will automatically discover all skills.\n');
+  // Install DevMind under a single consolidated devmind/ directory
+  const destDevmind = join(targetSkillsDir, 'devmind');
+  if (existsSync(destDevmind)) {
+    await rm(destDevmind, { recursive: true, force: true });
+  }
+  await cp(agUniversalDir, destDevmind, { recursive: true });
+  console.log(`  ✔ Installed consolidated DevMind skill into: devmind/ (includes master SKILL.md, references/, and skills/)`);
+
+  console.log('\nInstallation complete! DevMind is now installed cleanly under ~/.gemini/config/skills/devmind/\n');
 }
 
 build().catch(err => {

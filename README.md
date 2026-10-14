@@ -102,7 +102,7 @@ Antigravity requires every skill in `skills/` to have `SKILL.md` directly at its
 
 #### Option A: One-Click Local Install (Global)
 
-Install all DevMind skills directly into your global `~/.gemini/config/skills/`:
+Install DevMind as a single consolidated skill package directly into your global `~/.gemini/config/skills/devmind`:
 
 ```bash
 npm run install:gemini
