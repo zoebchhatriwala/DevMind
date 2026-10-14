@@ -1,13 +1,9 @@
 ---
 name: ai-standards
 description: >-
-  AI Agent, LLM, RAG, and Prompt Engineering Standards for production applications.
-  Activate when implementing or modifying LLM calls, RAG pipelines, vector search, embeddings,
-  system prompts, guardrails, tool calling, model evaluation, or agent orchestration.
-  Enforces: simplicity and reusability (no speculative vector DBs or multi-agent bloat),
-  structured outputs (Zod/Pydantic schemas), RAG access control and groundedness,
-  defense against direct and indirect prompt injection, independent tool authorization,
-  deterministic business logic fallback, and rigorous evaluation benchmarks.
+  Production standards for AI, LLM, RAG, and prompts. Enforces: YAGNI simplicity,
+  structured outputs (Zod), RAG access control, prompt injection defense,
+  independent tool authorization gates, and strict session token budget caps.
 trigger: model_decision
 ---
 
@@ -16,7 +12,7 @@ trigger: model_decision
 > **Scope**: LLM integrations, RAG pipelines, agentic workflows, prompt engineering, tool calling, and guardrails.  
 > **Audience**: Coding agents authoring AI-driven features, retrieval systems, prompt templates, or automated tools.  
 > **Standards Baseline**: Grounded in **OWASP Top 10 for LLM Applications (2025)**, **NIST AI Risk Management Framework (AI RMF 1.0)**, and the **RAG Triad** (Context Relevance, Groundedness, Answer Relevance).  
-> **Core Principle**: Build the simplest secure, reliable, and maintainable AI solution. Ground answers in verified evidence, treat external content as untrusted, validate all outputs before acting, and continuously improve through measurable evaluation.
+> **Core Principle**: Build the smallest secure, reliable, and maintainable AI solution. Enforce hard token budget ceilings, ground answers in verified evidence, treat external content as untrusted, validate all outputs before acting, and continuously improve through measurable evaluation.
 
 ---
 
@@ -26,7 +22,7 @@ trigger: model_decision
 
 Determine your operating mode before proceeding:
 - **Mode A: Greenfield / New AI Pipeline Scaffolding**: If designing initial RAG pipelines, LLM agent workflows, or prompt orchestration systems from scratch, resolve architecture requirements with the user in a single turn.
-- **Mode B: Incremental Modification / Patch**: If adding prompts, refining tools, or tuning existing AI chains, **DO NOT** ask the interview questionnaire. Conform to existing model wrappers, evaluation harnesses, and vector configurations. Enforce untrusted document delimiters, structured Zod schemas, and tool authorization gates on all changes.
+- **Mode B: Incremental Modification / Patch**: If adding prompts, refining tools, or tuning existing AI chains, **DO NOT** ask the interview questionnaire. Conform to existing model wrappers, evaluation harnesses, and vector configurations. Enforce untrusted document delimiters, structured Zod schemas, token budgets, and tool authorization gates on all changes.
 
 ---
 
@@ -40,6 +36,7 @@ Determine your operating mode before proceeding:
 | 4 | **Knowledge & Retrieval** | In-context few-shot, existing database (`pgvector`, full-text search), or dedicated vector DB? | Existing DB (e.g., PostgreSQL `pgvector`) or in-context documents; avoid new infra |
 | 5 | **Guardrails & Security** | Sensitivity level, PII redaction, human-in-the-loop approval on tool calls, injection defense? | Strict delimiter boundaries + independent tool authorization gates |
 | 6 | **Evaluation & Tracing** | Evaluation framework (DeepEval, Ragas, custom asserts) and tracing (Langfuse, OpenTelemetry)? | Automated assertions on golden dataset + structured logging |
+| 7 | **Token Budget & Session Cost** | Max tokens per response, max cumulative session budget, and history compaction policy? | Hard output cap (e.g., 1k-2k), sliding window (last 6-10 turns), and session cost limit |
 
 Echo back an **AI Architecture Summary** for user confirmation before writing implementation code.
 
@@ -129,6 +126,75 @@ export async function categorizeTicket(ticketText: string): Promise<SupportTicke
    - Implement exponential backoff with jitter on HTTP 429 (rate limits) and 503 (overloaded).
    - Set strict client timeouts (e.g., 15s for interactive UI, 60s for batch processing).
    - Maintain a graceful fallback path (e.g., secondary provider or user-facing retry prompt).
+
+### 2.4 Token Budgets, Session Cost Control & Context Window Management
+
+Unbounded token consumption causes latency spikes, budget blowouts, and sudden `context_length_exceeded` errors. Every production AI integration must enforce strict token controls:
+
+#### 1. The Three Hard Token Ceilings
+- **Per-Request Output Cap (`max_tokens`)**: Never invoke an LLM without an explicit, tight `max_tokens` / `max_completion_tokens` limit (e.g., 500 for classification/JSON, 1,500 for summaries, 2,500 for code).
+- **Cumulative Session Token Budget**: Enforce a hard session cap (e.g., 50,000 tokens or $0.20 per user session) to stop runaway loops, runaway agent chat, or denial-of-wallet attacks.
+- **Tool Loop Circuit Breakers**: Cap autonomous tool-calling loops at a deterministic maximum (default: 5 iterations). Halt and alert if the loop does not converge.
+
+#### 2. History Compaction & Sliding Windows
+Unbounded message histories (`messages: [...history]`) cause quadratic ($O(N^2)$) token and cost growth over time.
+- **Sliding Window**: Retain pinned system prompt + recent $K$ message turns (default: last 6–10 turns).
+- **Context Compaction**: When history exceeds token threshold (e.g., 4,000 tokens), summarize older turns into a single `<conversation_summary>` block and prune historical turns.
+- **Prompt Caching**: Position static system instructions and tool schemas at the prompt prefix to leverage provider caching (Anthropic, Gemini, OpenAI), saving 80–90% on input costs.
+
+#### 3. Production Token & Session Budget Guard Pattern
+
+```ts
+// src/lib/ai/token-budget.ts
+import { AppError } from '@/lib/errors';
+
+export interface SessionBudget {
+  sessionId: string;
+  totalTokensUsed: number;
+  maxSessionTokens: number; // e.g., 50_000
+  totalCostUsd: number;
+}
+
+export interface ChatMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export class TokenBudgetGuard {
+  // Prunes history to bounded sliding window
+  static applySlidingWindow(systemPrompt: string, history: ChatMessage[], maxTurns = 8): ChatMessage[] {
+    return [
+      { role: 'system', content: systemPrompt },
+      ...history.slice(-maxTurns),
+    ];
+  }
+
+  // Checks session limit before triggering LLM calls
+  static assertWithinBudget(session: SessionBudget): void {
+    if (session.totalTokensUsed >= session.maxSessionTokens) {
+      throw new AppError(
+        'TOKEN_BUDGET_EXCEEDED',
+        'Session token budget exhausted. Please start a new session.',
+        429,
+        { sessionId: session.sessionId, tokensUsed: session.totalTokensUsed }
+      );
+    }
+  }
+
+  // Accumulates token telemetry from model response
+  static recordUsage(
+    session: SessionBudget,
+    usage: { promptTokens: number; completionTokens: number },
+    rates = { promptPer1k: 0.003, completionPer1k: 0.015 }
+  ): void {
+    const callTokens = usage.promptTokens + usage.completionTokens;
+    session.totalTokensUsed += callTokens;
+    session.totalCostUsd +=
+      (usage.promptTokens / 1000) * rates.promptPer1k +
+      (usage.completionTokens / 1000) * rates.completionPer1k;
+  }
+}
+```
 
 ---
 
@@ -367,6 +433,7 @@ Before declaring any AI, LLM, RAG, or prompt task complete, verify every single 
 - [ ] **Simplicity & YAGNI**: Chosen solution is the simplest that works; no unneeded vector DBs, multi-agent frameworks, or extra LLM calls introduced.
 - [ ] **Reusability**: Existing project models, utilities, and prompts have been inspected and reused.
 - [ ] **Model Selection**: Model choice balances latency, quality, and cost for the specific task.
+- [ ] **Token Budget & Cost Controls**: Hard output token limits (`max_tokens`) configured on every call; session token budget cap and sliding window compaction enforced.
 - [ ] **Deterministic Fallback**: All math, authorization checks, and business-critical logic remain in deterministic code.
 - [ ] **Structured Outputs**: Model outputs are validated against strict Zod/Pydantic schemas before consumption.
 - [ ] **RAG Access Control**: Tenant isolation and object permissions are enforced at the database layer *before* retrieval.
@@ -378,7 +445,7 @@ Before declaring any AI, LLM, RAG, or prompt task complete, verify every single 
 - [ ] **Injection Defense**: Direct and indirect prompt injection attacks are mitigated via layered controls.
 - [ ] **Evaluation Suite**: Tested against representative queries, edge cases, and adversarial regression tests.
 - [ ] **Audit & Security**: Dependency audits pass with zero high/critical findings (`npm audit`).
-- [ ] **Observability**: Latency, token usage, cost, and errors are tracked with correlation IDs.
+- [ ] **Observability & Cost Accounting**: Latency, input/output token usage, session spend, and errors are tracked with correlation IDs.
 
 ---
 
