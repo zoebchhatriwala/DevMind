@@ -1,0 +1,42 @@
+{
+  "name": "devmind",
+  "version": "1.0.0",
+  "description": "Curated collection of Antigravity and AI coding agent skills for all IDEs (Cursor, Windsurf, Claude Code, GitHub Copilot).",
+  "type": "module",
+  "main": "dist/bundles/manifest.json",
+  "bin": {
+    "devmind": "./scripts/build.mjs"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate.mjs",
+    "test": "node scripts/validate.mjs",
+    "prepack": "npm run build"
+  },
+  "files": [
+    "skills",
+    "dist",
+    "AGENTS.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "antigravity",
+    "ai-agent",
+    "skills",
+    "cursor",
+    "windsurf",
+    "claude-code",
+    "copilot",
+    "fullstack",
+    "standards",
+    "rag",
+    "llm",
+    "prompts"
+  ],
+  "author": "devmind contributors",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
