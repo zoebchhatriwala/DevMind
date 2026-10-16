@@ -44,6 +44,7 @@ Determine your operating mode before proceeding:
 | 8 | Linting / formatting | ESLint + Prettier (default), Biome, or other? |
 | 9 | Auth | NextAuth, Clerk, custom JWT, or none? |
 | 10 | Design tokens | Existing brand palette or generate from scratch? |
+| 11 | Icon library | **ASK**: Which icon library do you prefer? (e.g., Lucide React, Heroicons, Radix Icons, Phosphor Icons, FontAwesome, React Icons). Do not assume a default; ask and confirm with user. (Strictly zero Unicode emojis for UI icons) |
 
 Once answered, echo back a **stack summary** for the user to confirm before
 generating any files.
@@ -176,7 +177,7 @@ Every frontend interface built with this skill must adhere to the 30 foundationa
 | **Notifications** | Don't rely on color alone; use accessible status messaging | Pair colors with icons, clear copy, and `aria-live="polite"` / `role="status"` |
 | **Motion** | Keep animation purposeful and respect prefers-reduced-motion | $\le 250\text{ms}$ transitions; disable animations when `prefers-reduced-motion: reduce` |
 | **Images** | Meaningful images require appropriate alternative text; decorative images should not pollute the accessibility tree | Informative `alt="..."`; decorative images must have `alt=""` or `aria-hidden="true"` |
-| **Icons** | Icons should have accessible names when they convey meaning; don't use icons alone when the meaning is ambiguous | `aria-label` on icon buttons; pair icon with label text where ambiguity exists |
+| **Icons** | Dedicated vector icon library; strictly zero emojis; accessible naming; optical alignment | Never use emojis (`⚠️`, `❌`, `✅`, `🔥`) as UI icons. Always ask the user for their preferred icon library (e.g., Lucide React, Heroicons, Radix, Phosphor, FontAwesome; do not assume a default). Provide `aria-label` on icon-only buttons or `aria-hidden="true"` when paired with text. Always optically align with text/elements using flexbox (`display: inline-flex; align-items: center; gap: var(--space-2); line-height: 1; flex-shrink: 0`) |
 | **Internationalization** | Don't assume fixed text widths, date formats, currencies, or text direction | Flexible containers; use `Intl.DateTimeFormat` and `Intl.NumberFormat` |
 | **Dark mode** | If supported, ensure contrast and semantic colors remain valid in every theme | Both light and dark palettes must satisfy WCAG AA contrast ratios |
 | **Browser support** | Use progressive enhancement and test the application's supported browsers | Standard modern evergreen browser baseline; avoid experimental vendor CSS |
@@ -241,6 +242,12 @@ brand palette if one exists; otherwise generate a harmonious one.
   --min-touch-target: 44px;
   --focus-ring: 2px solid var(--color-primary);
   --focus-offset: 2px;
+
+  /* Icon Sizing */
+  --icon-sm: 1rem;    /* 16px */
+  --icon-md: 1.25rem; /* 20px */
+  --icon-lg: 1.5rem;  /* 24px */
+  --icon-xl: 2rem;    /* 32px */
 
   /* Transitions */
   --transition-fast:   150ms ease;
@@ -313,6 +320,7 @@ Every generic UI element lives in `src/components/ui/`. Build as
 - [ ] `Badge` / `Tag`
 - [ ] `Avatar`
 - [ ] `Spinner` / `Skeleton`
+- [ ] `Icon` / `IconWrapper`  -  vetted SVG icon component wrapper or direct imports from user's chosen library (ask user: Lucide, Heroicons, Radix, etc.); strictly no raw emojis
 - [ ] `Table` + `Pagination` (see Section 8)
 - [ ] `Breadcrumb`
 - [ ] `Tabs`
@@ -341,9 +349,9 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   /** When true, disables the button and shows a loading indicator. */
   isLoading?: boolean;
-  /** Icon rendered before the label. Must be an accessible SVG or icon component. */
+  /** Leading icon rendered before the label. Must be an accessible vector SVG or icon component (never a raw emoji). */
   leadingIcon?: ReactNode;
-  /** Icon rendered after the label. Must be an accessible SVG or icon component. */
+  /** Trailing icon rendered after the label. Must be an accessible vector SVG or icon component (never a raw emoji). */
   trailingIcon?: ReactNode;
   /** Button label. Must be descriptive  -  never "Click here". */
   children: ReactNode;
@@ -384,12 +392,184 @@ export function Button({
 }
 ```
 
+```css
+/* src/components/ui/Button/Button.module.css */
+/* Perfect optical alignment contract for buttons with icons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  vertical-align: middle;
+  line-height: 1;
+  min-height: var(--min-touch-target);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+/* Ensure child SVG icons never squish and scale with tokens */
+.btn svg {
+  flex-shrink: 0;
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.sm svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.md svg {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+.lg svg {
+  width: var(--icon-md);
+  height: var(--icon-md);
+}
+```
+
 **Rules for all components:**
 - Every prop has a JSDoc comment.
 - No hardcoded colours, spacing, or font sizes  -  use CSS tokens only.
 - Forward `ref` when wrapping a native element.
 - Export both the component **and** its props interface.
 - All interactive elements have unique, descriptive `id` attributes at point of use.
+- Strictly no raw Unicode emojis for icons; always use vector SVG icon components from an approved library.
+
+---
+
+### 4.2 Icon Standards: Zero-Emoji Rule, Libraries & Optical Alignment
+
+Icons must be visually refined, functionally accessible, and strictly aligned with typography and adjacent UI elements.
+
+#### 1. The Strict Zero-Emoji Rule (Non-Negotiable)
+
+**Never use raw Unicode emojis (`⚠️`, `❌`, `✅`, `🔥`, `🚀`, `💡`, `🗑️`, `✏️`, `⚙️`, `👍`, `🎉`) as UI icons, button graphics, action triggers, status indicators, or empty-state illustrations.**
+
+Technical justifications:
+1. **Cross-Platform Rendering Divergence**: Emojis render radically differently across operating systems (Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji). An emoji that appears subtle on macOS may look garish, outdated, or illegible on Windows or Android.
+2. **Design System Disconnection**: Emojis cannot inherit CSS `currentColor`, cannot be styled using design tokens (`var(--color-primary)`, `var(--color-danger)`), and cannot adapt gracefully to dark mode or active/hover states.
+3. **Broken Optical Alignment & Metrics**: Emojis contain uncontrolled platform-specific font bounding boxes, asymmetrical baseline metrics, and arbitrary glyph padding, causing disruptive vertical misalignment, text baseline shifts, and uneven container heights.
+4. **Accessibility Interference**: Screen readers vocalize raw emojis using verbose Unicode descriptions (e.g. "warning sign", "cross mark button", "fire"), which pollutes screen reader announcements unless explicitly wrapped and suppressed with ARIA.
+5. **Amateur Visual Appearance**: Raw emojis give web applications a prototype, casual, or toy appearance rather than a cohesive, production-grade interface.
+
+#### 2. Vector Icon Libraries: Never Assume a Default (Always Ask the User)
+
+**Do not assume or hardcode a default icon library.** The coding agent MUST explicitly ask the user during Section 0 interview alignment (Mode A) or automatically inspect existing dependencies in `package.json` (Mode B) to confirm the project's preferred icon library.
+
+Present popular, relevant options based on the framework and UI stack:
+
+| Stack / Ecosystem | Popular Options (Confirm with User) | Package & Import Example |
+| :--- | :--- | :--- |
+| **React / Next.js / Vite** | **Lucide React** | `npm i lucide-react`<br>`import { Trash2, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';` |
+| **Tailwind CSS / Headless UI** | **Heroicons** | `npm i @heroicons/react`<br>`import { TrashIcon, CheckCircleIcon } from '@heroicons/react/24/outline';` |
+| **Radix UI / Dense Desktops** | **Radix Icons** | `npm i @radix-ui/react-icons`<br>`import { TrashIcon, CheckCircledIcon } from '@radix-ui/react-icons';` |
+| **Multi-Weight / Duotone** | **Phosphor Icons** | `npm i @phosphor-icons/react`<br>`import { Trash, CheckCircle } from '@phosphor-icons/react';` |
+| **Broad Multi-Pack** | **React Icons** / **FontAwesome** | `npm i react-icons` / `@fortawesome/react-fontawesome` |
+| **Vue / Svelte** | **Lucide / Heroicons / Unplugin** | `lucide-vue-next` / `unplugin-icons` |
+
+> **Interview Protocol for Icons**:
+> 1. In greenfield projects, ask: *"Which icon library would you like to use (e.g. Lucide React, Heroicons, Radix Icons, Phosphor Icons, FontAwesome, or other)?"*
+> 2. Await user confirmation before installing or importing any icon library. Never assume a default.
+> 3. When custom icons are necessary, provide clean, normalized SVG components with `viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `strokeWidth={2}`, `strokeLinecap="round"`, `strokeLinejoin="round"`, and `aria-hidden="true"`.
+
+#### 3. Optical Alignment & Layout Contract
+
+To achieve perfect alignment between icons, typography, and adjacent elements:
+
+- **Flexbox Alignment**: Group icons with adjacent text inside a flex container:
+  ```css
+  /* Inline alignment container */
+  .inline-badge,
+  .status-pill,
+  .btn-content {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2); /* 0.5rem (8px) */
+    line-height: 1;      /* Normalize font leading */
+  }
+  ```
+- **Prevent Icon Squishing (`flex-shrink: 0`)**: Always apply `flex-shrink: 0` (or `shrink-0` in Tailwind) and explicit dimensions (`width: var(--icon-sm); height: var(--icon-sm);` or `w-4 h-4`) to SVG icons so flex containers never distort them when text wraps.
+- **Optical Cap-Height Alignment**: SVGs align naturally to the cap-height of typography when centered in flex items. If an icon must be rendered inline with text without flex, use `vertical-align: middle; margin-top: -0.125em;` (or `-2px`).
+- **Icon Sizing Tokens**: Use standardized icon dimensions:
+  - Small / Inline with body (`14-16px`): `var(--icon-sm)` / `w-4 h-4`
+  - Medium / Buttons & nav (`20px`): `var(--icon-md)` / `w-5 h-5`
+  - Large / Metric cards & banners (`24px`): `var(--icon-lg)` / `w-6 h-6`
+  - Extra Large / Empty states (`32-48px`): `var(--icon-xl)` / `w-8 h-8` to `w-12 h-12`
+
+#### 4. Accessibility Rules for Icons
+
+- **Icons paired with text (Decorative)**: The text already conveys meaning. Always add `aria-hidden="true"` to the icon component so screen readers don't stutter:
+  ```tsx
+  <Button leadingIcon={<Trash2 size={16} aria-hidden="true" />}>
+    Delete project
+  </Button>
+  ```
+- **Icon-Only Buttons (Informative / Interactive)**: When there is no visible text, you MUST:
+  1. Provide a clear, localized `aria-label` describing the exact action (e.g., `aria-label="Delete project"`).
+  2. Include a tooltip or native `title` for sighted desktop users.
+  3. Ensure the clickable container satisfies the $\ge 44 \times 44\text{px}$ touch target.
+  4. Keep `aria-hidden="true"` on the nested `<svg>`.
+  ```tsx
+  <button
+    type="button"
+    className={styles.iconBtn}
+    aria-label="Delete project"
+    title="Delete project"
+  >
+    <Trash2 size={18} aria-hidden="true" />
+  </button>
+  ```
+
+#### 5. Code Comparison: Bad vs. Good Patterns
+
+```tsx
+// ❌ [NO] Raw emojis, broken alignment, missing touch targets, no accessible labels
+<button onClick={handleDelete}>
+  🗑️ Delete
+</button>
+
+<div className="alert">
+  ⚠️ Warning: Your subscription expires soon.
+</div>
+
+<button onClick={onClose}>
+  ❌
+</button>
+
+// ✅ [YES] Vector SVG icon library (e.g., Lucide, Heroicons, or user-selected library), optical flex alignment, accessible attributes
+import { Trash2, AlertTriangle, X } from 'lucide-react'; // Example using user-confirmed library
+
+<Button
+  variant="danger"
+  onClick={handleDelete}
+  leadingIcon={<Trash2 size={16} aria-hidden="true" className="shrink-0" />}
+>
+  Delete project
+</Button>
+
+<div className="inline-flex items-center gap-2 rounded-md bg-amber-50 p-3 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+  <AlertTriangle size={18} aria-hidden="true" className="shrink-0 text-amber-600" />
+  <span className="text-sm font-medium">Your subscription expires soon.</span>
+</div>
+
+<button
+  type="button"
+  onClick={onClose}
+  className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"
+  aria-label="Close dialog"
+  title="Close dialog"
+>
+  <X size={18} aria-hidden="true" className="shrink-0" />
+</button>
+```
 
 ---
 
@@ -558,10 +738,12 @@ All interface typography and copy—headings, labels, instructions, empty states
 
 - **Every input has a visible `<label>`**  -  never placeholder-only inputs.
 - **Every button has descriptive text**  -  no icon-only buttons without accessible `aria-label`.
+- **Zero raw Unicode emojis as UI icons**  -  never use raw emojis (`❌`, `✅`, `⚠️`, `🗑️`, `✏️`) as buttons, status indicators, or icons; always ask the user for their preferred vector icon library (e.g. Lucide React, Heroicons, Radix, Phosphor, FontAwesome) and import clean SVG components.
+- **Icons properly aligned with text**  -  always center icons optically with adjacent text or elements using `inline-flex items-center gap-2`, normalizing line-height, and specifying `shrink-0`.
 - **Every form field has a purpose**  -  if the API doesn't use it, remove it.
 - **No lorem ipsum or mock names**  -  use realistic, domain-relevant copy (e.g., "Jane Cooper", "Acme Logistics").
 - **No `// TODO: implement`** in shipped components.
-- **Empty states are designed**  -  clear icon + human title + informative description + actionable CTA button.
+- **Empty states are designed**  -  vetted SVG icon (never emojis) + human title + informative description + actionable CTA button.
 
 #### Form Field Contract
 
@@ -1127,7 +1309,11 @@ Before marking any frontend task complete, verify every item:
 - [ ] TypeScript strict mode enabled; zero `any` usage
 - [ ] Semantic HTML used: native buttons, forms, inputs, dialogs before custom constructs
 - [ ] All components follow the contract pattern in Section 4
-- [ ] Centralized design tokens (`tokens.css`) used for all colors, spacing, typography, and radius
+- [ ] Centralized design tokens (`tokens.css`) used for all colors, spacing, typography, radius, and icon dimensions
+- [ ] Asked user for preferred icon library in Section 0 (no hardcoded default); confirmed user choice or conformed to existing codebase dependencies
+- [ ] Strictly zero Unicode emojis used as UI icons, button graphics, or status badges; user-confirmed vector icon library used (Section 4.2)
+- [ ] All icons optically aligned with adjacent text or elements using `inline-flex`, `align-items: center`, tokenized gap, and `flex-shrink: 0` (Section 4.2)
+- [ ] Icon-only buttons have descriptive `aria-label` and `title`/tooltip; decorative icons marked with `aria-hidden="true"` (Section 4.2)
 - [ ] WCAG 2.2 AA accessibility satisfied: keyboard operable, visible `:focus-visible` rings, contrast $\ge 4.5:1$
 - [ ] Touch targets meet minimum $\ge 44 \times 44\text{px}$ with adequate spacing
 - [ ] All interactive components define state consistency (default, hover, focus, active, disabled, loading, error, success)
