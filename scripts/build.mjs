@@ -100,13 +100,38 @@ function generateMasterSkillMd(skills, agentsMd) {
   return `---
 name: devmind
 description: >-
-  Universal fullstack engineering standards, architecture reviewer, and quality baseline for AI coding agents. Governed by AGENTS.md. Activates when designing, implementing, refactoring, or auditing frontend, backend, security, databases, authentication, CI/CD, APIs, and AI/RAG systems.
+  MANDATORY TRIGGER: Universal fullstack engineering standards, architecture reviewer, and quality baseline for AI coding agents. Governed by AGENTS.md. Activates when designing, implementing, refactoring, or auditing frontend, backend, security, databases, authentication, CI/CD, APIs, and AI/RAG systems.
 trigger: model_decision
 ---
 
-# devmind: The Universal Engineering Brain
+# devmind: The Universal Engineering Brain & Zero-Amnesia Protocol
 
-You are operating under **devmind**, a production-grade engineering baseline and curated collection of architectural standards. devmind ensures that every generated line of code is simple (YAGNI), secure, maintainable, verified, and production-ready.
+You are operating under **DevMind**, a production-grade engineering baseline and curated collection of architectural standards. DevMind ensures that every generated line of code is simple (YAGNI), secure, maintainable, verified, and production-ready.
+
+---
+
+## 🎯 Mandatory Skill Routing Matrix
+
+When a user request touches any of the following file globs or task types, you **MUST** load and apply the corresponding DevMind skill(s) before authoring or modifying code:
+
+| Domain & Skill | Triggering Task Types & Keywords | File Globs |
+| :--- | :--- | :--- |
+| **\`ai-standards\`** | LLM integration, prompt templates, agent workflows, RAG pipelines, embeddings, tool calls, model routing | \`**/{ai,rag,prompts,llm,embeddings,agents}/**\` |
+| **\`api-design\`** | REST/GraphQL/RPC routes, OpenAPI spec, controllers, DTOs, endpoint pagination, error payloads, webhooks | \`**/{api,routes,controllers,contracts}/**\`, \`**/*.openapi.*\`, \`**/*.swagger.*\` |
+| **\`auth-patterns\`** | Login, signup, JWT, OAuth, sessions, RBAC/ABAC permissions, guards, password hashing, CSRF, refresh tokens | \`**/{auth,middleware,session,security}/**\` |
+| **\`be-standards\`** | Backend services, business logic, background jobs, queues, caching, logging, dependency injection, server errors | \`**/*.{ts,js,mjs,cjs,go,py,rs}\` |
+| **\`db-standards\`** | Database schemas, migrations, ORM models (Prisma/Drizzle/TypeORM/SQL), indexes, transactions, queries | \`**/{schema,migrations,models,entities}/**\`, \`**/*.sql\`, \`**/prisma/**\`, \`**/drizzle/**\` |
+| **\`deployment\`** | Dockerfiles, docker-compose, CI/CD workflows (.github/workflows), Kubernetes, Terraform, health probes | \`**/{.github,deploy,infra}/**\`, \`**/Dockerfile*\`, \`**/docker-compose*\`, \`**/*.tf\` |
+| **\`fe-standards\`** | UI components, pages, client state, forms, data fetching hooks, CSS/Tailwind, accessibility, frontend performance | \`**/*.{tsx,jsx,css,scss,html,vue,svelte}\` |
+| **\`security-standards\`** | User input validation, file uploads, secrets/env vars, rate limiting, CORS, CSP headers, encryption, PII/payments | \`**/*\` |
+
+<EXECUTION_RULE>
+### CRITICAL PROTOCOL FOR ALL CODING AGENTS:
+1. **STOP BEFORE CODING**: Identify every domain and skill touched by the user's request.
+2. **LOAD SKILLS FIRST**: Read the corresponding \`skills/<domain>/SKILL.md\` file(s) BEFORE writing or modifying any code.
+3. **PRINT RECEIPT**: Output \`🧠 [DevMind Active: <loaded-skills>]\` at the very top of your initial plan or implementation response.
+4. **NO COMPROMISE**: Never bypass or skip a skill to save time or tokens. Enforce every Pre-Flight Gate and Golden Pattern.
+</EXECUTION_RULE>
 
 ---
 
@@ -147,7 +172,7 @@ $$\\text{Understand} \\longrightarrow \\text{Inspect} \\longrightarrow \\text{Ev
 
 ## Domain Standards Catalog & Progressive Disclosure
 
-devmind provides 8 specialized domain guides. When working in any of these areas, consult the referenced guide:
+DevMind provides 8 specialized domain guides. When working in any of these areas, consult the referenced guide:
 
 | Skill | Domain | Standards & Baseline | Reference Guide |
 | :--- | :--- | :--- | :--- |
@@ -157,12 +182,22 @@ For universal engineering baseline directives, consult [AGENTS.md](./references/
 
 ---
 
-## Execution Checklist
+## 🔍 Anti-Amnesia Receipt
+
+Every coding agent applying DevMind MUST output a receipt badge at the top of its response:
+\`\`\`text
+🧠 [DevMind Active: <skill-name> applied | Checked: <top 3 rules verified>]
+\`\`\`
+
+---
+
+## ✅ Post-Implementation Checklist
 
 - [ ] Evaluated requirement against Section 0 Pre-Coding Review questions.
-- [ ] Conducted Section 0 interview if architectural decisions or stack choices exist.
+- [ ] Identified all touched domains via the Mandatory Skill Routing Matrix.
+- [ ] Read corresponding \`skills/<domain>/SKILL.md\` before authoring code.
+- [ ] Printed the Anti-Amnesia Receipt badge in response.
 - [ ] Inspected existing codebase patterns and utilities before adding code.
-- [ ] Consulted relevant domain reference file(s) for technical specifications.
 - [ ] Ran automated tests, linter, and type checks.
 - [ ] Verified that error paths and edge cases are handled gracefully.
 - [ ] Confirmed zero sensitive data leaks in logs, errors, or client payloads.
@@ -293,16 +328,21 @@ async function build() {
   }
   await writeFile(join(cursorDir, '.cursorrules'), cursorRulesContent, 'utf8');
 
-  // Modular .cursor/rules/*.mdc
-  await writeFile(
-    join(cursorRulesDir, '00-agents-baseline.mdc'),
-    `---\ndescription: Universal engineering baseline for all tasks (Simplicity, Security, Verification)\nglobs: *\nalwaysApply: true\n---\n\n${agentsMd}`,
-    'utf8'
-  );
+  // Master baseline rule: devmind.mdc (and 00-agents-baseline.mdc for compatibility)
+  const masterMdc = `---
+description: DevMind Universal Engineering Baseline & Mandatory Skill Routing Matrix
+globs: *
+alwaysApply: true
+---
+
+${agentsMd}
+`;
+  await writeFile(join(cursorRulesDir, 'devmind.mdc'), masterMdc, 'utf8');
+  await writeFile(join(cursorRulesDir, '00-agents-baseline.mdc'), masterMdc, 'utf8');
 
   for (const s of skills) {
     const mdcContent = `---
-description: ${s.name} - ${s.description.slice(0, 200).replace(/\r?\n/g, ' ')}
+description: ${s.description.slice(0, 250).replace(/\r?\n/g, ' ')}
 globs: ${s.globs}
 alwaysApply: false
 ---
@@ -411,9 +451,40 @@ ${s.body}
   await writeFile(join(agentsOutDir, 'AGENTS.md'), agentsMd, 'utf8');
 
   // =========================================================================
-  // 8. Distribution Bundles & Manifest (dist/bundles)
+  // 8. Multi-Agent Drop-In Root Hooks (dist/hooks)
   // =========================================================================
-  console.log('8. Creating distribution bundles and manifest (dist/bundles)...');
+  console.log('8. Building Multi-Agent Drop-In Root Hooks (dist/hooks)...');
+  const hooksDir = join(DIST_DIR, 'hooks');
+  const hooksCursorRulesDir = join(hooksDir, '.cursor', 'rules');
+  const hooksGithubDir = join(hooksDir, '.github');
+  await mkdir(hooksCursorRulesDir, { recursive: true });
+  await mkdir(hooksGithubDir, { recursive: true });
+
+  await writeFile(join(hooksDir, 'AGENTS.md'), agentsMd, 'utf8');
+  await writeFile(join(hooksDir, 'CLAUDE.md'), claudeMd, 'utf8');
+  await writeFile(join(hooksDir, '.cursorrules'), cursorRulesContent, 'utf8');
+  await writeFile(join(hooksDir, '.windsurfrules'), windsurfRules, 'utf8');
+  await writeFile(join(hooksDir, '.clinerules'), clineRules, 'utf8');
+  await writeFile(join(hooksGithubDir, 'copilot-instructions.md'), copilotMd, 'utf8');
+  await cp(cursorRulesDir, hooksCursorRulesDir, { recursive: true });
+
+  const hooksReadme = `# DevMind Drop-In Multi-Agent Hooks
+
+Copy these configuration files into any project's root directory to immediately equip AI coding agents with DevMind's Zero-Amnesia standards:
+
+- **Universal / OpenSkills**: \`AGENTS.md\`
+- **Claude Code**: \`CLAUDE.md\`
+- **Cursor IDE**: \`.cursorrules\` and \`.cursor/rules/*.mdc\` (includes auto-injecting globs)
+- **Windsurf / Cascade**: \`.windsurfrules\`
+- **GitHub Copilot**: \`.github/copilot-instructions.md\`
+- **Cline / Roo Code**: \`.clinerules\`
+`;
+  await writeFile(join(hooksDir, 'README.md'), hooksReadme, 'utf8');
+
+  // =========================================================================
+  // 9. Distribution Bundles & Manifest (dist/bundles)
+  // =========================================================================
+  console.log('9. Creating distribution bundles and manifest (dist/bundles)...');
   const bundlesDir = join(DIST_DIR, 'bundles');
   await mkdir(bundlesDir, { recursive: true });
 
@@ -462,13 +533,24 @@ ${s.body}
   console.log('  ✔ GitHub Copilot      -> dist/github-copilot/ (.github/copilot-instructions.md & scoped)');
   console.log('  ✔ Cline / Roo Code    -> dist/cline/ (.clinerules)');
   console.log('  ✔ Universal AGENTS    -> dist/agents/ (AGENTS.md)');
+  console.log('  ✔ Multi-Agent Hooks   -> dist/hooks/ (AGENTS.md, CLAUDE.md, .cursorrules, .cursor/rules/*.mdc, .windsurfrules, .github/)');
   console.log('  ✔ Unified Bundles     -> dist/bundles/ (manifest.json & devmind-full.md)\n');
 
-  // Check for --install-gemini or --install flag
+  // Check for CLI flags
   const args = process.argv.slice(2);
   if (args.includes('--install-gemini') || args.includes('--install')) {
     await installToGemini(agUniversalDir, skills);
   }
+  if (args.includes('--install-hooks')) {
+    await installHooks(hooksDir);
+  }
+}
+
+async function installHooks(hooksDir) {
+  const targetDir = process.cwd();
+  console.log(`\nInstalling multi-agent root hooks to current directory: ${targetDir}...`);
+  await cp(hooksDir, targetDir, { recursive: true });
+  console.log('  ✔ Copied AGENTS.md, CLAUDE.md, .cursorrules, .cursor/rules/, .windsurfrules, .clinerules, and .github/ into root.\n');
 }
 
 async function installToGemini(agUniversalDir, skills) {

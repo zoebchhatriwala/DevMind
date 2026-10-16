@@ -1,33 +1,115 @@
 ---
 name: auth-patterns
 description: >-
-  Authentication and Authorization Standards for fullstack applications.
-  Activate when implementing user authentication, login/signup flows, sessions, tokens, or permissions.
-  Covers: stateful sessions vs stateless JWTs, Refresh Token Rotation with reuse detection,
-  OAuth 2.0 / OIDC Authorization Code Flow with PKCE, Argon2id password hashing, NIST SP 800-63B policies,
-  account recovery, user enumeration defense, TOTP multi-factor auth (RFC 6238), Passkeys (WebAuthn),
-  granular permissions (RBAC/ABAC), cookie security flags (httpOnly, SameSite), and CSRF defense.
+  MANDATORY TRIGGER: Invoke BEFORE touching login, signup, JWT, OAuth, sessions,
+  RBAC/permissions, middleware/guards, password hashing, CSRF, or token refresh logic.
+  File globs: **/{auth,middleware,session,security}/**
 trigger: model_decision
 ---
 
-# Authentication & Authorization Standards
+# auth-patterns: Authentication & Authorization Engineering Protocol
 
-> **Scope**: Authentication (AuthN) and Authorization (AuthZ) for fullstack web applications and APIs.
-> **Audience**: Coding agents implementing identity, login flows, token handling, session management, or access control.
-> **Security Baseline**: Aligned strictly with **NIST SP 800-63B** (Digital Identity Guidelines) and **OWASP ASVS 5.0 V2 (Authentication) & V3 (Session Management) & V4 (Access Control)**.
+> **Scope**: Authentication (AuthN) and Authorization (AuthZ) for fullstack web applications and APIs.  
+> **Security Baseline**: Aligned strictly with **NIST SP 800-63B** (Digital Identity Guidelines) and **OWASP ASVS 5.0 V2 (Authentication), V3 (Session Management) & V4 (Access Control)**.  
 > **Cross-Reference**: Cryptographic primitives, secret handling, and general security controls reference `security-standards`.
 
 ---
 
-## 0 - Before You Write: Interview the User
+## 🚨 Pre-Flight Gate (Read Before Coding)
 
-### Operational Modes: Greenfield vs. Incremental Modification
+Before authoring or modifying any identity, token, session, or authorization code, verify these 5 non-negotiable gates:
 
-Determine your operating mode before proceeding:
-- **Mode A: Greenfield / New Auth System**: If building authentication/authorization architecture, OAuth integrations, or session infrastructure from scratch, verify identity requirements with the user in a single turn.
-- **Mode B: Incremental Modification / Patch**: If adding protected routes, permissions, or fixing login/auth bugs, **DO NOT** ask the interview questionnaire. Automatically detect the existing auth model and session storage. Enforce refresh token rotation, secure cookie flags, and timing-safe checks on all changes.
+1. **Zero Tokens in Browser Storage**: NEVER store JWT access tokens, refresh tokens, or session IDs in `localStorage` or `sessionStorage` (XSS vulnerability). Browser-based auth MUST use `HttpOnly; Secure; SameSite=Lax; Path=/` cookies.
+2. **Argon2id Password Hashing**: NEVER use MD5, SHA-256, or plain text. Use Argon2id (RFC 9106) with memory $\ge 64\text{MB}$, iterations $\ge 3$, parallelism $= 1$ (or bcrypt cost $\ge 12$).
+3. **Single-Use Refresh Token Rotation**: Refresh tokens MUST be rotated on every single use. If an already-invalidated token is submitted, treat it as token theft: immediately revoke the entire refresh token family.
+4. **User Enumeration Defense**: Authentication, registration, and password-reset endpoints MUST return uniform generic error messages and execute with constant timing (never reveal whether an email exists in the database).
+5. **Multi-Tenant Ownership Verification (Anti-IDOR)**: Never authorize an action or fetch a record using only client-provided path/query params. Always scope database queries to the authenticated user's session `organizationId` / `tenantId`.
+
+### Operational Modes:
+- **Mode A: Greenfield / New Auth System**: Run the Section 0 Authentication Architecture Checklist below in a single friendly turn.
+- **Mode B: Incremental Modification / Patch**: **DO NOT** run the interview questionnaire. Automatically inspect existing session cookies, JWT helpers, and middleware. Enforce all 5 pre-flight gates directly.
 
 ---
+
+## ⚡ Golden Patterns (DO vs. DON'T)
+
+### 1. Token Storage in Browsers
+```ts
+// ❌ [DON'T] Return raw tokens for client JavaScript to put in localStorage
+app.post('/api/auth/login', async (req, res) => {
+  const { accessToken, refreshToken } = await authService.login(req.body);
+  res.json({ accessToken, refreshToken }); // Any XSS flaw steals entire session
+});
+
+// ✅ [DO] Set secure, HttpOnly, SameSite cookies from the server
+app.post('/api/auth/login', async (req, res) => {
+  const { accessToken, refreshToken } = await authService.login(req.body);
+  res.cookie('access_token', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 15 * 60 * 1000, // 15 mins
+  });
+  res.cookie('refresh_token', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/auth/refresh',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+  res.json({ success: true });
+});
+```
+
+### 2. Password Hashing
+```ts
+// ❌ [DON'T] Fast cryptographic hashes (SHA-256, MD5) are vulnerable to GPU brute-forcing
+const hash = crypto.createHash('sha256').update(password).digest('hex');
+
+// ✅ [DO] Memory-hard Argon2id hashing
+import argon2 from 'argon2';
+
+const hash = await argon2.hash(password, {
+  type: argon2.argon2id,
+  memoryCost: 65536, // 64 MB
+  timeCost: 3,
+  parallelism: 1,
+});
+
+const isValid = await argon2.verify(hash, password);
+```
+
+### 3. User Enumeration Defense
+```ts
+// ❌ [DON'T] Leaking account existence via status codes or messages
+if (!user) return res.status(404).json({ error: 'User does not exist' });
+if (!valid) return res.status(401).json({ error: 'Incorrect password' });
+
+// ✅ [DO] Generic message with dummy hash verification for constant-time response
+if (!user) {
+  await argon2.verify(DUMMY_HASH, password); // Burn CPU time to prevent timing attacks
+  return res.status(401).json({ error: 'Invalid email or password' });
+}
+const valid = await argon2.verify(user.passwordHash, password);
+if (!valid) {
+  return res.status(401).json({ error: 'Invalid email or password' });
+}
+```
+
+---
+
+## 🔍 Anti-Amnesia Receipt
+
+Whenever applying `auth-patterns`, the coding agent **MUST** output a 1-line verification receipt at the end of its response:
+
+`🧠 [DevMind: auth-patterns applied | Checked: <top 3 rules verified>]`
+
+*Example:* `🧠 [DevMind: auth-patterns applied | Checked: HttpOnly cookie storage, Argon2id hashing, timing-safe enumeration defense]`
+
+---
+
+## 0 - Before You Write: Architecture Interview
 
 ### Authentication Architecture Checklist
 
@@ -669,9 +751,11 @@ describe('Authentication & Authorization Matrix', () => {
 
 ---
 
-## 9 - Agent Execution Checklist
+## ✅ Post-Implementation Checklist
 
 Before finishing any authentication or authorization feature, verify every item:
+
+- [ ] **Anti-Amnesia Receipt**: Output 1-line verification badge `🧠 [DevMind: auth-patterns applied | Checked: ...]` in response.
 
 ### AuthN Checklist
 - [ ] Passwords hashed exclusively with **Argon2id** (preferred) or **bcrypt** ($2b$, cost $\ge 12$).

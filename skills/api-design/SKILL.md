@@ -1,33 +1,101 @@
 ---
 name: api-design
 description: >-
-  REST, GraphQL, and RPC API Architecture and Contract Design Standards.
-  Activate when designing endpoints, authoring OpenAPI specifications, or structuring client/server contracts.
-  Covers: semantic URI design (nouns, kebab-case, HTTP methods), RFC 7807 Problem Details error envelopes,
-  code-first OpenAPI 3.1 generation from Zod, IETF Idempotency-Key header implementation with Redis caching,
-  filtering, sorting, and keyset cursor query parameters, weak ETags (304 Not Modified),
-  and timestamped HMAC-SHA256 webhook signatures.
+  MANDATORY TRIGGER: Invoke BEFORE creating, modifying, or reviewing any REST/GraphQL/RPC route,
+  controller, OpenAPI spec, DTO, pagination, error payload, or webhook handler.
+  File globs: **/{api,routes,controllers,contracts}/**,**/*.openapi.*,**/*.swagger.*
 trigger: model_decision
 ---
 
-# API Architecture & Contract Design Standards
+# api-design: API Architecture & Contract Design Protocol
 
-> **Scope**: External and internal web APIs — RESTful JSON, GraphQL, and typed RPC contracts.
-> **Audience**: Coding agents authoring route handlers, OpenAPI schemas, client SDKs, or webhook integrations.
-> **Standards Baseline**: Grounded in **OpenAPI 3.1**, **RFC 7807 (Problem Details for HTTP APIs)**, **RFC 7396 (JSON Merge Patch)**, and **IETF Draft Idempotency-Key**.
+> **Scope**: External and internal web APIs — RESTful JSON, GraphQL, and typed RPC contracts.  
+> **Standards Baseline**: Grounded in **OpenAPI 3.1**, **RFC 7807 (Problem Details for HTTP APIs)**, **RFC 7396 (JSON Merge Patch)**, and **IETF Draft Idempotency-Key**.  
 > **Cross-Reference**: Transport security, rate limiting, and token verification reference `security-standards` and `auth-patterns`.
 
 ---
 
-## 0 - Before You Write: Interview the User
+## 🚨 Pre-Flight Gate (Read Before Coding)
 
-### Operational Modes: Greenfield vs. Incremental Modification
+Before designing or modifying any API route, schema, or contract, verify these 5 non-negotiable gates:
 
-Determine your operating mode before proceeding:
-- **Mode A: Greenfield / New API Contract Scaffolding**: If establishing a new API, major route hierarchy, or contract architecture from scratch, resolve contract requirements with the user in a single turn.
-- **Mode B: Incremental Modification / Patch**: If adding endpoints to existing routers or updating schema definitions, **DO NOT** ask the interview questionnaire. Conform to existing URI structure, versioning, and validation conventions. Enforce RFC 7807 problem details, pagination/filtering rules, and idempotent mutations on all new endpoints.
+1. **Semantic REST URIs (Nouns, Not Verbs)**: URIs identify resource entities with plural nouns in kebab-case (e.g. `/api/v1/payment-methods`). Never put action verbs in the path (`/getUser`, `/cancelOrder`). HTTP verbs determine actions.
+2. **RFC 7807 Problem Details Envelopes**: Never return generic `{ error: "msg" }` or 200 OK with an error payload. Errors MUST use the RFC 7807 standard (`application/problem+json`) with standard fields: `type`, `title`, `status`, `detail`, `instance`, and `invalidParams`.
+3. **Mandatory Pagination & Filtering on Lists**: Every endpoint returning a collection MUST enforce server-side pagination (offset-based with `page`/`pageSize` or keyset cursor-based with `cursor`/`limit`) plus search/attribute filtering. Unbounded queries are strictly prohibited.
+4. **State Mutation Idempotency**: All critical write endpoints (billing, order checkout, resource creation) MUST accept the `Idempotency-Key` header and use distributed cache locking (Redis) to prevent duplicate execution.
+5. **Timestamped HMAC Webhook Signatures**: All outbound and inbound webhook integrations MUST include timestamped HMAC-SHA256 signatures (`t=...,v1=...`) with constant-time comparison (`crypto.timingSafeEqual`) and 5-minute replay attack windows.
+
+### Operational Modes:
+- **Mode A: Greenfield / New API Contract Scaffolding**: Run the Section 0 API Contract Alignment Checklist below in a single friendly turn.
+- **Mode B: Incremental Modification / Patch**: **DO NOT** ask the interview questionnaire. Conform to existing URI patterns, versioning, and validation conventions. Enforce all 5 pre-flight gates directly.
 
 ---
+
+## ⚡ Golden Patterns (DO vs. DON'T)
+
+### 1. Semantic Resource URIs
+```ts
+// ❌ [DON'T] Use RPC-style verbs or camelCase paths
+// POST /api/v1/getUser
+// POST /api/v1/updateUserStatus
+// GET  /api/v1/userOrders?userId=123
+
+// ✅ [DO] Plural nouns, proper HTTP verbs, sub-resource scoping
+// GET    /api/v1/users/:id
+// PATCH  /api/v1/users/:id/status
+// GET    /api/v1/users/:id/orders
+```
+
+### 2. Error Envelopes (RFC 7807 Problem Details)
+```json
+// ❌ [DON'T] Ad-hoc error format or returning 200 OK for errors
+HTTP/1.1 200 OK
+{ "success": false, "error": "Invalid email address", "code": 400 }
+
+// ✅ [DO] RFC 7807 Problem Details with Content-Type: application/problem+json
+HTTP/1.1 422 Unprocessable Content
+Content-Type: application/problem+json
+
+{
+  "type": "https://api.example.com/errors/validation-failed",
+  "title": "Validation Failed",
+  "status": 422,
+  "detail": "The request payload failed schema validation.",
+  "instance": "/api/v1/users/usr_123/contact-email",
+  "invalidParams": [
+    { "name": "email", "reason": "Must be a valid corporate email domain." }
+  ]
+}
+```
+
+### 3. Mutation Idempotency
+```ts
+// ❌ [DON'T] Execute mutating writes blindly without idempotency support
+app.post('/api/v1/charges', async (req, res) => {
+  const charge = await paymentGateway.charge(req.body); // Duplicate network retry causes double charge!
+  res.json(charge);
+});
+
+// ✅ [DO] Atomic Idempotency-Key check with Redis lock
+app.post('/api/v1/charges', idempotencyMiddleware({ ttlSeconds: 86400 }), async (req, res) => {
+  const charge = await paymentGateway.charge(req.body);
+  res.status(201).json(charge);
+});
+```
+
+---
+
+## 🔍 Anti-Amnesia Receipt
+
+Whenever applying `api-design`, the coding agent **MUST** output a 1-line verification receipt at the end of its response:
+
+`🧠 [DevMind: api-design applied | Checked: <top 3 rules verified>]`
+
+*Example:* `🧠 [DevMind: api-design applied | Checked: RFC 7807 problem details, plural REST URIs, pagination contract verified]`
+
+---
+
+## 0 - Before You Write: Architecture Interview
 
 ### API Contract Alignment Checklist
 
@@ -524,10 +592,11 @@ If building GraphQL APIs:
 
 ---
 
-## 9 - Agent Execution Checklist
+## ✅ Post-Implementation Checklist
 
 Before completing an API contract, route handler, or client SDK:
 
+- [ ] **Anti-Amnesia Receipt**: Output 1-line verification badge `🧠 [DevMind: api-design applied | Checked: ...]` in response.
 - [ ] All URIs use plural nouns in kebab-case; verbs eliminated from paths.
 - [ ] Correct HTTP methods used (`GET` safe & idempotent; `PATCH` for partial; `PUT` for complete).
 - [ ] Errors conform strictly to **RFC 7807 Problem Details** format (`application/problem+json`).

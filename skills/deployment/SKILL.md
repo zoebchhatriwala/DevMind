@@ -1,34 +1,115 @@
 ---
 name: deployment
 description: >-
-  CI/CD, Containerization, Infrastructure, and Production Deployment Standards.
-  Activate when writing Dockerfiles, GitHub Actions workflows, reverse proxy configs, or deploy scripts.
-  Covers: hardened multi-stage Docker builds (non-root user, dumb-init, layer caching),
-  GitHub Actions CI/CD pipelines (PR quality gates, dependency caching, concurrency control),
-  cloud deployments via OIDC (zero static credentials), zero-downtime rolling updates,
-  health probes (/healthz/live vs /healthz/ready), graceful shutdown (SIGTERM draining), Caddy/Nginx reverse proxy,
-  and 12-factor secrets management.
+  MANDATORY TRIGGER: Invoke BEFORE creating or editing Dockerfiles, docker-compose,
+  CI/CD workflows (.github/workflows), Kubernetes/Terraform, env configs, or healthcheck endpoints.
+  File globs: **/{.github,deploy,infra}/**,**/Dockerfile*,**/docker-compose*,**/*.tf
 trigger: model_decision
 ---
 
-# Deployment, CI/CD & Infrastructure Standards
+# deployment: CI/CD, Containerization & Infrastructure Protocol
 
-> **Scope**: Containerization, automated CI/CD pipelines, cloud orchestration, and production release safety.
-> **Audience**: Coding agents authoring Dockerfiles, GitHub Actions, server configurations, or release scripts.
-> **Security Baseline**: Aligned with **NIST SSDF SP 800-218 (PS.1, PW.7, PW.8, RV.1)** and **CIS Docker / Kubernetes Benchmarks**.
+> **Scope**: Containerization, automated CI/CD pipelines, cloud orchestration, and production release safety.  
+> **Security Baseline**: Aligned with **NIST SSDF SP 800-218 (PS.1, PW.7, PW.8, RV.1)** and **CIS Docker / Kubernetes Benchmarks**.  
 > **Cross-Reference**: Image vulnerability scanning and secret management reference `security-standards`.
 
 ---
 
-## 0 - Before You Write: Interview the User
+## 🚨 Pre-Flight Gate (Read Before Coding)
 
-### Operational Modes: Greenfield vs. Incremental Modification
+Before authoring Dockerfiles, workflows, or infrastructure configs, verify these 5 non-negotiable gates:
 
-Determine your operating mode before proceeding:
-- **Mode A: Greenfield / New Infrastructure Scaffolding**: If creating Dockerfiles, CI/CD pipelines, or IaC configs from scratch, resolve deployment requirements with the user in a single turn.
-- **Mode B: Incremental Modification / Patch**: If editing existing workflows, fixing Docker builds, or tuning deployment scripts, **DO NOT** ask the interview questionnaire. Conform to existing CI/CD and container platforms. Enforce rootless multi-stage builds, non-root users, secret protection, and vulnerability scanning on all changes.
+1. **Non-Root Execution in Containers**: Production images MUST run under an unprivileged user (`USER node` or dedicated `appuser`). Running containers as `root` is strictly prohibited.
+2. **Hardened Multi-Stage Builds**: Build tools, devDependencies, and source code MUST NOT leak into the runtime image. Use multi-stage builds with frozen lockfiles (`npm ci` / `pnpm install --frozen-lockfile`).
+3. **PID 1 Signal Handling**: Node.js cannot properly reap zombie processes or handle Linux `SIGTERM` as PID 1. Containers MUST use an init system (`dumb-init` or `tini`) and implement graceful connection draining.
+4. **Zero Static Cloud Credentials**: CI/CD pipelines MUST authenticate to cloud providers (AWS, GCP, Azure) via OpenID Connect (OIDC) federation. Storing long-lived access keys in secrets is forbidden.
+5. **Decoupled Health Probes**: Always separate `/healthz/live` (process liveness) from `/healthz/ready` (dependency and DB readiness) to prevent cascading restart loops.
+
+### Operational Modes:
+- **Mode A: Greenfield / New Infrastructure Scaffolding**: Run the Section 0 Infrastructure & Deployment Checklist below in a single friendly turn.
+- **Mode B: Incremental Modification / Patch**: **DO NOT** ask the interview questionnaire. Automatically detect container, cloud, and CI/CD conventions. Enforce all 5 pre-flight gates directly.
 
 ---
+
+## ⚡ Golden Patterns (DO vs. DON'T)
+
+### 1. Hardened Multi-Stage Dockerfile
+```dockerfile
+# ❌ [DON'T] Single-stage bloated image running as root with devDependencies
+FROM node:20
+WORKDIR /app
+COPY . .
+RUN npm install
+CMD ["node", "src/index.js"]
+
+# ✅ [DO] Multi-stage build with non-root user and minimal runtime image
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+FROM node:20-alpine AS runner
+RUN apk add --no-cache dumb-init && addgroup -g 1001 appgroup && adduser -u 1001 -G appgroup -s /bin/sh -D appuser
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --chown=appuser:appgroup . .
+USER appuser
+EXPOSE 3000
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "dist/index.js"]
+```
+
+### 2. CI/CD Cloud Authentication (OIDC vs. Static Keys)
+```yaml
+# ❌ [DON'T] Hardcode long-lived access keys in secrets
+- name: Configure AWS
+  uses: aws-actions/configure-aws-credentials@v4
+  with:
+    aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+    aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+# ✅ [DO] Zero-static-credential OpenID Connect (OIDC) assume-role
+permissions:
+  id-token: write
+  contents: read
+
+- name: Configure AWS via OIDC
+  uses: aws-actions/configure-aws-credentials@v4
+  with:
+    role-to-assume: arn:aws:iam::123456789012:role/github-actions-deploy
+    aws-region: us-east-1
+```
+
+### 3. Graceful Shutdown & Health Probes
+```ts
+// ❌ [DON'T] Abrupt exit without draining active requests
+process.on('SIGTERM', () => process.exit(0));
+
+// ✅ [DO] Drain active connections and close database pools on SIGTERM
+process.on('SIGTERM', async () => {
+  logger.info('SIGTERM received: closing HTTP server and draining pools...');
+  server.close(async () => {
+    await db.destroy();
+    logger.info('Graceful shutdown complete');
+    process.exit(0);
+  });
+  setTimeout(() => process.exit(1), 10000); // 10s force kill timeout
+});
+```
+
+---
+
+## 🔍 Anti-Amnesia Receipt
+
+Whenever applying `deployment`, the coding agent **MUST** output a 1-line verification receipt at the end of its response:
+
+`🧠 [DevMind: deployment applied | Checked: <top 3 rules verified>]`
+
+*Example:* `🧠 [DevMind: deployment applied | Checked: Rootless container user, multi-stage layer caching, dumb-init PID 1 handler]`
+
+---
+
+## 0 - Before You Write: Architecture Interview
 
 ### Infrastructure & Deployment Checklist
 
@@ -544,9 +625,11 @@ export const logger = pino({
 
 ---
 
-## 8 - Agent Execution Checklist
+## ✅ Post-Implementation Checklist
 
 Before finishing any deployment, infrastructure, or containerization task, verify:
+
+- [ ] **Anti-Amnesia Receipt**: Output 1-line verification badge `🧠 [DevMind: deployment applied | Checked: ...]` in response.
 
 ### Container Checklist
 - [ ] Base image uses minimal Alpine or Distroless image (`node:20-alpine`).

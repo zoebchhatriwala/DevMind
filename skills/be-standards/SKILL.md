@@ -1,36 +1,102 @@
 ---
 name: be-standards
 description: >-
-  Backend Engineering Standards for fullstack applications.
-  Activate when building, reviewing, or scaffolding backend code (Node.js, Express, Fastify, NestJS, Hono, Bun).
-  Covers: clean architecture (controllers, services, repositories, DTOs), TypeScript strict mode,
-  Zod input validation, global typed error handling (RFC 7807), pagination, authentication/authorization
-  middleware, Pino structured logging, Vitest/Supertest integration testing, and OpenAPI generation.
-  Delegates deep database/migration rules to db-standards and security rules to security-standards.
+  MANDATORY TRIGGER: Invoke BEFORE writing or refactoring backend services,
+  business logic, background jobs, queues, caching, logging, dependency injection, or server error handling.
+  File globs: **/*.{ts,js,mjs,cjs,go,py,rs}
 trigger: model_decision
 ---
 
-# Backend Engineering Standards
+# be-standards: Backend Engineering Protocol
 
-> **Scope**: Any Node.js / Bun / Deno backend  -  REST, GraphQL, tRPC, or hybrid.
-> **Audience**: Coding agents scaffolding or modifying backend code.
-> **Security**: This skill covers backend structure and patterns. All security
-> rules (auth, secrets, crypto, logging, supply chain, etc.) are in the
-> companion `security-standards` skill  -  read it in full alongside this one.
-> **How to use**: Read fully before writing any backend code. Resolve every
-> **ASK** item with the user before generating files.
+> **Scope**: Any Node.js / Bun / Deno backend  -  REST, GraphQL, tRPC, or background workers.  
+> **Security & Database Delegation**: Deep database schema & migration rules delegate to `db-standards`; cryptographic and identity controls reference `security-standards` and `auth-patterns`.  
+> **Core Principle**: Enforce strict separation of concerns, zero `any` types, runtime validation at boundaries, structured logging, and robust typed error handling.
 
 ---
 
-## 0 - Before You Write: Interview the User
+## 🚨 Pre-Flight Gate (Read Before Coding)
 
-### Operational Modes: Greenfield vs. Incremental Modification
+Before authoring or modifying any backend service, controller, repository, or worker, verify these 5 non-negotiable gates:
 
-Determine your operating mode before proceeding:
-- **Mode A: Greenfield / New Service Scaffolding**: If building a new service, major domain module, or repository from scratch, ask the questions below in a single, friendly conversation turn. Group by theme.
-- **Mode B: Incremental Modification / Patch**: If modifying, bugfixing, or adding endpoints to an existing backend, **DO NOT** ask the interview questionnaire. Automatically detect runtime, ORM, framework, and logging conventions from the repository. All architectural layers (clean architecture, DTOs, RFC 7807 errors, Pino logging, and integration tests) remain strictly mandatory.
+1. **Strict TypeScript (Zero `any`)**: No raw `any` types, implicit anys, or `@ts-ignore` comments. External payloads (`req.body`, `req.query`, `req.params`) MUST be validated at runtime with Zod schemas before touching service logic.
+2. **Clean Layered Architecture**:
+   - **Controllers**: HTTP transport only (status codes, headers, cookie setting). NEVER query databases directly or run business logic here.
+   - **Services**: Pure business logic, framework-agnostic. NEVER import Express/Fastify `req` or `res`.
+   - **Repositories**: Data access and ORM queries only. Services consume repositories via dependency injection.
+3. **Structured Pino Logging with Redaction**: NEVER use `console.log` in backend code. Emit structured JSON via `pino` with request correlation IDs (`reqId`). Configure `pino.redact` to scrub sensitive fields (`password`, `authorization`, `creditCard`).
+4. **Centralized RFC 7807 Error Handling**: Throw typed domain exceptions (`AppError`, `NotFoundError`, `UnauthorizedError`). Catch globally in error middleware and format as client-safe RFC 7807 Problem Details. Never leak raw SQL errors or stack traces to clients.
+5. **Bounded Queries & Pagination**: Every endpoint or query returning a dynamic list MUST enforce pagination (offset or cursor) and filtering. Unbounded queries are prohibited.
+
+### Operational Modes:
+- **Mode A: Greenfield / New Service Scaffolding**: Run the Section 0 Backend Stack Alignment Checklist below in a single friendly turn.
+- **Mode B: Incremental Modification / Patch**: **DO NOT** ask the interview questionnaire. Automatically detect runtime, ORM, and framework conventions. Enforce all 5 pre-flight gates directly.
 
 ---
+
+## ⚡ Golden Patterns (DO vs. DON'T)
+
+### 1. Clean Layering vs. Fat Controller
+```ts
+// ❌ [DON'T] Direct database queries and business logic inside the HTTP route
+app.post('/api/users', async (req, res) => {
+  const existing = await db.query('SELECT * FROM users WHERE email = $1', [req.body.email]);
+  if (existing.rows.length) return res.status(400).send('Email taken');
+  const user = await db.query('INSERT INTO users ...');
+  res.json(user);
+});
+
+// ✅ [DO] Controller -> Service -> Repository with DTO validation
+export class UserController {
+  constructor(private userService: UserService) {}
+
+  async createUser(req: Request, res: Response, next: NextFunction) {
+    try {
+      const dto = CreateUserSchema.parse(req.body);
+      const user = await this.userService.register(dto);
+      res.status(201).json(UserResponseDto.from(user));
+    } catch (err) {
+      next(err);
+    }
+  }
+}
+```
+
+### 2. Structured Logging vs. console.log
+```ts
+// ❌ [DON'T] Bare console.log leaking PII and lacking context
+console.log('User created:', user);
+
+// ✅ [DO] Structured Pino logging with correlation ID and redacted secrets
+logger.info({
+  event: 'user_registered',
+  userId: user.id,
+  reqId: req.id,
+}, 'User account created successfully');
+```
+
+### 3. Runtime Input Validation
+```ts
+// ❌ [DON'T] Blindly trust req.body with type assertion
+const data = req.body as CreateUserInput; // Unsafe at runtime!
+
+// ✅ [DO] Parse and strip untrusted properties with Zod
+const validated = CreateUserSchema.parse(req.body);
+```
+
+---
+
+## 🔍 Anti-Amnesia Receipt
+
+Whenever applying `be-standards`, the coding agent **MUST** output a 1-line verification receipt at the end of its response:
+
+`🧠 [DevMind: be-standards applied | Checked: <top 3 rules verified>]`
+
+*Example:* `🧠 [DevMind: be-standards applied | Checked: Clean architecture layers, Zod validation, Pino structured logging]`
+
+---
+
+## 0 - Before You Write: Architecture Interview
 
 ### Backend Stack Alignment Checklist
 
@@ -1257,10 +1323,11 @@ Backend security checklist:
 
 ---
 
-## Agent Execution Checklist
+## ✅ Post-Implementation Checklist
 
 Before marking any backend task complete:
 
+- [ ] **Anti-Amnesia Receipt**: Output 1-line verification badge `🧠 [DevMind: be-standards applied | Checked: ...]` in response.
 - [ ] All section 0 ASK items answered and stack summary confirmed by user
 - [ ] TypeScript strict mode enabled; zero any usage
 - [ ] config.ts validates all env vars at startup with Zod

@@ -40,12 +40,41 @@ async function validateSkillFile(skillName, skillFile) {
   if (!yaml.includes('description:')) reportError(skillName, 'Frontmatter missing "description" field');
   if (!yaml.includes('trigger:')) reportError(skillName, 'Frontmatter missing "trigger" field');
 
-  if (!/## 0\s*[-–—]\s*Before You Write/i.test(content)) {
-    reportError(skillName, 'SKILL.md missing "## 0 - Before You Write" section');
+  // 1. Mandatory Trigger Check
+  const descMatch = yaml.match(/description:\s*(?:>-\s*)?["']?([^"'\r\n]+)/);
+  if (!descMatch || !descMatch[1].trim().startsWith('MANDATORY TRIGGER:')) {
+    reportError(skillName, 'Frontmatter description MUST begin with "MANDATORY TRIGGER:"');
   }
 
-  if (!content.includes('Checklist')) {
-    reportError(skillName, 'SKILL.md missing an execution checklist');
+  // 2. Protocol Sections Check
+  if (!/##\s*🚨?\s*Pre-Flight Gate/i.test(content)) {
+    reportError(skillName, 'Missing "## 🚨 Pre-Flight Gate" section');
+  }
+
+  if (!/##\s*⚡?\s*Golden Patterns/i.test(content)) {
+    reportError(skillName, 'Missing "## ⚡ Golden Patterns" section');
+  }
+
+  if (!/##\s*🔍?\s*Anti-Amnesia Receipt/i.test(content)) {
+    reportError(skillName, 'Missing "## 🔍 Anti-Amnesia Receipt" section');
+  }
+
+  if (!/##\s*✅?\s*Post-Implementation Checklist/i.test(content) && !content.includes('Checklist')) {
+    reportError(skillName, 'Missing "## ✅ Post-Implementation Checklist" section');
+  }
+
+  // 3. Receipt Badge Format Check
+  if (!content.includes('🧠 [DevMind:')) {
+    reportError(skillName, 'Missing Anti-Amnesia badge format: 🧠 [DevMind: <skill-name> applied...]');
+  }
+
+  // 4. Token & Scannability Check
+  const words = content.split(/\s+/).length;
+  if (words < 100) {
+    reportError(skillName, 'SKILL.md content is empty or incomplete');
+  }
+  if (words > 15000) {
+    reportError(skillName, `SKILL.md word count (${words}) is excessive; keep concise to avoid context exhaustion`);
   }
 
   return true;
@@ -98,10 +127,12 @@ async function validateDist() {
   }
 
   // 4. Cursor validation
-  if (!existsSync(join(DIST_DIR, 'cursor', '.cursorrules')) || !existsSync(join(DIST_DIR, 'cursor', '.cursor', 'rules', '00-agents-baseline.mdc'))) {
+  if (!existsSync(join(DIST_DIR, 'cursor', '.cursorrules')) || 
+      !existsSync(join(DIST_DIR, 'cursor', '.cursor', 'rules', 'devmind.mdc')) ||
+      !existsSync(join(DIST_DIR, 'cursor', '.cursor', 'rules', '00-agents-baseline.mdc'))) {
     reportError('cursor', 'Missing Cursor .cursorrules or .cursor/rules/*.mdc');
   } else {
-    console.log('  ✔ [cursor]: Rules and .mdc modules verified.');
+    console.log('  ✔ [cursor]: Rules and devmind.mdc verified.');
   }
 
   // 5. Windsurf validation
@@ -132,7 +163,18 @@ async function validateDist() {
     console.log('  ✔ [cline]: .clinerules verified.');
   }
 
-  // 9. Bundles validation
+  // 9. Multi-Agent Hooks validation
+  const hooksDir = join(DIST_DIR, 'hooks');
+  if (!existsSync(join(hooksDir, 'AGENTS.md')) || 
+      !existsSync(join(hooksDir, 'CLAUDE.md')) ||
+      !existsSync(join(hooksDir, '.cursorrules')) ||
+      !existsSync(join(hooksDir, '.cursor', 'rules', 'devmind.mdc'))) {
+    reportError('hooks', 'Missing drop-in multi-agent hooks in dist/hooks');
+  } else {
+    console.log('  ✔ [hooks]: Multi-agent drop-in root hooks verified.');
+  }
+
+  // 10. Bundles validation
   if (!existsSync(join(DIST_DIR, 'bundles', 'manifest.json')) || !existsSync(join(DIST_DIR, 'bundles', 'devmind-full.md'))) {
     reportError('bundles', 'Missing bundle manifest or devmind-full.md');
   } else {
@@ -149,6 +191,14 @@ async function validate() {
     errorsCount++;
   } else {
     const agentsContent = await readFile(AGENTS_MD_PATH, 'utf8');
+    if (!agentsContent.includes('Mandatory Skill Routing Matrix')) {
+      console.error('✖ AGENTS.md is missing Mandatory Skill Routing Matrix');
+      errorsCount++;
+    }
+    if (!agentsContent.includes('<EXECUTION_RULE>')) {
+      console.error('✖ AGENTS.md is missing <EXECUTION_RULE> block');
+      errorsCount++;
+    }
     if (!agentsContent.includes('Mandatory Pre-Coding Review')) {
       console.error('✖ AGENTS.md is missing Section 1: Mandatory Pre-Coding Review');
       errorsCount++;

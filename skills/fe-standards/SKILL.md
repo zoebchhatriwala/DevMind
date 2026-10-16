@@ -1,22 +1,118 @@
 ---
 name: fe-standards
 description: >-
-  Frontend Engineering Standards for fullstack web applications.
-  Activate when building, reviewing, or scaffolding frontend code (React, Next.js, Vite, Remix).
-  Covers: UI/UX consistency, reusable components (Radix, shadcn/ui), Tailwind/CSS tokens,
-  TypeScript strict mode, SWR/TanStack data fetching, Zod form validation, table pagination,
-  custom accessible modals (no window.alert/confirm), Vitest/RTL testing, responsive design,
-  and frontend security (OWASP ASVS XSS/CSP controls).
+  MANDATORY TRIGGER: Invoke BEFORE building or editing UI components, pages,
+  client state, forms, data fetching hooks, CSS/Tailwind, accessibility, or frontend performance.
+  File globs: **/*.{tsx,jsx,css,scss,html,vue,svelte}
 trigger: model_decision
 ---
 
-# Frontend Engineering Standards
+# fe-standards: Frontend Engineering Protocol
 
-> **Scope**: Any web frontend  -  React, Next.js, Vite, Remix, or vanilla.
-> **Audience**: Coding agents scaffolding or modifying frontend code.
-> **How to use**: Read this skill fully before writing any frontend code. Follow
-> every section. When decisions are left open (marked **ASK**), interview the
-> user before proceeding.
+> **Scope**: Any web frontend  -  React, Next.js, Vite, Remix, or modern UI framework.  
+> **Accessibility Baseline**: **WCAG 2.2 AA** non-negotiable standard across all interactive controls and typography.  
+> **Core Principle**: Deliver accessible, token-driven, resilient UI with zero emojis as icons, verified optical alignment, human empathetic copy, and zero agent amnesia.
+
+---
+
+## 🚨 Pre-Flight Gate (Read Before Coding)
+
+Before building or editing any UI component, page, hook, or stylesheet, verify these 5 non-negotiable gates:
+
+1. **Strictly Zero Raw Emojis as UI Icons**: NEVER use raw Unicode emojis (`⚠️`, `❌`, `✅`, `🔥`, `🗑️`, `✏️`) as UI icons, button graphics, or status indicators. In greenfield projects, ASK the user which vector icon library they prefer (Lucide React, Heroicons, Radix Icons, Phosphor, FontAwesome, or other; never assume a default).
+2. **Optical Icon Alignment Contract**: All icons paired with text MUST be centered using flexbox (`display: inline-flex; align-items: center; gap: var(--space-2);` or Tailwind `inline-flex items-center gap-2`), normalized `line-height: 1`, explicit sizing (`--icon-sm` / `w-4 h-4`), and `flex-shrink: 0`. Decorative icons MUST have `aria-hidden="true"`; icon-only buttons MUST have `aria-label` and `title`.
+3. **Design Tokens First (`tokens.css`)**: Scaffold or inspect `tokens.css` before writing components. Never hardcode arbitrary hex colors (`#1a73e8`), random margins (`17px`), or arbitrary font sizes. Use centralized CSS custom properties.
+4. **No Native Browser Dialogs**: NEVER invoke `window.alert()`, `confirm()`, or `prompt()`. All notifications and confirmations must use accessible custom modals (`<ConfirmDialog>`, `<Toast>`) with focus traps and keyboard navigation.
+5. **State Consistency (8-State Matrix)**: Every interactive element MUST define behavior for: default, hover, focus-visible, active, disabled, loading, error, and success states.
+
+### Operational Modes:
+- **Mode A: Greenfield / New Feature Scaffolding**: Run through the Section 0 Stack Alignment Checklist below in a single friendly turn.
+- **Mode B: Incremental Modification / Patch**: **DO NOT** run the interview questionnaire. Automatically inspect existing tokens, components, and libraries. Enforce all 5 pre-flight gates directly.
+
+---
+
+## ⚡ Golden Patterns (DO vs. DON'T)
+
+### 1. Vector Icons vs. Raw Emojis
+```tsx
+// ❌ [DON'T] Raw emojis and missing alignment or accessible labels
+<button onClick={handleDelete}>
+  🗑️ Delete
+</button>
+<button onClick={onClose}>❌</button>
+
+// ✅ [DO] Vector SVG icon, optical flex alignment, accessible attributes
+import { Trash2, X } from 'lucide-react'; // Or user-selected icon library
+
+<Button
+  variant="danger"
+  onClick={handleDelete}
+  leadingIcon={<Trash2 size={16} aria-hidden="true" className="shrink-0" />}
+>
+  Delete project
+</Button>
+
+<button
+  type="button"
+  onClick={onClose}
+  className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"
+  aria-label="Close dialog"
+  title="Close dialog"
+>
+  <X size={18} aria-hidden="true" className="shrink-0" />
+</button>
+```
+
+### 2. Dialogs & Alerts
+```tsx
+// ❌ [DON'T] Obnoxious blocking native browser dialogs
+if (window.confirm('Delete this user?')) {
+  await deleteUser();
+}
+
+// ✅ [DO] Accessible custom ConfirmDialog with focus trap and danger variant
+<ConfirmDialog
+  isOpen={isConfirmOpen}
+  title="Delete project"
+  description="Are you sure you want to delete this project? All associated resources and audit logs will be permanently removed. This action cannot be undone."
+  confirmLabel="Delete project"
+  confirmVariant="danger"
+  isLoading={isDeleting}
+  onConfirm={handleDelete}
+  onCancel={() => setIsConfirmOpen(false)}
+/>
+```
+
+### 3. Accessible Form Fields
+```tsx
+// ❌ [DON'T] Placeholder-only input without visible label
+<input placeholder="Enter your email" value={email} onChange={...} />
+
+// ✅ [DO] Semantic FormField with visible label, helper text, and accessible error
+<FormField
+  id="user-email"
+  label="Email address"
+  helperText="We'll send your invoice receipts and confirmations here."
+  error={errors.email?.message}
+>
+  <Input
+    id="user-email"
+    type="email"
+    autoComplete="email"
+    placeholder="alex@company.com"
+  />
+</FormField>
+```
+
+---
+
+## 🔍 Anti-Amnesia Receipt
+
+Whenever applying `fe-standards`, the coding agent **MUST** output a 1-line verification receipt at the end of its response:
+
+`🧠 [DevMind: fe-standards applied | Checked: <top 3 rules verified>]`
+
+*Example:* `🧠 [DevMind: fe-standards applied | Checked: Zero emojis used, user icon library aligned, WCAG 2.2 AA contrast verified]`
 
 ---
 
@@ -1301,10 +1397,11 @@ Before shipping any frontend feature:
 
 ---
 
-## Agent Execution Checklist
+## ✅ Post-Implementation Checklist
 
 Before marking any frontend task complete, verify every item:
 
+- [ ] **Anti-Amnesia Receipt**: Output 1-line verification badge `🧠 [DevMind: fe-standards applied | Checked: ...]` in response.
 - [ ] All Section 0 **ASK** items answered and stack summary confirmed by user
 - [ ] TypeScript strict mode enabled; zero `any` usage
 - [ ] Semantic HTML used: native buttons, forms, inputs, dialogs before custom constructs

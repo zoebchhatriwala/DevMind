@@ -1,33 +1,90 @@
 ---
 name: db-standards
 description: >-
-  Database and Migration Engineering Standards for fullstack projects.
-  Activate when designing schemas, writing migrations, optimizing queries, or configuring data layers (PostgreSQL, MySQL, SQLite).
-  Covers: schema modeling (UUIDv7 vs BigInt, TIMESTAMPTZ, partial unique indexes), zero-downtime migrations
-  (Expand-Contract pattern, CONCURRENTLY indexing), auto-generation rules (Drizzle Kit, Prisma Migrate),
-  indexing strategy (B-Tree, GIN, ESR rule), keyset/cursor pagination, N+1 query elimination,
-  transactions & concurrency (isolation levels, SKIP LOCKED), PgBouncer connection pooling, and Testcontainers.
+  MANDATORY TRIGGER: Invoke BEFORE creating or editing database schemas, migrations,
+  ORM models (Prisma/Drizzle/TypeORM/SQL), indexes, transactions, or complex queries.
+  File globs: **/{schema,migrations,models,entities}/**,**/*.sql,**/prisma/**,**/drizzle/**
 trigger: model_decision
 ---
 
-# Database & Migration Engineering Standards
+# db-standards: Database & Migration Engineering Protocol
 
-> **Scope**: Relational and document databases — PostgreSQL (primary standard), MySQL, SQLite, MongoDB.
-> **Audience**: Coding agents designing schemas, writing migrations, executing queries, or configuring data layers.
-> **Security**: This skill enforces structural, performance, and transactional safety. Cryptographic storage, secret handling, and threat models reference the companion `security-standards` skill.
-> **How to use**: Read before proposing schema changes, writing migrations, or authoring data queries. Resolve section 0 interview questions before generating migration files.
+> **Scope**: Relational and document databases — PostgreSQL (primary standard), MySQL, SQLite, MongoDB.  
+> **Security & Secret Delegation**: Cryptographic storage, credentials, and threat models reference `security-standards`.  
+> **Core Principle**: Enforce zero-downtime expand-contract migrations, time-sortable primary keys (UUIDv7/BigInt), indexed foreign keys, elimination of N+1 queries, and keyset cursor pagination.
+
+---
+
+## 🚨 Pre-Flight Gate (Read Before Coding)
+
+Before authoring schemas, migrations, ORM models, or database queries, verify these 5 non-negotiable gates:
+
+1. **Zero-Downtime Expand-Contract Migrations**: NEVER drop, rename, or add `NOT NULL` without default to existing columns in a single step. Always follow the 5-phase Expand-Contract pattern (Expand -> Dual-write -> Backfill -> Contract).
+2. **Non-Blocking Index Creation**: NEVER execute bare `CREATE INDEX` on populated tables. In PostgreSQL, always use `CREATE INDEX CONCURRENTLY` outside of a transaction block, with explicit `lock_timeout`.
+3. **Elimination of N+1 Queries**: NEVER query the database inside a `for`/`map` loop. Always batch query with `WHERE id IN (...)`, relational joins, or DataLoader.
+4. **Time-Sortable Primary Keys**: Primary keys MUST be UUIDv7 (time-ordered, distributed) or BigInt identity. NEVER use random UUIDv4 as PK on high-insert tables (prevents B-Tree page splits and cache degradation).
+5. **Keyset Cursor Pagination**: Unbounded collections MUST use keyset cursor pagination (`WHERE (created_at, id) < (cursor_time, cursor_id)`). Large `OFFSET` queries ($O(N)$ table scans) are strictly prohibited in production hot paths.
+
+### Operational Modes:
+- **Mode A: Greenfield / New Schema Scaffolding**: Run the Section 0 Database Architecture Checklist below in a single friendly turn.
+- **Mode B: Incremental Modification / Patch**: **DO NOT** ask the interview questionnaire. Automatically detect the ORM/migration tool from configuration. Enforce all 5 pre-flight gates directly.
 
 ---
 
-## 0 - Before You Write: Interview the User
+## ⚡ Golden Patterns (DO vs. DON'T)
 
-### Operational Modes: Greenfield vs. Incremental Modification
+### 1. N+1 Query Elimination
+```ts
+// ❌ [DON'T] Execute queries inside a loop
+const users = await db.select().from(usersTable);
+for (const user of users) {
+  user.posts = await db.select().from(postsTable).where(eq(postsTable.userId, user.id)); // N+1 queries!
+}
 
-Determine your operating mode before proceeding:
-- **Mode A: Greenfield / New Schema Scaffolding**: If designing initial database schemas, selecting ORMs, or initializing a database, ask the user these architectural questions in a single friendly turn.
-- **Mode B: Incremental Modification / Patch**: If adding migrations, columns, or querying an existing database, **DO NOT** run the questionnaire. Automatically detect the ORM/migration tool from configuration. Enforce zero-downtime expand-contract rules, indexed foreign keys, keyset pagination, and N+1 elimination on all changes.
+// ✅ [DO] Batch fetch with relational join or IN clause
+const usersWithPosts = await db.query.usersTable.findMany({
+  with: { posts: true },
+});
+```
+
+### 2. Zero-Downtime Column Renaming / Deprecation
+```sql
+-- ❌ [DON'T] Rename column directly on active production table (breaks running app replicas)
+ALTER TABLE users RENAME COLUMN full_name TO display_name;
+
+-- ✅ [DO] Expand-Contract Phase 1: Add new nullable column
+ALTER TABLE users ADD COLUMN display_name VARCHAR(255);
+-- Phase 2: Application dual-writes to both columns
+-- Phase 3: Backfill historical rows in batches
+-- Phase 4: Application reads from display_name
+-- Phase 5: Drop full_name once all replicas are updated
+```
+
+### 3. Keyset Cursor Pagination vs. Heavy Offset
+```sql
+-- ❌ [DON'T] High offset pagination (scans and discards 100,000 rows)
+SELECT * FROM audit_logs ORDER BY created_at DESC LIMIT 20 OFFSET 100000;
+
+-- ✅ [DO] Keyset cursor pagination (uses index directly)
+SELECT * FROM audit_logs
+WHERE (created_at, id) < ($cursor_time, $cursor_id)
+ORDER BY created_at DESC, id DESC
+LIMIT 20;
+```
 
 ---
+
+## 🔍 Anti-Amnesia Receipt
+
+Whenever applying `db-standards`, the coding agent **MUST** output a 1-line verification receipt at the end of its response:
+
+`🧠 [DevMind: db-standards applied | Checked: <top 3 rules verified>]`
+
+*Example:* `🧠 [DevMind: db-standards applied | Checked: Zero-downtime expand-contract, N+1 query elimination, foreign key indexes]`
+
+---
+
+## 0 - Before You Write: Architecture Interview
 
 ### Database Architecture Checklist
 
@@ -975,9 +1032,11 @@ ALTER TABLE job_queue SET (
 
 ---
 
-## 12 - Agent Execution Checklist
+## ✅ Post-Implementation Checklist
 
 Apply this verification checklist before finishing any database schema, migration, or query task.
+
+- [ ] **Anti-Amnesia Receipt**: Output 1-line verification badge `🧠 [DevMind: db-standards applied | Checked: ...]` in response.
 
 ### Pre-DDL Checklist
 - [ ] Schema changes made in ORM/schema files first; migrations auto-generated via CLI (`drizzle-kit generate`, `prisma migrate dev --create-only`), NEVER typed manually from scratch.

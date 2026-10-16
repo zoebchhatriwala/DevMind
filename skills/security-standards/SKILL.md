@@ -1,35 +1,89 @@
 ---
 name: security-standards
 description: >-
-  Comprehensive Application Security Standards grounded in NIST SSDF SP 800-218 v1.1 and OWASP ASVS 5.0.
-  Activate when implementing security controls, conducting security reviews, or auditing code.
-  Covers: authentication, authorization, access control (RBAC/ABAC), input validation, SQL injection,
-  XSS prevention, CSRF defense, cryptographic standards (Argon2id, AES-GCM), secret management,
-  secure headers (CSP, HSTS), supply chain audits (npm audit, Snyk), error handling, and security logging.
+  MANDATORY TRIGGER: Invoke BEFORE handling user input validation, file uploads,
+  secrets/env vars, rate limiting, CORS, CSP headers, encryption, or payment/PII flows.
+  File globs: **/*
 trigger: model_decision
 ---
 
-# Security Standards
+# security-standards: Application Security Protocol
 
-> **Normative references**
-> - **NIST SP 800-218 v1.1**  -  Secure Software Development Framework (SSDF)
-> - **OWASP ASVS 5.0**  -  Application Security Verification Standard
->
-> **How to use**: This skill is a mandatory companion to fe-standards,
-> be-standards, and all other devmind skills. Read it fully when security
-> decisions are being made. Cross-reference section numbers in code reviews.
+> **Scope**: Application security, threat modeling, cryptographic safety, and defensive engineering.  
+> **Normative Standards**: Grounded strictly in **NIST SP 800-218 v1.1 (SSDF)** and **OWASP ASVS 5.0 (Level 2 Baseline)**.  
+> **Core Principle**: Proactively eliminate vulnerabilities before writing code. Enforce defense in depth, zero secrets in source, constant-time comparisons, strict input sanitization, and automated supply chain defense.
+
+---
+
+## 🚨 Pre-Flight Gate (Read Before Coding)
+
+Before handling user input, auth, credentials, files, or sensitive flows, verify these 5 non-negotiable gates:
+
+1. **Strict Input Validation & Canonicalization**: Every input parameter (body, query, headers, files) MUST pass through strict Zod schemas with unknown properties stripped (`.strict()`). Canonicalize filenames and paths before filesystem access.
+2. **Zero Hardcoded Secrets**: Secrets, tokens, connection strings, or private keys MUST NEVER appear in code, comments, tests, or committed env files. Validate environment configuration at boot with Zod.
+3. **Constant-Time Secret Comparisons**: NEVER use standard equality operators (`===`, `!==`) when comparing password hashes, webhook signatures, or session tokens. ALWAYS use `crypto.timingSafeEqual` to eliminate timing side-channel attacks.
+4. **Zero Shell & Injection Vectors**: NEVER execute user input in shell commands (`child_process.exec`). Use parameterized database queries and safe APIs (`child_process.execFile` with argument arrays). Never use `dangerouslySetInnerHTML` without `DOMPurify`.
+5. **Hardened Headers & CORS**: Enforce strict Content-Security-Policy (CSP), HSTS, and explicit origin allowlists in CORS. Never set `Access-Control-Allow-Origin: *` alongside credentials.
+
+### Operational Modes:
+- **Mode A: Greenfield / New Security Baseline**: Run the Section 0 Security Posture Checklist below in a single friendly turn.
+- **Mode B: Incremental Modification / Patch**: **DO NOT** run the security questionnaire. Enforce all 5 pre-flight gates directly on all modified code.
+
+---
+
+## ⚡ Golden Patterns (DO vs. DON'T)
+
+### 1. Constant-Time Secret Comparison
+```ts
+// ❌ [DON'T] Standard string equality is vulnerable to timing attacks
+if (providedToken === expectedToken) { ... }
+
+// ✅ [DO] Constant-time buffer comparison preventing timing leakage
+import crypto from 'node:crypto';
+
+function safeCompare(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  if (bufA.length !== bufB.length) return false;
+  return crypto.timingSafeEqual(bufA, bufB);
+}
+```
+
+### 2. XSS & HTML Sanitization
+```tsx
+// ❌ [DON'T] Direct HTML injection of unverified user content
+<div dangerouslySetInnerHTML={{ __html: userBio }} />
+
+// ✅ [DO] DOMPurify sanitization with strict tag allowlist
+import DOMPurify from 'isomorphic-dompurify';
+
+<div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(userBio, { ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p'] }) }} />
+```
+
+### 3. Command Execution
+```ts
+// ❌ [DON'T] Unescaped shell command vulnerable to command injection
+import { exec } from 'node:child_process';
+exec(`ping -c 1 ${userIp}`); // Attacker passes: "127.0.0.1; rm -rf /"
+
+// ✅ [DO] Safe argument array without shell interpreter
+import { execFile } from 'node:child_process';
+execFile('ping', ['-c', '1', userIp], (error, stdout) => { ... });
+```
+
+---
+
+## 🔍 Anti-Amnesia Receipt
+
+Whenever applying `security-standards`, the coding agent **MUST** output a 1-line verification receipt at the end of its response:
+
+`🧠 [DevMind: security-standards applied | Checked: <top 3 rules verified>]`
+
+*Example:* `🧠 [DevMind: security-standards applied | Checked: Input validation & sanitization, constant-time comparison, zero secret exposure]`
 
 ---
 
 ## 0 - Before You Write: Security Interview
-
-### Operational Modes: Greenfield vs. Incremental Modification
-
-Determine your operating mode before proceeding:
-- **Mode A: Greenfield / New Security Baseline**: If establishing security architecture, initial compliance, or auth infrastructure for a project, ask once per project and record answers in `docs/security-assumptions.md`.
-- **Mode B: Incremental Modification / Patch**: If modifying code or applying bugfixes, **DO NOT** run the security questionnaire. Enforce all NIST SSDF, OWASP ASVS Level 2, input validation, constant-time comparisons, and secret zero-leakage rules directly on the modified code.
-
----
 
 ### Security Posture Checklist
 
@@ -831,9 +885,11 @@ Documentation rules:
 
 ---
 
-## Master Security Checklist
+## ✅ Post-Implementation Checklist
 
 Use before every release. Failures block deployment.
+
+- [ ] **Anti-Amnesia Receipt**: Output 1-line verification badge `🧠 [DevMind: security-standards applied | Checked: ...]` in response.
 
 ### Secure Development
 - [ ] SECURITY.md present at repo root with disclosure policy and SLAs

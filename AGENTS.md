@@ -6,6 +6,31 @@
 
 ---
 
+## 🎯 Mandatory Skill Routing Matrix
+
+When a user request touches any of the following file globs or task types, you **MUST** load and apply the corresponding DevMind skill(s) before authoring or modifying code:
+
+| Domain & Skill | Triggering Task Types & Keywords | File Globs |
+| :--- | :--- | :--- |
+| **`ai-standards`** | LLM integration, prompt templates, agent workflows, RAG pipelines, embeddings, tool calls, model routing | `**/{ai,rag,prompts,llm,embeddings,agents}/**` |
+| **`api-design`** | REST/GraphQL/RPC routes, OpenAPI spec, controllers, DTOs, endpoint pagination, error payloads, webhooks | `**/{api,routes,controllers,contracts}/**`, `**/*.openapi.*`, `**/*.swagger.*` |
+| **`auth-patterns`** | Login, signup, JWT, OAuth, sessions, RBAC/ABAC permissions, guards, password hashing, CSRF, refresh tokens | `**/{auth,middleware,session,security}/**` |
+| **`be-standards`** | Backend services, business logic, background jobs, queues, caching, logging, dependency injection, server errors | `**/*.{ts,js,mjs,cjs,go,py,rs}` |
+| **`db-standards`** | Database schemas, migrations, ORM models (Prisma/Drizzle/TypeORM/SQL), indexes, transactions, queries | `**/{schema,migrations,models,entities}/**`, `**/*.sql`, `**/prisma/**`, `**/drizzle/**` |
+| **`deployment`** | Dockerfiles, docker-compose, CI/CD workflows (.github/workflows), Kubernetes, Terraform, health probes | `**/{.github,deploy,infra}/**`, `**/Dockerfile*`, `**/docker-compose*`, `**/*.tf` |
+| **`fe-standards`** | UI components, pages, client state, forms, data fetching hooks, CSS/Tailwind, accessibility, frontend performance | `**/*.{tsx,jsx,css,scss,html,vue,svelte}` |
+| **`security-standards`** | User input validation, file uploads, secrets/env vars, rate limiting, CORS, CSP headers, encryption, PII/payments | `**/*` |
+
+<EXECUTION_RULE>
+### CRITICAL PROTOCOL FOR ALL CODING AGENTS:
+1. **STOP BEFORE CODING**: Identify every domain and skill touched by the user's request. (e.g. A prompt to "Add user profile endpoint with database migration and React form" touches `db-standards`, `be-standards`, `api-design`, and `fe-standards`).
+2. **LOAD SKILLS FIRST**: Read the corresponding `skills/<domain>/SKILL.md` file(s) BEFORE writing or modifying any code.
+3. **PRINT RECEIPT**: Output `🧠 [DevMind Active: <loaded-skills>]` at the very top of your initial plan or implementation response.
+4. **NO COMPROMISE**: Never bypass or skip a skill to save time or tokens. Enforce every Pre-Flight Gate and Golden Pattern.
+</EXECUTION_RULE>
+
+---
+
 ## 0. Operating Modes: Greenfield vs. Incremental Modification
 
 Coding agents MUST determine their operating mode before taking any action:
