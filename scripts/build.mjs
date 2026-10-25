@@ -104,9 +104,9 @@ description: >-
 trigger: model_decision
 ---
 
-# devmind: The Universal Engineering Brain & Zero-Amnesia Protocol
+# devmind: Engineering Standards & Zero-Amnesia Protocol
 
-You are operating under **DevMind**, a production-grade engineering baseline and curated collection of architectural standards. DevMind ensures that every generated line of code is simple (YAGNI), secure, maintainable, verified, and production-ready.
+You are operating under **DevMind**, an engineering baseline combining production-grade architecture with ruthless simplicity (YAGNI). Deliver the cleanest, smallest solution that meets real security, typing, and architectural baselines. The best code is code you didn't have to write.
 
 ---
 
@@ -127,38 +127,50 @@ When a user request touches any of the following file globs or task types, you *
 
 <EXECUTION_RULE>
 ### CRITICAL PROTOCOL FOR ALL CODING AGENTS:
-1. **STOP BEFORE CODING**: Identify every domain and skill touched by the user's request.
-2. **LOAD SKILLS FIRST**: Read the corresponding \`skills/<domain>/SKILL.md\` file(s) BEFORE writing or modifying any code.
+1. **STOP BEFORE CODING**: Identify every domain touched by the request.
+2. **LOAD SKILLS FIRST**: Read the corresponding \`skills/<domain>/SKILL.md\` file(s) BEFORE writing or modifying code.
 3. **PRINT RECEIPT**: Output \`🧠 [DevMind Active: <loaded-skills>]\` at the very top of your initial plan or implementation response.
-4. **NO COMPROMISE**: Never bypass or skip a skill to save time or tokens. Enforce every Pre-Flight Gate and Golden Pattern.
+4. **NO COMPROMISE**: Never bypass a skill to save time or tokens. Enforce every Pre-Flight Gate and Golden Pattern.
 </EXECUTION_RULE>
 
 ---
 
-## 0 - Before You Write: Pre-Coding Review & Architecture Alignment
+## 0 - Before You Write: The Simplicity Ladder
 
-Before writing or modifying any code, the AI agent **MUST** evaluate the proposed solution against the universal AGENTS.md baseline:
+Before writing or editing code, climb this ladder and stop at the first rung that holds:
 
-### A. Simplicity and Overengineering (YAGNI)
-- Is this implementation unnecessarily complex or overengineered?
-- Can the requirement be fulfilled with a simpler, more readable, and maintainable solution?
-- Am I introducing premature abstractions, unnecessary wrappers, or complex design patterns?
-- Prefer the simplest solution that meets functional, security, performance, and maintainability requirements.
+\`\`\`
+[1. Does this need to exist at all? (YAGNI)]
+  └── [2. Already in this codebase? (Reuse existing utils/types)]
+        └── [3. Standard library or runtime does it?]
+              └── [4. Native platform or framework feature covers it?]
+                    └── [5. Existing installed dependency solves it?]
+                          └── [6. Concise one-liner or simple pure function?]
+                                └── [7. Only then: write minimum typed production code]
+\`\`\`
 
-### B. Existing Functionality and Reusability
-- Does equivalent functionality already exist in the codebase, framework, or shared utilities?
-- Can an existing function, service, component, helper, or hook be reused or extended?
-- Zero duplicate logic. Inspect the system before creating new code.
+1. **YAGNI First**: Speculative needs, premature config, and imaginary abstractions are bloat. Skip them.
+2. **Reuse Existing Code**: Search the codebase before writing. Reusing existing helpers, components, and types stops duplicate slop.
+3. **Standard Library First**: Use built-in JavaScript/TypeScript/Python/Go features (\`URL\`, \`fetch\`, \`Intl\`, \`crypto.randomUUID()\`, \`structuredClone\`, \`Array.prototype.*\`) before hand-rolling or adding libraries.
+4. **Platform Native First**: Let the platform work: semantic HTML (\`<input type="date">\`, \`<dialog>\`), CSS over JS layout/animations, database \`CHECK\`/\`UNIQUE\` constraints over app validators.
+5. **Installed Dependencies**: Use what's in \`package.json\`/\`pyproject.toml\`. Never add a package when an existing one or 5 lines of code does the job.
+6. **Concise Functions**: Prefer straightforward expressions over heavy class hierarchies or speculative design patterns.
+7. **Only Then Author New Code**: Smallest clean, typed implementation that meets security, accessibility, and correctness standards.
 
-### C. Dependency and Library Justification
-- Is the dependency genuinely necessary?
-- Can the requirement be implemented using built-in language features, standard libraries, or existing dependencies?
-- Compare complete maintenance, security, and operational costs.
+### Root-Cause Bug Fixing
+- Fix the root cause, not just the symptom. Grep all callers of the function you're touching before editing. One fix at the shared source is smaller, cleaner, and prevents leaving sibling callers broken.
 
-### D. Security and Vulnerability Prevention
-- Proactively mitigate injection, auth bypasses, exposed secrets, and unhandled errors.
-- Never invent cryptography or weaken security controls.
-- Grounded in NIST SP 800-218 (SSDF) and OWASP ASVS 5.0.
+### Pragmatic Shortcut Markers
+- Deliberate simplifications with known operational ceilings (e.g. in-memory cache, synchronous handler) must be marked with a tracked comment:
+  \`// devmind: <ceiling>, <upgrade-path>\`
+  *Example:* \`// devmind: in-memory cache per instance, migrate to Redis if horizontally scaled\`
+
+### Natural Communication (Zero Fillers)
+- Deliver code and concrete answers first.
+- Zero AI boilerplate ("Certainly!", "I'd be glad to help!", "Below is the implementation...").
+- Keep post-code commentary to at most 1–3 short lines:
+  \`[What was done] → skipped: [X], add when: [Y].\`
+- No unrequested essays or defensive lectures.
 
 ---
 
@@ -182,6 +194,18 @@ For universal engineering baseline directives, consult [AGENTS.md](./references/
 
 ---
 
+## 8 - Session Continuity & HANDOVER.md
+
+When concluding a feature, milestone, or user session, generate or update \`HANDOVER.md\` in the project root:
+- Current Status & Stack
+- Work Completed in this Session
+- Decisions & Deliberate Shortcuts (\`// devmind: <ceiling>, <upgrade-path>\`)
+- Immediate Next Steps (Prioritized)
+- Verification Commands & Results
+- Fast-Resume Prompt for the next session
+
+---
+
 ## 🔍 Anti-Amnesia Receipt
 
 Every coding agent applying DevMind MUST output a receipt badge at the top of its response:
@@ -193,13 +217,15 @@ Every coding agent applying DevMind MUST output a receipt badge at the top of it
 
 ## ✅ Post-Implementation Checklist
 
-- [ ] Evaluated requirement against Section 0 Pre-Coding Review questions.
+- [ ] Climbed the Simplicity Ladder (YAGNI → reuse → stdlib → native → minimal code).
+- [ ] Fixed root cause at the shared source (grepped all callers).
 - [ ] Identified all touched domains via the Mandatory Skill Routing Matrix.
 - [ ] Read corresponding \`skills/<domain>/SKILL.md\` before authoring code.
 - [ ] Printed the Anti-Amnesia Receipt badge in response.
-- [ ] Inspected existing codebase patterns and utilities before adding code.
+- [ ] Delivered code first with natural, filler-free commentary.
 - [ ] Ran automated tests, linter, and type checks.
-- [ ] Verified that error paths and edge cases are handled gracefully.
+- [ ] Marked any intentional simplification with \`// devmind: <ceiling>, <upgrade-path>\`.
+- [ ] Updated \`HANDOVER.md\` with session summary and next steps if concluding a milestone.
 - [ ] Confirmed zero sensitive data leaks in logs, errors, or client payloads.
 `;
 }

@@ -1,8 +1,8 @@
 ---
 name: security-standards
 description: >-
-  MANDATORY TRIGGER: Invoke BEFORE handling user input validation, file uploads,
-  secrets/env vars, rate limiting, CORS, CSP headers, encryption, or payment/PII flows.
+  MANDATORY TRIGGER: Invoke BEFORE handling user input validation, file uploads, secrets/env vars, rate limiting, CORS, CSP headers, encryption, or payment/PII flows.
+  Keywords & Triggers: security, application security, sanitize input, validate input, Zod validation, file upload security, magic bytes, antivirus scan, secrets, credentials, API keys, .env, environment variable validation, rate limiting, brute force protection, CORS, Content-Security-Policy, CSP headers, XSS prevention, DOMPurify, CSRF defense, SQL injection prevention, parameterized queries, command injection, execFile, constant-time comparison, timingSafeEqual, encryption at rest, AES-256-GCM, PII, sensitive user data, compliance, OWASP ASVS, NIST SSDF.
   File globs: **/*
 trigger: model_decision
 ---
@@ -24,6 +24,8 @@ Before handling user input, auth, credentials, files, or sensitive flows, verify
 3. **Constant-Time Secret Comparisons**: NEVER use standard equality operators (`===`, `!==`) when comparing password hashes, webhook signatures, or session tokens. ALWAYS use `crypto.timingSafeEqual` to eliminate timing side-channel attacks.
 4. **Zero Shell & Injection Vectors**: NEVER execute user input in shell commands (`child_process.exec`). Use parameterized database queries and safe APIs (`child_process.execFile` with argument arrays). Never use `dangerouslySetInnerHTML` without `DOMPurify`.
 5. **Hardened Headers & CORS**: Enforce strict Content-Security-Policy (CSP), HSTS, and explicit origin allowlists in CORS. Never set `Access-Control-Allow-Origin: *` alongside credentials.
+
+> **Security Invariant (Never Simplified Away)**: While application logic strictly follows the Simplicity Ladder (YAGNI, minimal diffs), security controls (Zod boundary validation, constant-time comparisons, parameterized queries, secret redaction) MUST NEVER be simplified away or skipped for convenience.
 
 ### Operational Modes:
 - **Mode A: Greenfield / New Security Baseline**: Run the Section 0 Security Posture Checklist below in a single friendly turn.

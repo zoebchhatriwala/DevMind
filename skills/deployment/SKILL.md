@@ -1,8 +1,8 @@
 ---
 name: deployment
 description: >-
-  MANDATORY TRIGGER: Invoke BEFORE creating or editing Dockerfiles, docker-compose,
-  CI/CD workflows (.github/workflows), Kubernetes/Terraform, env configs, or healthcheck endpoints.
+  MANDATORY TRIGGER: Invoke BEFORE creating or editing Dockerfiles, docker-compose, CI/CD workflows (.github/workflows), Kubernetes/Terraform, env configs, or healthcheck endpoints.
+  Keywords & Triggers: deploy, deployment, Docker, Dockerfile, docker-compose, container, containerize, multi-stage build, non-root user, dumb-init, CI/CD pipeline, GitHub Actions, workflow, automated test workflow, automated deploy, release, Kubernetes, k8s, pods, deployment yaml, service yaml, Helm, Terraform, infra as code, cloud deploy, AWS, GCP, Azure, Vercel, Fly.io, healthcheck, liveness probe, readiness probe, graceful shutdown, SIGTERM, OIDC cloud auth, environment variables, production build.
   File globs: **/{.github,deploy,infra}/**,**/Dockerfile*,**/docker-compose*,**/*.tf
 trigger: model_decision
 ---
@@ -20,7 +20,7 @@ trigger: model_decision
 Before authoring Dockerfiles, workflows, or infrastructure configs, verify these 5 non-negotiable gates:
 
 1. **Non-Root Execution in Containers**: Production images MUST run under an unprivileged user (`USER node` or dedicated `appuser`). Running containers as `root` is strictly prohibited.
-2. **Hardened Multi-Stage Builds**: Build tools, devDependencies, and source code MUST NOT leak into the runtime image. Use multi-stage builds with frozen lockfiles (`npm ci` / `pnpm install --frozen-lockfile`).
+2. **Hardened Multi-Stage Builds (Minimal Footprint)**: Build tools, devDependencies, and source clutter MUST NOT leak into the runtime image. Use multi-stage builds with frozen lockfiles (`npm ci` / `pnpm install --frozen-lockfile`). Never install speculative debug tools or bloat packages in production containers; the smallest working image wins.
 3. **PID 1 Signal Handling**: Node.js cannot properly reap zombie processes or handle Linux `SIGTERM` as PID 1. Containers MUST use an init system (`dumb-init` or `tini`) and implement graceful connection draining.
 4. **Zero Static Cloud Credentials**: CI/CD pipelines MUST authenticate to cloud providers (AWS, GCP, Azure) via OpenID Connect (OIDC) federation. Storing long-lived access keys in secrets is forbidden.
 5. **Decoupled Health Probes**: Always separate `/healthz/live` (process liveness) from `/healthz/ready` (dependency and DB readiness) to prevent cascading restart loops.

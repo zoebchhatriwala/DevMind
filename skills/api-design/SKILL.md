@@ -1,8 +1,8 @@
 ---
 name: api-design
 description: >-
-  MANDATORY TRIGGER: Invoke BEFORE creating, modifying, or reviewing any REST/GraphQL/RPC route,
-  controller, OpenAPI spec, DTO, pagination, error payload, or webhook handler.
+  MANDATORY TRIGGER: Invoke BEFORE creating, modifying, or reviewing any REST/GraphQL/RPC route, controller, OpenAPI spec, DTO, pagination, error payload, or webhook handler.
+  Keywords & Triggers: create API endpoint, REST route, HTTP methods (GET, POST, PUT, PATCH, DELETE), API controllers, route handlers, query parameters, request body, DTO validation, collection pagination, keyset cursor pagination, offset pagination, filtering, sorting, RFC 7807 problem details, error format, OpenAPI 3.1, Swagger spec, tRPC router, GraphQL schema, resolvers, webhooks, Stripe webhooks, HMAC signature verification, Idempotency-Key, rate limiting headers, API versioning.
   File globs: **/{api,routes,controllers,contracts}/**,**/*.openapi.*,**/*.swagger.*
 trigger: model_decision
 ---
@@ -19,7 +19,7 @@ trigger: model_decision
 
 Before designing or modifying any API route, schema, or contract, verify these 5 non-negotiable gates:
 
-1. **Semantic REST URIs (Nouns, Not Verbs)**: URIs identify resource entities with plural nouns in kebab-case (e.g. `/api/v1/payment-methods`). Never put action verbs in the path (`/getUser`, `/cancelOrder`). HTTP verbs determine actions.
+1. **Semantic REST URIs & Protocol Simplicity**: URIs identify resource entities with plural nouns in kebab-case (e.g. `/api/v1/payment-methods`). Never put action verbs in the path (`/getUser`, `/cancelOrder`). Favor straightforward REST endpoints with Zod contracts over introducing GraphQL or complex RPC frameworks unless multi-entity query overfetching is a proven bottleneck.
 2. **RFC 7807 Problem Details Envelopes**: Never return generic `{ error: "msg" }` or 200 OK with an error payload. Errors MUST use the RFC 7807 standard (`application/problem+json`) with standard fields: `type`, `title`, `status`, `detail`, `instance`, and `invalidParams`.
 3. **Mandatory Pagination & Filtering on Lists**: Every endpoint returning a collection MUST enforce server-side pagination (offset-based with `page`/`pageSize` or keyset cursor-based with `cursor`/`limit`) plus search/attribute filtering. Unbounded queries are strictly prohibited.
 4. **State Mutation Idempotency**: All critical write endpoints (billing, order checkout, resource creation) MUST accept the `Idempotency-Key` header and use distributed cache locking (Redis) to prevent duplicate execution.

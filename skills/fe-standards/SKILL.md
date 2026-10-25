@@ -1,8 +1,8 @@
 ---
 name: fe-standards
 description: >-
-  MANDATORY TRIGGER: Invoke BEFORE building or editing UI components, pages,
-  client state, forms, data fetching hooks, CSS/Tailwind, accessibility, or frontend performance.
+  MANDATORY TRIGGER: Invoke BEFORE building or editing UI components, pages, client state, forms, data fetching hooks, CSS/Tailwind, accessibility, or frontend performance.
+  Keywords & Triggers: UI, user interface, frontend, React, Next.js, Vite, Vue, Svelte, components, page layout, buttons, modals, modal dialog, HTML dialog, dropdown, navbar, sidebar, forms, form validation, React Hook Form, inputs, checkboxes, icons, Lucide icons, Heroicons, CSS, Tailwind CSS, design tokens, tokens.css, responsive design, mobile layout, dark mode, accessibility, a11y, WCAG 2.2 AA, ARIA labels, focus visible, keyboard navigation, 8-state matrix, loading spinner, skeleton, error boundary, state management, Zustand, TanStack Query, React Query, custom hooks.
   File globs: **/*.{tsx,jsx,css,scss,html,vue,svelte}
 trigger: model_decision
 ---
@@ -22,7 +22,7 @@ Before building or editing any UI component, page, hook, or stylesheet, verify t
 1. **Strictly Zero Raw Emojis as UI Icons**: NEVER use raw Unicode emojis (`⚠️`, `❌`, `✅`, `🔥`, `🗑️`, `✏️`) as UI icons, button graphics, or status indicators. In greenfield projects, ASK the user which vector icon library they prefer (Lucide React, Heroicons, Radix Icons, Phosphor, FontAwesome, or other; never assume a default).
 2. **Optical Icon Alignment Contract**: All icons paired with text MUST be centered using flexbox (`display: inline-flex; align-items: center; gap: var(--space-2);` or Tailwind `inline-flex items-center gap-2`), normalized `line-height: 1`, explicit sizing (`--icon-sm` / `w-4 h-4`), and `flex-shrink: 0`. Decorative icons MUST have `aria-hidden="true"`; icon-only buttons MUST have `aria-label` and `title`.
 3. **Design Tokens First (`tokens.css`)**: Scaffold or inspect `tokens.css` before writing components. Never hardcode arbitrary hex colors (`#1a73e8`), random margins (`17px`), or arbitrary font sizes. Use centralized CSS custom properties.
-4. **No Native Browser Dialogs**: NEVER invoke `window.alert()`, `confirm()`, or `prompt()`. All notifications and confirmations must use accessible custom modals (`<ConfirmDialog>`, `<Toast>`) with focus traps and keyboard navigation.
+4. **Native Platform First & No Blocking Alert Dialogs**: NEVER invoke blocking `window.alert()`, `confirm()`, or `prompt()`. Prefer the native HTML `<dialog>` element (via `.showModal()`) or accessible dialog components with focus traps. Leverage semantic HTML (`<input type="date">`, `<details>`) and CSS transitions before installing external component packages.
 5. **State Consistency (8-State Matrix)**: Every interactive element MUST define behavior for: default, hover, focus-visible, active, disabled, loading, error, and success states.
 
 ### Operational Modes:

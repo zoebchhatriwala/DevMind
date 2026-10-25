@@ -12,24 +12,29 @@
 
 ## ⚡ Why DevMind Exists
 
-### The Problem: AI Agent Amnesia & Sloppy Default Code
-Every developer using AI coding agents experiences the exact same frustrations:
-1. **Agents Think They "Already Know How to Code"**: LLMs treat passive documentation as optional advice and default to their training priors—generating raw `any`, unvalidated `req.body`, tokens in `localStorage`, N+1 queries, unindexed foreign keys, or unstyled emojis instead of real UI icons.
-2. **Multi-Domain Blindness**: When asked to *"Build a user profile API with DB migration and a React form"*, agents only remember one aspect (e.g., writing the React component) while writing insecure queries and unvalidated endpoints without realizing they touched 4 different engineering domains.
-3. **Mid-Session Amnesia (Context Drift)**: By turn 5 or 6, earlier instructions scroll out of the agent's attention window. The agent reverts back to sloppy, naive code.
+### The Problem: Agent Amnesia & Bloated Default Code
+Every developer using AI coding agents faces the same recurring frustrations:
+1. **Agents Over-Engineer and Write AI Slop**: LLMs default to speculative abstractions—generating single-implementation interfaces, single-product factories, premature config files, and paragraphs of robotic filler prose instead of shipping the simplest working diff.
+2. **Sloppy Security Defaults**: Agents fall back to their training priors—generating raw `any`, unvalidated `req.body`, tokens in `localStorage`, N+1 queries, unindexed foreign keys, or unstyled emojis instead of real UI icons.
+3. **Multi-Domain Blindness**: When asked to *"Build a user profile API with DB migration and a React form"*, agents only implement one part while ignoring the security, database, and backend contracts they silently touched.
+4. **Mid-Session Amnesia (Context Drift)**: By turn 5 or 6, earlier instructions scroll out of the agent's token window, and the agent reverts to naive statistical defaults.
 
-### The Solution: DevMind's Zero-Amnesia Architecture
-DevMind turns passive reference docs into an **enforceable, multi-agent operating system**:
+### The Solution: DevMind's Architecture
+DevMind turns passive reference docs into an **enforceable engineering baseline**:
 
-1. **Action- & Glob-Triggered Frontmatter**: Every skill's YAML description starts with `MANDATORY TRIGGER:` and maps exact file globs and user intents, forcing agents to load the skill BEFORE authoring code.
-2. **Pre-Flight Gates & Golden Patterns**: Banning common LLM anti-patterns with strict, concrete DO vs. DON'T code examples.
-3. **Anti-Amnesia Receipt Badges**: Agents MUST output a receipt badge at the top of their response:
+1. **The Simplicity Ladder**: Enforces a strict 7-rung hierarchy (YAGNI → codebase reuse → stdlib → platform native → installed deps → pure functions → minimal safe code). The best code is code you never had to write.
+2. **Root-Cause First**: Grep all callers before editing a function. Fix once at the shared source rather than patching isolated ticket symptoms.
+3. **Pragmatic Shortcut Tracking**: Deliberate simplifications with known operational limits are tracked with explicit inline markers (`// devmind: <ceiling>, <upgrade-path>`), preventing technical debt rot.
+4. **Natural, Zero-Filler Communication**: Code first, direct answers, and at most 1–3 lines summarizing what was done and what was skipped. Zero canned AI sycophancy.
+5. **Action- & Glob-Triggered Frontmatter**: Every skill's YAML maps exact file globs and user intents, forcing agents to load the right skill before touching code.
+6. **Pre-Flight Gates & Golden Patterns**: Bans common anti-patterns with concrete DO vs. DON'T code examples.
+7. **Anti-Amnesia Receipt Badges**: Agents output a 1-line receipt badge at the top of their response:
    ```text
    🧠 [DevMind: <skill-name> applied | Checked: <top 3 rules verified>]
    ```
-   This anchors DevMind directly in the LLM's recent token window so it never forgets the skill on turn 5+.
-4. **Mandatory Routing Matrix & `<EXECUTION_RULE>`**: Top-level matrix in [AGENTS.md](./AGENTS.md) that commands the agent to identify all touched domains and load all relevant skills before coding.
-5. **Auto-Injecting IDE Rules**: Compiles into `.cursor/rules/*.mdc` with targeted `globs` that Cursor automatically injects into the prompt whenever matching files are touched—making forgetting physically impossible.
+   This anchors DevMind directly in the LLM's active attention window so it never forgets standards mid-session.
+8. **Auto-Injecting IDE Rules**: Compiles into `.cursor/rules/*.mdc`, `.windsurfrules`, and `CLAUDE.md` with targeted globs that editors inject automatically.
+9. **`HANDOVER.md` Session Continuity**: Standardized session summary format enabling any engineer or AI agent to resume work across new sessions with zero context loss.
 
 ---
 
@@ -37,7 +42,7 @@ DevMind turns passive reference docs into an **enforceable, multi-agent operatin
 
 | Skill | Domain & Mandatory Trigger | File Globs | Core Enforcement Highlights |
 | :--- | :--- | :--- | :--- |
-| **[`ai-standards`](./skills/ai-standards/)** | **AI, LLM & RAG Engineering**<br>`MANDATORY TRIGGER: Invoke BEFORE writing or modifying any LLM/AI integration, prompt templates, agent workflows, RAG pipelines, embeddings, tool calls, or model routing.` | `**/{ai,rag,prompts,llm,embeddings,agents}/**` | OWASP Top 10 for LLMs, RAG Triad evaluation, structured Zod output validation, prompt injection delimiters, explicit tool authorization gates. |
+| **[`ai-standards`](./skills/ai-standards/)** | **AI Platforms, RAG & Agents**<br>`MANDATORY TRIGGER: Invoke BEFORE writing or modifying any LLM/AI integration, prompt templates, agent workflows, RAG pipelines, embeddings, tool calls, or model routing.` | `**/{ai,rag,prompts,llm,embeddings,agents}/**` | Hybrid search (sparse BM25 + dense vector via RRF), cross-encoder neural reranking (Cohere/BGE), contextual chunking, prompt-master XML structures, agent circuit breakers, and DeepEval/Ragas automated evals (RAG Triad). |
 | **[`api-design`](./skills/api-design/)** | **API Contracts & Protocols**<br>`MANDATORY TRIGGER: Invoke BEFORE creating, modifying, or reviewing any REST/GraphQL/RPC route, controller, OpenAPI spec, DTO, pagination, error payload, or webhook handler.` | `**/{api,routes,controllers,contracts}/**`, `**/*.openapi.*`, `**/*.swagger.*` | RESTful URI semantics, OpenAPI 3.1 code-first from Zod, RFC 7807 problem details, IETF Idempotency-Key with Redis locks, mandatory dynamic list pagination & weak ETags. |
 | **[`auth-patterns`](./skills/auth-patterns/)** | **Auth & Permissions**<br>`MANDATORY TRIGGER: Invoke BEFORE touching login, signup, JWT, OAuth, sessions, RBAC/permissions, middleware/guards, password hashing, CSRF, or token refresh logic.` | `**/{auth,middleware,session,security}/**` | Refresh token rotation with reuse detection, zero `localStorage` tokens (HttpOnly SameSite cookies), OAuth 2.0 PKCE, WebAuthn Passkeys, TOTP 2FA, session invalidation. |
 | **[`be-standards`](./skills/be-standards/)** | **Backend Engineering**<br>`MANDATORY TRIGGER: Invoke BEFORE writing or refactoring backend services, business logic, background jobs, queues, caching, logging, dependency injection, or server error handling.` | `**/*.{ts,js,mjs,cjs,go,py,rs}` | Strict DTO validation (no raw `req.body`), clean service/repository boundaries, Pino structured logging (zero secret leaks), mandatory collection pagination, RFC 7807 errors. |

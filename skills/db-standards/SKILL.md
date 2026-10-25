@@ -1,8 +1,8 @@
 ---
 name: db-standards
 description: >-
-  MANDATORY TRIGGER: Invoke BEFORE creating or editing database schemas, migrations,
-  ORM models (Prisma/Drizzle/TypeORM/SQL), indexes, transactions, or complex queries.
+  MANDATORY TRIGGER: Invoke BEFORE creating or editing database schemas, migrations, ORM models (Prisma/Drizzle/TypeORM/SQL), indexes, transactions, or complex queries.
+  Keywords & Triggers: database, SQL, schema, tables, migrations, Drizzle ORM, Prisma, TypeORM, Kysely, PostgreSQL, Postgres, MySQL, SQLite, MongoDB, foreign keys, primary keys, UUIDv7, BigInt, database indexes, composite index, unique index, non-blocking index, CREATE INDEX CONCURRENTLY, N+1 query elimination, relational join, database transactions, ACID, keyset cursor pagination, expand-contract migrations, column rename, alter table, database seeding, soft delete, tenant isolation, connection pooling, PgBouncer.
   File globs: **/{schema,migrations,models,entities}/**,**/*.sql,**/prisma/**,**/drizzle/**
 trigger: model_decision
 ---
@@ -19,7 +19,7 @@ trigger: model_decision
 
 Before authoring schemas, migrations, ORM models, or database queries, verify these 5 non-negotiable gates:
 
-1. **Zero-Downtime Expand-Contract Migrations**: NEVER drop, rename, or add `NOT NULL` without default to existing columns in a single step. Always follow the 5-phase Expand-Contract pattern (Expand -> Dual-write -> Backfill -> Contract).
+1. **Zero-Downtime Expand-Contract & Engine Constraints**: NEVER drop, rename, or add `NOT NULL` without default to existing columns in a single step. Follow the 5-phase Expand-Contract pattern. Enforce data integrity natively at the engine level (`CHECK`, `UNIQUE`, foreign keys) rather than relying exclusively on fragile application-layer checks.
 2. **Non-Blocking Index Creation**: NEVER execute bare `CREATE INDEX` on populated tables. In PostgreSQL, always use `CREATE INDEX CONCURRENTLY` outside of a transaction block, with explicit `lock_timeout`.
 3. **Elimination of N+1 Queries**: NEVER query the database inside a `for`/`map` loop. Always batch query with `WHERE id IN (...)`, relational joins, or DataLoader.
 4. **Time-Sortable Primary Keys**: Primary keys MUST be UUIDv7 (time-ordered, distributed) or BigInt identity. NEVER use random UUIDv4 as PK on high-insert tables (prevents B-Tree page splits and cache degradation).

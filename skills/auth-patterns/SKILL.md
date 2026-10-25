@@ -1,8 +1,8 @@
 ---
 name: auth-patterns
 description: >-
-  MANDATORY TRIGGER: Invoke BEFORE touching login, signup, JWT, OAuth, sessions,
-  RBAC/permissions, middleware/guards, password hashing, CSRF, or token refresh logic.
+  MANDATORY TRIGGER: Invoke BEFORE touching login, signup, JWT, OAuth, sessions, RBAC/permissions, middleware/guards, password hashing, CSRF, or token refresh logic.
+  Keywords & Triggers: login, sign in, signup, register, user authentication, auth, passwords, forgot password, reset password, change password, password hashing, Argon2id, bcrypt, session management, session cookies, HttpOnly cookies, SameSite cookies, JWT, access token, refresh token rotation, token reuse detection, OAuth 2.0, social login, Google login, GitHub login, PKCE, NextAuth, Auth.js, Clerk, Supabase auth, roles, permissions, RBAC, ABAC, protected routes, auth guards, middleware auth, multi-tenant IDOR, 2FA, TOTP, MFA, passkeys, WebAuthn.
   File globs: **/{auth,middleware,session,security}/**
 trigger: model_decision
 ---
@@ -24,6 +24,8 @@ Before authoring or modifying any identity, token, session, or authorization cod
 3. **Single-Use Refresh Token Rotation**: Refresh tokens MUST be rotated on every single use. If an already-invalidated token is submitted, treat it as token theft: immediately revoke the entire refresh token family.
 4. **User Enumeration Defense**: Authentication, registration, and password-reset endpoints MUST return uniform generic error messages and execute with constant timing (never reveal whether an email exists in the database).
 5. **Multi-Tenant Ownership Verification (Anti-IDOR)**: Never authorize an action or fetch a record using only client-provided path/query params. Always scope database queries to the authenticated user's session `organizationId` / `tenantId`.
+
+> **Auth Invariant**: Never invent custom cryptography or proprietary session mechanisms. Rely on standard language/platform primitives (`crypto.randomUUID()`, `crypto.timingSafeEqual`) and battle-tested libraries (`argon2`, `jose`). Keep permission checks simple and explicit.
 
 ### Operational Modes:
 - **Mode A: Greenfield / New Auth System**: Run the Section 0 Authentication Architecture Checklist below in a single friendly turn.

@@ -1,8 +1,8 @@
 ---
 name: be-standards
 description: >-
-  MANDATORY TRIGGER: Invoke BEFORE writing or refactoring backend services,
-  business logic, background jobs, queues, caching, logging, dependency injection, or server error handling.
+  MANDATORY TRIGGER: Invoke BEFORE writing or refactoring backend services, business logic, background jobs, queues, caching, logging, dependency injection, or server error handling.
+  Keywords & Triggers: backend, server, Express, Fastify, NestJS, Hono, Node.js, Bun, Deno, REST API service, business logic, service layer, controller, repository, dependency injection, background jobs, worker, BullMQ, queues, Redis cache, caching, cache invalidation, structured logging, Pino logger, request ID, correlation ID, error handling, AppError, try catch, server error, collection pagination, Zod DTO validation, backend architecture, backend refactor.
   File globs: **/*.{ts,js,mjs,cjs,go,py,rs}
 trigger: model_decision
 ---
@@ -20,10 +20,11 @@ trigger: model_decision
 Before authoring or modifying any backend service, controller, repository, or worker, verify these 5 non-negotiable gates:
 
 1. **Strict TypeScript (Zero `any`)**: No raw `any` types, implicit anys, or `@ts-ignore` comments. External payloads (`req.body`, `req.query`, `req.params`) MUST be validated at runtime with Zod schemas before touching service logic.
-2. **Clean Layered Architecture**:
+2. **Clean Layered Architecture (No Speculative Bloat)**:
    - **Controllers**: HTTP transport only (status codes, headers, cookie setting). NEVER query databases directly or run business logic here.
    - **Services**: Pure business logic, framework-agnostic. NEVER import Express/Fastify `req` or `res`.
    - **Repositories**: Data access and ORM queries only. Services consume repositories via dependency injection.
+   - **Simplicity Invariant**: Avoid single-implementation interfaces or empty wrapper repositories for basic CRUD (Rule of Three). Direct ORM queries inside services are acceptable until multiple storage engines or unit test mocking requirements justify an explicit abstraction.
 3. **Structured Pino Logging with Redaction**: NEVER use `console.log` in backend code. Emit structured JSON via `pino` with request correlation IDs (`reqId`). Configure `pino.redact` to scrub sensitive fields (`password`, `authorization`, `creditCard`).
 4. **Centralized RFC 7807 Error Handling**: Throw typed domain exceptions (`AppError`, `NotFoundError`, `UnauthorizedError`). Catch globally in error middleware and format as client-safe RFC 7807 Problem Details. Never leak raw SQL errors or stack traces to clients.
 5. **Bounded Queries & Pagination**: Every endpoint or query returning a dynamic list MUST enforce pagination (offset or cursor) and filtering. Unbounded queries are prohibited.
