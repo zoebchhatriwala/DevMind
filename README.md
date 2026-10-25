@@ -5,92 +5,84 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 [![Zero-Amnesia Enforced](https://img.shields.io/badge/AI%20Agent-Zero--Amnesia%20Enforced-emerald.svg)](./AGENTS.md)
 
-> **The Zero-Amnesia Brain for AI Coding Agents**  
-> *Production-grade engineering standards, security gates, and multi-skill auto-routing that coding agents (Claude Code, Cursor, Windsurf, Cline, OpenSkills, GitHub Copilot) NEVER ignore, bypass, or forget mid-session.*
+> **Pragmatic engineering standards and sanity checks for AI coding agents.**  
+> Keeps Claude Code, Cursor, Windsurf, Cline, and GitHub Copilot from over-engineering, writing sloppy defaults, or drifting off track mid-session.
 
 ---
 
-## ⚡ Why DevMind Exists
+## Why DevMind?
 
-### The Problem: Agent Amnesia & Bloated Default Code
-Every developer using AI coding agents faces the same recurring frustrations:
-1. **Agents Over-Engineer and Write AI Slop**: LLMs default to speculative abstractions—generating single-implementation interfaces, single-product factories, premature config files, and paragraphs of robotic filler prose instead of shipping the simplest working diff.
-2. **Sloppy Security Defaults**: Agents fall back to their training priors—generating raw `any`, unvalidated `req.body`, tokens in `localStorage`, N+1 queries, unindexed foreign keys, or unstyled emojis instead of real UI icons.
-3. **Multi-Domain Blindness**: When asked to *"Build a user profile API with DB migration and a React form"*, agents only implement one part while ignoring the security, database, and backend contracts they silently touched.
-4. **Mid-Session Amnesia (Context Drift)**: By turn 5 or 6, earlier instructions scroll out of the agent's token window, and the agent reverts to naive statistical defaults.
+If you build software with AI coding tools, you've probably run into these exact frustrations:
 
-### The Solution: DevMind's Architecture
-DevMind turns passive reference docs into an **enforceable engineering baseline**:
+1. **They over-engineer everything.** Ask for a simple utility function, and you get an abstract factory, three single-implementation interfaces, a speculative config file, and a brand-new npm package you didn't ask for.
+2. **They take lazy shortcuts on basics.** Unvalidated `req.body`, tokens saved in `localStorage`, missing database indexes, unhandled network timeouts, and raw `any` types everywhere.
+3. **They suffer from mid-session amnesia.** By turn 5 or 6, earlier decisions scroll out of the model's active attention window, and the agent quietly reverts to generic defaults.
+4. **They bury you in conversational fluff.** Paragraphs of robotic preamble (*"Certainly! I would be delighted to assist you with..."*) instead of getting straight to the point with working code.
 
-1. **The Simplicity Ladder**: Enforces a strict 7-rung hierarchy (YAGNI → codebase reuse → stdlib → platform native → installed deps → pure functions → minimal safe code). The best code is code you never had to write.
-2. **Root-Cause First**: Grep all callers before editing a function. Fix once at the shared source rather than patching isolated ticket symptoms.
-3. **Pragmatic Shortcut Tracking**: Deliberate simplifications with known operational limits are tracked with explicit inline markers (`// devmind: <ceiling>, <upgrade-path>`), preventing technical debt rot.
-4. **Natural, Zero-Filler Communication**: Code first, direct answers, and at most 1–3 lines summarizing what was done and what was skipped. Zero canned AI sycophancy.
-5. **Action- & Glob-Triggered Frontmatter**: Every skill's YAML maps exact file globs and user intents, forcing agents to load the right skill before touching code.
-6. **Pre-Flight Gates & Golden Patterns**: Bans common anti-patterns with concrete DO vs. DON'T code examples.
-7. **Anti-Amnesia Receipt Badges**: Agents output a 1-line receipt badge at the top of their response:
-   ```text
-   🧠 [DevMind: <skill-name> applied | Checked: <top 3 rules verified>]
-   ```
-   This anchors DevMind directly in the LLM's active attention window so it never forgets standards mid-session.
-8. **Auto-Injecting IDE Rules**: Compiles into `.cursor/rules/*.mdc`, `.windsurfrules`, and `CLAUDE.md` with targeted globs that editors inject automatically.
-9. **`HANDOVER.md` Session Continuity**: Standardized session summary format enabling any engineer or AI agent to resume work across new sessions with zero context loss.
+DevMind replaces these habits with a straightforward engineering baseline that agents actually follow.
 
 ---
 
-## 🧠 The 8 Core Engineering Skills
+## Core Principles
 
-| Skill | Domain & Mandatory Trigger | File Globs | Core Enforcement Highlights |
-| :--- | :--- | :--- | :--- |
-| **[`ai-standards`](./skills/ai-standards/)** | **AI Platforms, RAG & Agents**<br>`MANDATORY TRIGGER: Invoke BEFORE writing or modifying any LLM/AI integration, prompt templates, agent workflows, RAG pipelines, embeddings, tool calls, or model routing.` | `**/{ai,rag,prompts,llm,embeddings,agents}/**` | Hybrid search (sparse BM25 + dense vector via RRF), cross-encoder neural reranking (Cohere/BGE), contextual chunking, prompt-master XML structures, agent circuit breakers, and DeepEval/Ragas automated evals (RAG Triad). |
-| **[`api-design`](./skills/api-design/)** | **API Contracts & Protocols**<br>`MANDATORY TRIGGER: Invoke BEFORE creating, modifying, or reviewing any REST/GraphQL/RPC route, controller, OpenAPI spec, DTO, pagination, error payload, or webhook handler.` | `**/{api,routes,controllers,contracts}/**`, `**/*.openapi.*`, `**/*.swagger.*` | RESTful URI semantics, OpenAPI 3.1 code-first from Zod, RFC 7807 problem details, IETF Idempotency-Key with Redis locks, mandatory dynamic list pagination & weak ETags. |
-| **[`auth-patterns`](./skills/auth-patterns/)** | **Auth & Permissions**<br>`MANDATORY TRIGGER: Invoke BEFORE touching login, signup, JWT, OAuth, sessions, RBAC/permissions, middleware/guards, password hashing, CSRF, or token refresh logic.` | `**/{auth,middleware,session,security}/**` | Refresh token rotation with reuse detection, zero `localStorage` tokens (HttpOnly SameSite cookies), OAuth 2.0 PKCE, WebAuthn Passkeys, TOTP 2FA, session invalidation. |
-| **[`be-standards`](./skills/be-standards/)** | **Backend Engineering**<br>`MANDATORY TRIGGER: Invoke BEFORE writing or refactoring backend services, business logic, background jobs, queues, caching, logging, dependency injection, or server error handling.` | `**/*.{ts,js,mjs,cjs,go,py,rs}` | Strict DTO validation (no raw `req.body`), clean service/repository boundaries, Pino structured logging (zero secret leaks), mandatory collection pagination, RFC 7807 errors. |
-| **[`db-standards`](./skills/db-standards/)** | **Database & Migrations**<br>`MANDATORY TRIGGER: Invoke BEFORE creating or editing database schemas, migrations, ORM models (Prisma/Drizzle/TypeORM/SQL), indexes, transactions, or complex queries.` | `**/{schema,migrations,models,entities}/**`, `**/*.sql`, `**/prisma/**`, `**/drizzle/**` | Strict auto-generation (no manual SQL edit drift), zero-downtime expand-contract migrations, N+1 query elimination, foreign key indexes, keyset pagination. |
-| **[`deployment`](./skills/deployment/)** | **CI/CD & Cloud Infrastructure**<br>`MANDATORY TRIGGER: Invoke BEFORE creating or editing Dockerfiles, docker-compose, CI/CD workflows (.github/workflows), Kubernetes/Terraform, env configs, or healthcheck endpoints.` | `**/{.github,deploy,infra}/**`, `**/Dockerfile*`, `**/docker-compose*`, `**/*.tf` | Multi-stage rootless Dockerfiles (`USER nonroot`), explicit healthchecks, SHA-pinned GitHub Actions, Trivy container scans, secret masking, zero hardcoded credentials. |
-| **[`fe-standards`](./skills/fe-standards/)** | **Frontend Engineering**<br>`MANDATORY TRIGGER: Invoke BEFORE building or editing UI components, pages, client state, forms, data fetching hooks, CSS/Tailwind, accessibility, or frontend performance.` | `**/*.{tsx,jsx,css,scss,html,vue,svelte}` | WCAG 2.2 AA (30 UX areas), 8-state interaction matrix, design tokens (`tokens.css`), zero unstyled emojis as icons (curated icon libraries aligned with text), human UX copy. |
-| **[`security-standards`](./skills/security-standards/)** | **Application Security**<br>`MANDATORY TRIGGER: Invoke BEFORE handling user input validation, file uploads, secrets/env vars, rate limiting, CORS, CSP headers, encryption, or payment/PII flows.` | `**/*` | NIST SP 800-218 (SSDF) and OWASP ASVS 5.0, Argon2id password hashing, AES-256-GCM authenticated encryption, magic bytes file validation, Gitleaks, `npm audit` zero tolerance. |
-
----
-
-## 🎯 How Auto-Routing & Anti-Amnesia Work
+### 1. The Simplicity Ladder
+Before writing a single line of new code, agents must climb down this ladder and stop at the first rung that works:
 
 ```
-User Prompt (e.g. "Add user profile API with DB migration and React form")
-                              │
-                              ▼
-                 AGENTS.md Skill Routing Matrix
-         ┌────────────────────┼────────────────────┐
-         ▼                    ▼                    ▼
-   db-standards         be-standards          fe-standards
-         │                    │                    │
-         ▼                    ▼                    ▼
-   Pre-Flight Gate      Pre-Flight Gate      Pre-Flight Gate
-   (No manual SQL)      (Strict DTO validation) (WCAG 2.2 AA & Tokens)
-         │                    │                    │
-         └────────────────────┼────────────────────┘
-                              ▼
-                  Print Anti-Amnesia Receipt
-        🧠 [DevMind Active: db-standards, be-standards, fe-standards]
-                              │
-                              ▼
-            Verified Implementation with Zero Amnesia
+[1. Does this need to exist at all? (YAGNI)]
+  └── [2. Already in this codebase? (Search before writing)]
+        └── [3. Does the standard library / runtime do it?]
+              └── [4. Does the native platform or framework handle it?]
+                    └── [5. Does an installed dependency already solve it?]
+                          └── [6. Can it be a clean, concise pure function?]
+                                └── [7. Only then: write minimum typed production code]
+```
+The best code is the code you never had to write.
+
+### 2. Fix the Root Cause, Not the Symptom
+When fixing a bug or refactoring, search all callers before editing. Fix once at the shared source rather than patching individual call sites and leaving edge cases broken.
+
+### 3. Track Deliberate Shortcuts
+Taking a pragmatic shortcut for now is fine, but it shouldn't rot into mystery tech debt. Any deliberate simplification is marked with an explicit comment:
+```ts
+// devmind: in-memory cache per instance, migrate to Redis if horizontally scaled
 ```
 
-### The Anti-Amnesia Receipt Protocol
-Whenever an agent executes an engineering task governed by DevMind, it must emit a receipt badge at the very beginning of its plan and output:
-```text
-🧠 [DevMind: <skill-name> applied | Checked: <top 3 rules verified>]
-```
-*Example:*
+### 4. Talk Like an Engineer (Zero Filler)
+No unsolicited essays, no cheerleading, and no robotic filler text. Agents lead directly with the solution or diff, followed by a concise 1–3 line note on what was done and what was intentionally deferred.
+
+### 5. Session Continuity (`HANDOVER.md`)
+Context windows fill up, sessions get interrupted, and you need to switch tasks. DevMind provides a clean handover protocol: when a milestone is reached or when asked, the agent writes a concise `HANDOVER.md` summarizing the exact status, decisions made, test results, and immediate next steps so any agent can pick up instantly in a fresh turn.
+
+### 6. Anti-Amnesia Receipts
+To prevent agents from forgetting standards mid-session, they print a single-line receipt badge at the top of their response:
 ```text
 🧠 [DevMind: db-standards applied | Checked: expand-contract migration, foreign key index added, keyset cursor pagination]
 ```
-This single line anchors the agent's memory in its immediate context window, preventing it from drifting back into generic statistical defaults during multi-turn refactorings.
+This forces the rules directly into the model's immediate context window, preventing context drift across long conversations.
 
 ---
 
-## 🚀 1-Command Installation & Build
+## The 8 Skill Domains
+
+DevMind includes specialized, modular rules across the full stack:
+
+| Skill | What it Covers | Key Standards Enforced |
+| :--- | :--- | :--- |
+| **[`ai-standards`](./skills/ai-standards/)** | AI Platforms, RAG & Agents | Hybrid search (BM25 + Dense Vectors + RRF), Cross-Encoder reranking, Prompt-Master XML prompts, Primacy Zone constraints, bounded context & chat compaction, and DeepEval/Ragas CI eval tests. |
+| **[`api-design`](./skills/api-design/)** | REST, GraphQL & RPC | Clean RESTful URI semantics, Zod-first OpenAPI schemas, RFC 7807 problem details, IETF `Idempotency-Key` locks, keyset pagination, and weak ETags. |
+| **[`auth-patterns`](./skills/auth-patterns/)** | Auth, Sessions & RBAC | Refresh token rotation, zero tokens in `localStorage` (HttpOnly SameSite cookies), OAuth 2.0 PKCE, WebAuthn Passkeys, TOTP 2FA, and explicit role guards. |
+| **[`be-standards`](./skills/be-standards/)** | Backend Logic & Services | Strict DTO validation, clean service/repository boundaries, Pino structured logging (secrets redacted), collection pagination, and safe graceful shutdowns. |
+| **[`db-standards`](./skills/db-standards/)** | Databases & Migrations | Zero-downtime expand-contract migrations, foreign key indexes, N+1 query elimination, keyset cursor pagination, and ACID transaction boundaries. |
+| **[`deployment`](./skills/deployment/)** | Docker, CI/CD & Cloud | Multi-stage rootless Dockerfiles (`USER nonroot`), explicit health probes, SHA-pinned GitHub Actions, Trivy vulnerability scans, and zero hardcoded secrets. |
+| **[`fe-standards`](./skills/fe-standards/)** | UI, Accessibility & Design | WCAG 2.2 AA accessibility, full 8-state interaction matrices (hover, focus-visible, active, disabled, loading, empty, error), semantic CSS tokens, and real icon libraries (no unstyled emojis). |
+| **[`security-standards`](./skills/security-standards/)** | AppSec & Defense-in-Depth | NIST SSDF & OWASP ASVS compliance, Argon2id hashing, AES-256-GCM encryption, magic-byte file validation, rate limiting, and zero-tolerance dependency audit. |
+
+---
+
+## Quick Setup
+
+Clone the repository and build the compiled rules for your tool of choice:
 
 ```bash
 git clone https://github.com/zoebchhatriwala/DevMind.git
@@ -98,85 +90,74 @@ cd DevMind
 npm run build
 ```
 
-DevMind generates ready-to-use drop-in artifacts for all major coding agents in `dist/`:
+This generates drop-in configurations inside `dist/`:
 
-### 1. Claude Code (Anthropic CLI)
-Drop the universal agent configuration and skills directly into your project:
+### Cursor IDE
+Copy the auto-attaching rules into your project:
+```bash
+# Modular rules that auto-attach based on the files you open (Recommended)
+cp -r dist/cursor/.cursor your-project/
+
+# Or as a single fallback file
+cp dist/cursor/.cursorrules your-project/
+```
+
+### Claude Code (Anthropic CLI)
 ```bash
 cp dist/claude-code/CLAUDE.md your-project/
 cp -r dist/claude-code/.claude your-project/
 ```
 
-### 2. Cursor IDE
-Enable auto-injecting `.mdc` rules that trigger automatically based on the files you open:
-```bash
-# Modular rules with file globs (Recommended)
-cp -r dist/cursor/.cursor your-project/
-
-# Unified single rule fallback
-cp dist/cursor/.cursorrules your-project/
-```
-*Cursor Pro-Tip:* The generated `.cursor/rules/devmind.mdc` has `alwaysApply: true`, guaranteeing the baseline is always loaded, while the individual `.mdc` files auto-attach whenever relevant files (e.g., `schema.prisma`, `*.tsx`, `Dockerfile`) are opened!
-
-### 3. Windsurf / Cascade
+### Windsurf / Cascade
 ```bash
 cp dist/windsurf/.windsurfrules your-project/
-# Or modular rules:
 cp -r dist/windsurf/.windsurf your-project/
 ```
 
-### 4. OpenSkills / Universal Agents
-Works with any agent supporting `AGENTS.md` (e.g., Cline, Roo Code, OpenHands):
+### Google Antigravity & Gemini CLI
+Install directly into your global Antigravity config:
+```bash
+npm run install:gemini
+```
+
+### Universal Agents (Cline, Roo Code, OpenHands)
 ```bash
 cp AGENTS.md your-project/
 ```
 
-### 5. Google Antigravity & Gemini CLI
-Install DevMind into your global Antigravity config in a single command:
-```bash
-npm run install:gemini
-```
-*Or copy manually:*
-```bash
-cp -r dist/antigravity/devmind ~/.gemini/config/skills/devmind
-```
-
-### 6. GitHub Copilot
-```bash
-cp -r dist/github-copilot/.github your-project/
-```
-
-### 7. Universal 1-Command Drop-In for ANY Repository
-To copy all multi-agent root hooks into your current repository in one command:
+### One-Command Drop-In for Any Repo
+To copy all multi-agent hooks into an existing project at once:
 ```bash
 node scripts/build.mjs --install-hooks
 ```
 
 ---
 
-## 🛠 Validation & Quality Suite
+## Validation & Testing
 
-DevMind includes a zero-dependency validation script that strictly verifies every skill:
+Every skill and build target in DevMind is covered by automated verification:
 
 ```bash
+# Run the verification suite
 npm test
+
+# Rebuild all distribution packages
+npm run build
 ```
 
-The validation suite verifies:
-- Frontmatter format, valid names, and descriptions starting with `MANDATORY TRIGGER:`.
-- Presence of all 4 enforceable protocol sections: `Pre-Flight Gate`, `Golden Patterns`, `Anti-Amnesia Receipt`, and `Post-Implementation Checklist`.
-- Receipt badge format compliance (`🧠 [DevMind: ...`).
-- Scannable, token-efficient size constraints.
-- Multi-agent compilation artifacts in `dist/`.
+The test runner validates:
+- YAML frontmatter triggers and natural language keywords.
+- Mandatory sections: Pre-Flight Gate, Golden Patterns, Anti-Amnesia Receipt, and Post-Implementation Checklist.
+- Code blocks, token efficiency, and multi-agent distribution integrity.
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
-We welcome contributions to expand and refine agent skills. Please review [CONTRIBUTING.md](./CONTRIBUTING.md) for our skill quality bar, frontmatter specifications, and pull request workflow.
+Suggestions, refinements, and new domain skills are welcome! Check out [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines on skill structure and pull requests.
 
 ---
 
-## 📄 License
+## License
 
 [MIT](./LICENSE) — © 2026 DevMind contributors.
