@@ -229,36 +229,36 @@ co-located components, hooks, types, tests, and styles.
 
 ```
 src/
-â”œâ”€â”€ app/                        # Next.js App Router pages OR Vite router
-â”‚   â””â”€â”€ (feature)/
-â”‚       â”œâ”€â”€ page.tsx
-â”‚       â””â”€â”€ layout.tsx
-â”œâ”€â”€ features/
-â”‚   â””â”€â”€ <feature-name>/
-â”‚       â”œâ”€â”€ components/         # UI components for this feature
-â”‚       â”‚   â”œâ”€â”€ FeatureList.tsx
-â”‚       â”‚   â””â”€â”€ FeatureList.test.tsx
-â”‚       â”œâ”€â”€ hooks/              # SWR hooks / mutations
-â”‚       â”‚   â””â”€â”€ useFeature.ts
-â”‚       â”œâ”€â”€ types/              # Feature-specific TypeScript types
-â”‚       â”‚   â””â”€â”€ feature.types.ts
-â”‚       â”œâ”€â”€ utils/              # Pure helpers, formatters, validators
-â”‚       â”‚   â””â”€â”€ feature.utils.ts
-â”‚       â”œâ”€â”€ README.md           # Feature-level documentation
-â”‚       â””â”€â”€ index.ts            # Barrel export
-â”œâ”€â”€ components/
-â”‚   â”œâ”€â”€ ui/                     # Generic reusable primitives (Button, Input...)
-â”‚   â””â”€â”€ layout/                 # Shell, Sidebar, TopNav
-â”œâ”€â”€ hooks/                      # Global / cross-feature hooks
-â”œâ”€â”€ lib/                        # API client, SWR config, auth helpers
-â”‚   â”œâ”€â”€ api.ts
-â”‚   â””â”€â”€ swr.ts
-â”œâ”€â”€ styles/
-â”‚   â”œâ”€â”€ tokens.css              # CSS custom properties (design tokens)
-â”‚   â”œâ”€â”€ global.css
-â”‚   â””â”€â”€ reset.css
-â””â”€â”€ types/                      # Shared / global TypeScript types
-    â””â”€â”€ api.types.ts
+├── app/                        # Next.js App Router pages OR Vite router
+│   └── (feature)/
+│       ├── page.tsx
+│       └── layout.tsx
+├── features/
+│   └── <feature-name>/
+│       ├── components/         # UI components for this feature
+│       │   ├── FeatureList.tsx
+│       │   └── FeatureList.test.tsx
+│       ├── hooks/              # SWR hooks / mutations
+│       │   └── useFeature.ts
+│       ├── types/              # Feature-specific TypeScript types
+│       │   └── feature.types.ts
+│       ├── utils/              # Pure helpers, formatters, validators
+│       │   └── feature.utils.ts
+│       ├── README.md           # Feature-level documentation
+│       └── index.ts            # Barrel export
+├── components/
+│   ├── ui/                     # Generic reusable primitives (Button, Input...)
+│   └── layout/                 # Shell, Sidebar, TopNav
+├── hooks/                      # Global / cross-feature hooks
+├── lib/                        # API client, SWR config, auth helpers
+│   ├── api.ts
+│   └── swr.ts
+├── styles/
+│   ├── tokens.css              # CSS custom properties (design tokens)
+│   ├── global.css
+│   └── reset.css
+└── types/                      # Shared / global TypeScript types
+    └── api.types.ts
 ```
 
 **Rules:**

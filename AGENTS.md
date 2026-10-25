@@ -23,10 +23,15 @@ When a user request touches any of the following file globs or task types, you *
 
 <EXECUTION_RULE>
 ### CRITICAL PROTOCOL FOR ALL CODING AGENTS:
-1. **STOP BEFORE CODING**: Identify every domain touched by the request.
-2. **LOAD SKILLS FIRST**: Read the corresponding `skills/<domain>/SKILL.md` file(s) BEFORE writing or modifying code.
-3. **PRINT RECEIPT**: Output `🧠 [DevMind Active: <loaded-skills>]` at the very top of your initial plan or implementation response.
-4. **NO COMPROMISE**: Never bypass a skill to save time or tokens. Enforce every Pre-Flight Gate and Golden Pattern.
+1. **ASSESS TASK SCOPE & TIER**:
+   - **Tier 1: Targeted Edits & Bug Fixes (Micro-Patches)**: For localized bug fixes, CSS/UI tweaks, or single-function changes in existing files, **DO NOT** dump entire 50KB domain skill files into context. The universal engineering baseline in this document (Simplicity Ladder, Zod runtime boundaries, zero `any`, Pino logging, WCAG 2.2 AA) is already active. Fix root causes directly with the shortest working diff.
+   - **Tier 2: Macro-Features & Scaffolding (Architectural Work)**: For new endpoints, database migrations, auth flows, major UI subsystems, or new services:
+     a. Identify primary domains via the Mandatory Skill Routing Matrix.
+     b. Read the relevant `skills/<domain>/SKILL.md` Pre-Flight Gates and Golden Patterns.
+     c. Use targeted slice-reading for deep topic references instead of loading full multi-thousand-line files blindly.
+2. **PRINT RECEIPT**: Output a compact badge at the top of your initial plan or implementation response:
+   `🧠 [DevMind: <skill-name/tier> | Checked: <top 3 rules verified>]`
+3. **NO COMPROMISE ON QUALITY**: Tiered loading prevents token exhaustion and context amnesia, but never waives strict typing, runtime validation, accessibility, or security invariants.
 </EXECUTION_RULE>
 
 ---
@@ -42,6 +47,9 @@ Determine your operating mode before acting:
 ### Mode B: Incremental Modification / Patch (Bugfix, Refactor, or Feature Extension)
 - **Scope**: Modifying, extending, or fixing existing code in an established project.
 - **Protocol**: **DO NOT** run the Section 0 interview. Automatically inspect the repository to identify existing stack decisions, frameworks, and conventions.
+- **Framework Idiom Alignment**:
+  - **Traditional Multi-Tier Backend (Express, Fastify, NestJS)**: Enforce strict separation of Controller (HTTP) -> Service (Domain) -> Repository (Data).
+  - **Modern Fullstack & Serverless (Next.js Server Actions, Remix/React Router, Hono RPC, tRPC)**: Colocated typed actions/handlers with direct Zod validation + ORM queries are the idiomatic first choice. Do not artificially introduce multi-file classes or wrapper interfaces for simple CRUD (Rule of Three).
 - **Non-Negotiable Invariant**: Skipping the interview does **NOT** waive quality standards. Simplicity (YAGNI), strict typing, security, error handling, and verification strictly apply to every modified or added line of code.
 
 ---
@@ -164,10 +172,6 @@ For trivial changes, keep it proportionate—one or two lines are sufficient.
 
 ---
 
----
-
-## 8. Session Continuity & HANDOVER.md Protocol
-
 ## 8. Token Optimization & The `.devmind/` Memory Vault
 
 AI coding agents burn excessive tokens by repeatedly re-reading large files, dumping full terminal logs into chat, re-printing verbose checklists in every response, and suffering mid-session amnesia. 
@@ -189,13 +193,11 @@ To slash token waste and preserve context across sessions, agents externalize ac
 3. **Fast-Boot from Memory**: At the start of a turn or session, read `.devmind/task.md`, `.devmind/memory.md`, and `.devmind/rules.md` (~300 tokens) to immediately rehydrate context and user rules instead of re-analyzing configs and directories (~3,000+ tokens).
 4. **Zero Filler**: Lead directly with code or concrete answers. No pleasantries, preambles, or unsolicited design theory essays.
 
-### Git Tracking Protocol (Mandatory User Choice)
+### Git Tracking Protocol (Sensible Defaults & User Choice)
 
-When creating `.devmind/` in a project for the first time, the agent **MUST** ask the user:
-> *"Should `.devmind/` be committed to Git (to share task state, memory, and handover notes with your team and other AI agents) or added to `.gitignore` (keep it private to your local machine)?"*
-
-- If the user selects **local / gitignore**: Immediately append `.devmind/` to `.gitignore`.
-- If the user selects **commit / git**: Track `.devmind/` in Git alongside project code.
+When creating `.devmind/` in a project for the first time:
+- **Default (Local First)**: Automatically check `.gitignore`. If `.devmind/` is not tracked, add `.devmind/` to `.gitignore` to keep scratchpad and memory local to the machine, outputting a 1-line notice: `[DevMind: Initialized local .devmind/ (added to .gitignore). Ask if you wish to track in git.]`
+- **Team / Shared Option**: If the user indicates they want to share task state, memory, or handover notes with their team and other agents in git, track `.devmind/` in Git alongside project code.
 
 ---
 
@@ -274,7 +276,7 @@ When creating `.devmind/` in a project for the first time, the agent **MUST** as
 - **MUST** climb the Simplicity Ladder from Rung 1 down.
 - **MUST** fix root causes over symptoms by grepping callers.
 - **MUST** output the Anti-Amnesia Receipt badge: `🧠 [DevMind: <skill> applied | Checked: <rules>]`.
-- **MUST** ask the user whether to commit `.devmind/` or add it to `.gitignore` upon creating the directory.
+- **MUST** ensure `.devmind/` is local (gitignored) by default unless the user chooses git tracking.
 - **MUST** obey all project and user-defined constraints in `.devmind/rules.md`.
 - **MUST** update `.devmind/task.md` and `.devmind/handover.md` to conserve context tokens.
 - **MUST NOT** introduce single-implementation abstractions or speculative config.

@@ -127,10 +127,15 @@ When a user request touches any of the following file globs or task types, you *
 
 <EXECUTION_RULE>
 ### CRITICAL PROTOCOL FOR ALL CODING AGENTS:
-1. **STOP BEFORE CODING**: Identify every domain touched by the request.
-2. **LOAD SKILLS FIRST**: Read the corresponding \`skills/<domain>/SKILL.md\` file(s) BEFORE writing or modifying code.
-3. **PRINT RECEIPT**: Output \`🧠 [DevMind Active: <loaded-skills>]\` at the very top of your initial plan or implementation response.
-4. **NO COMPROMISE**: Never bypass a skill to save time or tokens. Enforce every Pre-Flight Gate and Golden Pattern.
+1. **ASSESS TASK SCOPE & TIER**:
+   - **Tier 1: Targeted Edits & Bug Fixes (Micro-Patches)**: For localized bug fixes, UI adjustments, or single-function changes in existing files, **DO NOT** dump entire 50KB domain skill files into context. The universal engineering baseline in AGENTS.md (Simplicity Ladder, Zod boundaries, zero \`any\`, Pino logging, WCAG 2.2 AA) is already active. Fix root causes directly with the shortest working diff.
+   - **Tier 2: Macro-Features & Scaffolding (Architectural Work)**: For new endpoints, database migrations, auth flows, major UI subsystems, or new services:
+     a. Identify primary domains via the Mandatory Skill Routing Matrix.
+     b. Read the relevant \`skills/<domain>/SKILL.md\` Pre-Flight Gates and Golden Patterns.
+     c. Use targeted slice-reading for deep topic references instead of loading full multi-thousand-line files blindly.
+2. **PRINT RECEIPT**: Output a compact badge at the top of your initial plan or implementation response:
+   \`🧠 [DevMind: <skill-name/tier> | Checked: <top 3 rules verified>]\`
+3. **NO COMPROMISE ON QUALITY**: Tiered loading prevents token exhaustion and context amnesia, but never waives strict typing, runtime validation, accessibility, or security invariants.
 </EXECUTION_RULE>
 
 ---
@@ -210,12 +215,11 @@ To slash token waste and preserve context across sessions, agents externalize ac
 3. **Fast-Boot from Memory**: At the start of a turn or session, read \`.devmind/task.md\`, \`.devmind/memory.md\`, and \`.devmind/rules.md\` (~300 tokens) to immediately rehydrate context and user constraints instead of re-analyzing configs and directories (~3,000+ tokens).
 4. **Zero Filler**: Lead directly with code or concrete answers. No conversational boilerplate.
 
-### Git Tracking Protocol (Mandatory User Choice)
-When creating \`.devmind/\` in a project for the first time, the agent **MUST** ask the user:
-> *"Should \`.devmind/\` be committed to Git (to share task state, memory, and handover notes with your team and other AI agents) or added to \`.gitignore\` (keep it private to your local machine)?"*
+### Git Tracking Protocol (Sensible Defaults & User Choice)
 
-- If the user selects **local / gitignore**: Immediately append \`.devmind/\` to \`.gitignore\`.
-- If the user selects **commit / git**: Track \`.devmind/\` in Git alongside project code.
+When creating \`.devmind/\` in a project for the first time:
+- **Default (Local First)**: Automatically check \`.gitignore\`. If \`.devmind/\` is not tracked, add \`.devmind/\` to \`.gitignore\` to keep scratchpad and memory local to the machine, outputting a 1-line notice: \`[DevMind: Initialized local .devmind/ (added to .gitignore). Ask if you wish to track in git.]\`
+- **Team / Shared Option**: If the user indicates they want to share task state, memory, or handover notes with their team and other agents in git, track \`.devmind/\` in Git alongside project code.
 
 ---
 
@@ -223,7 +227,7 @@ When creating \`.devmind/\` in a project for the first time, the agent **MUST** 
 
 Every coding agent applying DevMind MUST output a receipt badge at the top of its response:
 \`\`\`text
-🧠 [DevMind Active: <skill-name> applied | Checked: <top 3 rules verified>]
+🧠 [DevMind: <skill-name/tier> | Checked: <top 3 rules verified>]
 \`\`\`
 
 ---
@@ -233,8 +237,8 @@ Every coding agent applying DevMind MUST output a receipt badge at the top of it
 - [ ] Climbed the Simplicity Ladder (YAGNI → reuse → stdlib → native → minimal code).
 - [ ] Fixed root cause at the shared source (grepped all callers).
 - [ ] Identified all touched domains via the Mandatory Skill Routing Matrix.
-- [ ] Read corresponding \`skills/<domain>/SKILL.md\` before authoring code.
-- [ ] Asked user whether to commit \`.devmind/\` or add to \`.gitignore\` upon directory creation.
+- [ ] Read corresponding \`skills/<domain>/SKILL.md\` before authoring code (Tiered Precision Loading).
+- [ ] Ensured \`.devmind/\` is local (gitignored) by default unless user opted to commit.
 - [ ] Obeyed all project and user-defined constraints in \`.devmind/rules.md\`.
 - [ ] Updated \`.devmind/task.md\` and \`.devmind/handover.md\` to conserve context tokens.
 - [ ] Printed the Anti-Amnesia Receipt badge in response.
