@@ -55,6 +55,7 @@ No unsolicited essays, no cheerleading, and no robotic filler text. Agents lead 
 AI coding agents waste thousands of tokens repeating checklists in chat turns, dumping huge file reads, and losing track of project facts across sessions. DevMind solves this by externalizing state into a lightweight `.devmind/` workspace folder:
 - **`task.md`**: Live progress scratchpad. The agent updates this file directly instead of spitting out multi-page checklists in chat.
 - **`memory.md`**: Repository facts, verified stack versions, project conventions, and intentional shortcut markers (`// devmind:`). Booting a fresh turn reads this small file (~150 tokens) instead of re-scanning the entire codebase (~3,000+ tokens).
+- **`rules.md`**: Custom project-specific user rules, team conventions, and hard constraints that agents must obey on every turn.
 - **`handover.md`**: Standardized session summary for zero-loss resumption across agent sessions.
 
 **Git Tracking Choice**: When `.devmind/` is first created, the agent asks whether to commit it to Git (to share session memory with your team and other AI agents) or append it to `.gitignore` (keep it local to your machine only).

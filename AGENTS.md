@@ -177,6 +177,7 @@ To slash token waste and preserve context across sessions, agents externalize ac
 .devmind/
 ├── task.md        # Active task & progress checklist (live scratchpad)
 ├── memory.md      # Persistent repository facts, stack choices & tracked shortcuts
+├── rules.md       # Project-specific user rules, conventions & constraints
 └── handover.md    # Session continuity summary for zero-loss resumption
 ```
 
@@ -184,7 +185,7 @@ To slash token waste and preserve context across sessions, agents externalize ac
 
 1. **Slice, Don't Dump**: Never read entire 1,000-line files when 30 lines are relevant. Use targeted grep and line-number ranges. Never echo multi-page terminal outputs or bundle files back to the user.
 2. **Externalize Progress**: Update `.devmind/task.md` instead of re-generating lengthy checklists in chat turns. In chat, output a single line: `Updated .devmind/task.md [Step 2/4 complete]`.
-3. **Fast-Boot from Memory**: At the start of a turn or session, read `.devmind/task.md` and `.devmind/memory.md` (~250 tokens) to immediately rehydrate context instead of re-analyzing configs and directories (~3,000+ tokens).
+3. **Fast-Boot from Memory**: At the start of a turn or session, read `.devmind/task.md`, `.devmind/memory.md`, and `.devmind/rules.md` (~300 tokens) to immediately rehydrate context and user rules instead of re-analyzing configs and directories (~3,000+ tokens).
 4. **Zero Filler**: Lead directly with code or concrete answers. No pleasantries, preambles, or unsolicited design theory essays.
 
 ### Git Tracking Protocol (Mandatory User Choice)
@@ -221,7 +222,20 @@ When creating `.devmind/` in a project for the first time, the agent **MUST** as
 - `// devmind: in-memory cache, migrate to Redis if horizontally scaled`
 ```
 
-#### 3. `.devmind/handover.md` (Session Handover)
+#### 3. `.devmind/rules.md` (Project & User Rules)
+```markdown
+# Project & User Rules
+
+## 🎯 High-Priority Directives:
+- Always use kebab-case for file names
+- Strict Zod validation on all API boundaries
+
+## 🚫 Hard Constraints (What NEVER to do):
+- Never delete database columns without a multi-phase migration
+- Never add third-party utility packages if stdlib covers it
+```
+
+#### 4. `.devmind/handover.md` (Session Handover)
 *Generate or update upon milestone completion or when the user asks to wrap up/hand off (fallback to root `HANDOVER.md` if existing):*
 ```markdown
 # Session Handover
@@ -248,7 +262,7 @@ When creating `.devmind/` in a project for the first time, the agent **MUST** as
 - `npm run build` -> [exact result]
 
 ## ⚡ Fast-Resume Prompt for Next Agent
-> "Continue work on this codebase. Read `.devmind/task.md` and `.devmind/handover.md`, inspect git status and recent test results, and proceed with Step 1 from the Immediate Next Steps list."
+> "Continue work on this codebase. Read `.devmind/task.md`, `.devmind/rules.md`, and `.devmind/handover.md`, inspect git status and recent test results, and proceed with Step 1 from the Immediate Next Steps list."
 ```
 
 ---
@@ -260,6 +274,7 @@ When creating `.devmind/` in a project for the first time, the agent **MUST** as
 - **MUST** fix root causes over symptoms by grepping callers.
 - **MUST** output the Anti-Amnesia Receipt badge: `🧠 [DevMind: <skill> applied | Checked: <rules>]`.
 - **MUST** ask the user whether to commit `.devmind/` or add it to `.gitignore` upon creating the directory.
+- **MUST** obey all project and user-defined constraints in `.devmind/rules.md`.
 - **MUST** update `.devmind/task.md` and `.devmind/handover.md` to conserve context tokens.
 - **MUST NOT** introduce single-implementation abstractions or speculative config.
 - **MUST NOT** weaken security, validation, or accessibility controls for brevity.
