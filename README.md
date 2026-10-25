@@ -81,7 +81,7 @@ DevMind includes specialized, modular rules across the full stack:
 | **[`be-standards`](./skills/be-standards/)** | Backend Logic & Services | Strict DTO validation, clean service/repository boundaries, Pino structured logging (secrets redacted), collection pagination, and safe graceful shutdowns. |
 | **[`db-standards`](./skills/db-standards/)** | Databases & Migrations | Zero-downtime expand-contract migrations, foreign key indexes, N+1 query elimination, keyset cursor pagination, and ACID transaction boundaries. |
 | **[`deployment`](./skills/deployment/)** | Docker, CI/CD & Cloud | Multi-stage rootless Dockerfiles (`USER nonroot`), explicit health probes, SHA-pinned GitHub Actions, Trivy vulnerability scans, and zero hardcoded secrets. |
-| **[`fe-standards`](./skills/fe-standards/)** | UI, Accessibility & Design | WCAG 2.2 AA accessibility, full 8-state interaction matrices (hover, focus-visible, active, disabled, loading, empty, error), semantic CSS tokens, and real icon libraries (no unstyled emojis). |
+| **[`fe-standards`](./skills/fe-standards/)** | UI, Accessibility & Design | Intent-driven SaaS UI (zero generic AI slop, no arbitrary purple gradients/blobs), full wayfinding (AppShell, breadcrumbs, page headers), WCAG 2.2 AA accessibility, 8-state interaction matrices, semantic CSS tokens, and real icon libraries (no unstyled emojis). |
 | **[`security-standards`](./skills/security-standards/)** | AppSec & Defense-in-Depth | NIST SSDF & OWASP ASVS compliance, Argon2id hashing, AES-256-GCM encryption, magic-byte file validation, rate limiting, and zero-tolerance dependency audit. |
 
 ---

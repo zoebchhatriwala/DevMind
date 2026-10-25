@@ -107,6 +107,7 @@ Once the pre-coding review is complete:
 4. **Shortest working diff**: Keep changes tightly focused on the requirement. Understand the problem thoroughly first—the smallest edit in the wrong place is just a second bug.
 5. **Anchor to affirmative templates**: Consult the concrete code patterns in the active skill (e.g., RFC 7807 problem details, Pino structured logging, WCAG states) rather than statistical default implementations.
 6. **Mitigate context drift**: Re-verify active changes against the skill's execution checklist before concluding.
+7. **Intent-Driven UI over Generic AI Slop**: When authoring frontend interfaces, deeply ground the design in the user's specific domain and mental model. Strictly ban generic AI design slop (arbitrary dark purple/cyan gradients, glowing blobs, unreadable glassmorphism, and fake vanity metrics on internal tools). Mandate SaaS wayfinding: clear App Shell navigation, hierarchical breadcrumbs, structured page headers, and realistic domain seed data.
 
 ---
 

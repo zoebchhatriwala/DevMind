@@ -24,6 +24,16 @@ Before building or editing any UI component, page, hook, or stylesheet, verify t
 3. **Design Tokens First (`tokens.css`)**: Scaffold or inspect `tokens.css` before writing components. Never hardcode arbitrary hex colors (`#1a73e8`), random margins (`17px`), or arbitrary font sizes. Use centralized CSS custom properties.
 4. **Native Platform First & No Blocking Alert Dialogs**: NEVER invoke blocking `window.alert()`, `confirm()`, or `prompt()`. Prefer the native HTML `<dialog>` element (via `.showModal()`) or accessible dialog components with focus traps. Leverage semantic HTML (`<input type="date">`, `<details>`) and CSS transitions before installing external component packages.
 5. **State Consistency (8-State Matrix)**: Every interactive element MUST define behavior for: default, hover, focus-visible, active, disabled, loading, error, and success states.
+6. **Intent-Driven Design & Ban on Generic AI Slop**:
+   - Deeply ground every UI in the user's specific domain (SaaS, developer tooling, CRM, finance, logistics, e-commerce).
+   - **BANNED AI SLOP**: Strictly ban stereotypical dark violet/cyan gradient backgrounds, arbitrary floating glowing blobs, unreadable glassmorphism, fake vanity statistics ("100k+ Users", "99.9% Uptime") on functional apps, and disconnected landing page fluff.
+   - **MANDATORY SAAS WAYFINDING**: Every SaaS interface must provide clear, human wayfinding:
+     - Clear App Shell (Sidebar or TopNav) with active route indicators (`aria-current="page"`).
+     - Hierarchical Breadcrumbs (`Billing > Invoices > INV-2024-001`) on nested views.
+     - Standard Page Header: Title, descriptive subtitle, and Primary Action button top-right.
+     - Contextual Back navigation on detail/edit screens.
+     - Realistic, domain-specific seed data (real statuses, currency, timestamps; zero "Lorem Ipsum" or "Feature 1").
+     - Actionable empty states: explain what's missing + a clear "Create first [Item]" primary action button.
 
 ### Operational Modes:
 - **Mode A: Greenfield / New Feature Scaffolding**: Run through the Section 0 Stack Alignment Checklist below in a single friendly turn.
@@ -102,6 +112,71 @@ if (window.confirm('Delete this user?')) {
     placeholder="alex@company.com"
   />
 </FormField>
+```
+
+### 4. Human SaaS Navigation & Page Architecture vs. Generic AI Slop
+```tsx
+// ❌ [DON'T] Generic AI Slop: floating gradient card, glowing blob, no breadcrumbs, fake vanity stats, unrouted pills, placeholder text
+<div className="min-h-screen bg-gradient-to-br from-indigo-950 via-purple-900 to-black text-white p-8">
+  <div className="absolute top-10 left-10 w-72 h-72 bg-purple-500 rounded-full blur-3xl opacity-20 pointer-events-none" />
+  <div className="max-w-md mx-auto backdrop-blur-md bg-white/10 border border-white/20 p-6 rounded-2xl shadow-2xl">
+    <span className="text-xs uppercase tracking-wider text-purple-300">AI Powered Platform</span>
+    <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-400 to-violet-400 bg-clip-text text-transparent">Next-Gen Dashboard</h1>
+    <p className="text-neutral-400 text-sm mt-2">100k+ active users worldwide. 99.9% uptime guaranteed.</p>
+    <div className="flex gap-2 mt-4">
+      <span className="px-3 py-1 bg-purple-600/30 rounded-full text-xs">Feature 1</span>
+      <span className="px-3 py-1 bg-purple-600/30 rounded-full text-xs">Feature 2</span>
+    </div>
+    <button className="w-full mt-6 py-2 bg-gradient-to-r from-pink-500 to-purple-600 rounded-xl font-medium shadow-lg hover:brightness-110">
+      Get Started
+    </button>
+  </div>
+</div>
+
+// ✅ [DO] Human SaaS Layout: App Shell, Breadcrumbs, PageHeader with clear primary actions, domain data, and actionable empty state
+import { Plus, Download, ChevronRight } from 'lucide-react';
+
+export function InvoicesPage() {
+  return (
+    <div className="flex h-screen bg-neutral-50 dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100">
+      {/* 1. App Shell Sidebar Navigation */}
+      <AppSidebar currentRoute="/billing/invoices" />
+
+      {/* 2. Main Work Area with Wayfinding */}
+      <main className="flex-1 overflow-y-auto px-6 py-8 max-w-7xl mx-auto">
+        {/* Breadcrumb Trail */}
+        <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs text-neutral-500 mb-3">
+          <a href="/billing" className="hover:text-neutral-900 dark:hover:text-neutral-200">Billing</a>
+          <ChevronRight size={12} aria-hidden="true" className="shrink-0" />
+          <span className="font-medium text-neutral-800 dark:text-neutral-200" aria-current="page">Invoices</span>
+        </nav>
+
+        {/* Structured Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-neutral-200 dark:border-neutral-800">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Invoices & Receipts</h1>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+              Manage client billing records, export tax reports, and track payment statuses.
+            </p>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <Button variant="secondary" leadingIcon={<Download size={16} aria-hidden="true" />}>
+              Export CSV
+            </Button>
+            <Button variant="primary" leadingIcon={<Plus size={16} aria-hidden="true" />}>
+              Create Invoice
+            </Button>
+          </div>
+        </div>
+
+        {/* 3. Domain-Grounded Content with Actionable Empty State if Empty */}
+        <div className="mt-6">
+          <InvoicesDataTable />
+        </div>
+      </main>
+    </div>
+  );
+}
 ```
 
 ---
@@ -244,6 +319,41 @@ async function fetchUser(id: any): Promise<any> { /* ... */ }
 ---
 
 ## 3  -  Consistent UX, Design System & Accessibility (WCAG 2.2 AA)
+
+### 3.0 Intent-Driven UI Architecture & Anti-Slop Standards
+
+When AI coding agents generate interfaces by default, they frequently produce "AI design slop": arbitrary dark violet/cyan gradients, floating glowing blobs, unreadable glassmorphic cards, fake vanity stats, unrouted pill tags, and disconnected landing page fluff. 
+
+DevMind enforces **Intent-Driven SaaS Interfaces**: clean, functional, domain-grounded UIs built for real human workflows.
+
+#### 1. AI Slop vs. Human SaaS Interface
+
+| Area | ❌ Generic AI Slop | ✅ Human Intent-Driven SaaS UI |
+| :--- | :--- | :--- |
+| **Color & Theme** | Dark violet/cyan gradients, glowing blobs, neon drop shadows | Slate / neutral backgrounds, high text contrast, single deliberate brand accent |
+| **Wayfinding** | Isolated cards with no navigation or back button | App Shell with active route indicators, hierarchical breadcrumbs, back buttons |
+| **Page Layout** | Giant hero with fake marketing stats ("100k+ Users") | Structured Page Header: Title, descriptive subtitle, primary action button top-right |
+| **Data Display** | Static cards with placeholder text ("Feature 1") | Domain-calibrated tables, filters, search, pagination, realistic entity seed data |
+| **Empty States** | Blank void or unstyled "No data" | Actionable empty state: clear explanation + primary "Create first [Item]" button |
+| **Interactions** | Decorative buttons that do nothing | Full 8-state interaction coverage with working modals, drawers, or route changes |
+
+#### 2. The SaaS Wayfinding & Navigation Contract
+Every non-trivial application view MUST implement four wayfinding primitives:
+1. **App Shell**: Collapsible sidebar or top navigation with clear `aria-current="page"` indicators and section grouping.
+2. **Breadcrumb Trail**: Nested screens must display navigable breadcrumbs (`Accounts > Acme Corp > Invoices > INV-2024-001`).
+3. **Structured Page Header**: Every page must have:
+   - Primary `<h1>` title.
+   - 1-sentence subtitle explaining the page context.
+   - Primary and secondary actions aligned to the top-right.
+4. **Contextual Back Navigation**: Edit screens, detail views, and multi-step wizards must provide an explicit back button returning to the parent list.
+
+#### 3. Realistic Domain Seed Data
+Never use generic placeholder slop (`Lorem ipsum`, `John Doe`, `test@test.com`, `Feature 1`, `Item 1`). Always seed realistic domain data matching the user's project idea:
+- Invoicing: `Acme Corp`, `$4,250.00 USD`, `Due in 14 days`, `PAID`, `OVERDUE`.
+- Developer Tools: `prod-cluster-us-east-1`, `v2.4.1`, `99.98% Latency p95: 142ms`.
+- Healthcare/CRM: `Dr. Sarah Chen`, `Cardiology Consultation`, `Scheduled for Oct 28`.
+
+---
 
 ### 3.1 The 30 Core UX, UI & Accessibility Standards
 
@@ -1415,6 +1525,7 @@ Before marking any frontend task complete, verify every item:
 - [ ] Touch targets meet minimum $\ge 44 \times 44\text{px}$ with adequate spacing
 - [ ] All interactive components define state consistency (default, hover, focus, active, disabled, loading, error, success)
 - [ ] UX copy is human, natural, engaging, and empathetic; zero technical jargon, zero tacky/gimmicky phrasing, and zero internal implementation or business-logic leaks (Section 8)
+- [ ] Intent-driven design verified: zero generic AI slop (no arbitrary purple gradients or floating blobs), wayfinding intact (AppShell, breadcrumbs, page header, and back buttons), and realistic domain seed data used (Section 3.0)
 - [ ] No placeholder copy, lorem ipsum, or `// TODO` components
 - [ ] All tables and dynamic lists support server-side pagination and filters (offset-based or cursor-based per user ask) (Section 9)
 - [ ] SWR hooks follow the fetch and mutation patterns in Section 10
