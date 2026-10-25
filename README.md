@@ -51,8 +51,13 @@ Taking a pragmatic shortcut for now is fine, but it shouldn't rot into mystery t
 ### 4. Talk Like an Engineer (Zero Filler)
 No unsolicited essays, no cheerleading, and no robotic filler text. Agents lead directly with the solution or diff, followed by a concise 1–3 line note on what was done and what was intentionally deferred.
 
-### 5. Session Continuity (`HANDOVER.md`)
-Context windows fill up, sessions get interrupted, and you need to switch tasks. DevMind provides a clean handover protocol: when a milestone is reached or when asked, the agent writes a concise `HANDOVER.md` summarizing the exact status, decisions made, test results, and immediate next steps so any agent can pick up instantly in a fresh turn.
+### 5. Token Optimization & The `.devmind/` Memory Vault
+AI coding agents waste thousands of tokens repeating checklists in chat turns, dumping huge file reads, and losing track of project facts across sessions. DevMind solves this by externalizing state into a lightweight `.devmind/` workspace folder:
+- **`task.md`**: Live progress scratchpad. The agent updates this file directly instead of spitting out multi-page checklists in chat.
+- **`memory.md`**: Repository facts, verified stack versions, project conventions, and intentional shortcut markers (`// devmind:`). Booting a fresh turn reads this small file (~150 tokens) instead of re-scanning the entire codebase (~3,000+ tokens).
+- **`handover.md`**: Standardized session summary for zero-loss resumption across agent sessions.
+
+**Git Tracking Choice**: When `.devmind/` is first created, the agent asks whether to commit it to Git (to share session memory with your team and other AI agents) or append it to `.gitignore` (keep it local to your machine only).
 
 ### 6. Anti-Amnesia Receipts
 To prevent agents from forgetting standards mid-session, they print a single-line receipt badge at the top of their response:

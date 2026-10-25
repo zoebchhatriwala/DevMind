@@ -194,15 +194,27 @@ For universal engineering baseline directives, consult [AGENTS.md](./references/
 
 ---
 
-## 8 - Session Continuity & HANDOVER.md
+## 8 - Token Optimization & The .devmind/ Memory Vault
 
-When concluding a feature, milestone, or user session, generate or update \`HANDOVER.md\` in the project root:
-- Current Status & Stack
-- Work Completed in this Session
-- Decisions & Deliberate Shortcuts (\`// devmind: <ceiling>, <upgrade-path>\`)
-- Immediate Next Steps (Prioritized)
-- Verification Commands & Results
-- Fast-Resume Prompt for the next session
+AI coding agents burn excessive tokens by repeatedly re-reading large files, dumping full terminal logs into chat, re-printing verbose checklists in every response, and suffering mid-session amnesia. 
+
+To slash token waste and preserve context across sessions, agents externalize active state into a lightweight \`.devmind/\` directory in the project root:
+- \`.devmind/task.md\`: Active task & progress checklist (live scratchpad, avoids repeating checklists in chat).
+- \`.devmind/memory.md\`: Persistent repository facts, stack choices & tracked shortcuts (\`// devmind:\`).
+- \`.devmind/handover.md\`: Session continuity summary for zero-loss resumption (fallback: root \`HANDOVER.md\`).
+
+### The 4 Token Optimization Rules
+1. **Slice, Don't Dump**: Never read entire 1,000-line files when 30 lines are relevant. Use targeted grep and line ranges.
+2. **Externalize Progress**: Update \`.devmind/task.md\` instead of re-generating lengthy checklists in chat turns.
+3. **Fast-Boot from Memory**: At the start of a turn or session, read \`.devmind/task.md\` and \`.devmind/memory.md\` (~250 tokens) to immediately rehydrate context instead of re-analyzing configs and directories (~3,000+ tokens).
+4. **Zero Filler**: Lead directly with code or concrete answers. No conversational boilerplate.
+
+### Git Tracking Protocol (Mandatory User Choice)
+When creating \`.devmind/\` in a project for the first time, the agent **MUST** ask the user:
+> *"Should \`.devmind/\` be committed to Git (to share task state, memory, and handover notes with your team and other AI agents) or added to \`.gitignore\` (keep it private to your local machine)?"*
+
+- If the user selects **local / gitignore**: Immediately append \`.devmind/\` to \`.gitignore\`.
+- If the user selects **commit / git**: Track \`.devmind/\` in Git alongside project code.
 
 ---
 
@@ -221,13 +233,15 @@ Every coding agent applying DevMind MUST output a receipt badge at the top of it
 - [ ] Fixed root cause at the shared source (grepped all callers).
 - [ ] Identified all touched domains via the Mandatory Skill Routing Matrix.
 - [ ] Read corresponding \`skills/<domain>/SKILL.md\` before authoring code.
+- [ ] Asked user whether to commit \`.devmind/\` or add to \`.gitignore\` upon directory creation.
+- [ ] Updated \`.devmind/task.md\` and \`.devmind/handover.md\` to conserve context tokens.
 - [ ] Printed the Anti-Amnesia Receipt badge in response.
 - [ ] Delivered code first with natural, filler-free commentary.
 - [ ] Ran automated tests, linter, and type checks.
 - [ ] Marked any intentional simplification with \`// devmind: <ceiling>, <upgrade-path>\`.
-- [ ] Updated \`HANDOVER.md\` with session summary and next steps if concluding a milestone.
 - [ ] Confirmed zero sensitive data leaks in logs, errors, or client payloads.
 `;
+
 }
 
 async function build() {

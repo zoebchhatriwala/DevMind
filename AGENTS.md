@@ -167,20 +167,64 @@ For trivial changes, keep it proportionate—one or two lines are sufficient.
 
 ## 8. Session Continuity & HANDOVER.md Protocol
 
-AI coding sessions face token window exhaustion, context drift, or mid-feature interruptions. To enable zero-loss resumption at any time:
+## 8. Token Optimization & The `.devmind/` Memory Vault
 
-### When to Create or Update `HANDOVER.md`
-- At the conclusion of a significant milestone, feature, or refactor.
-- When the user asks to "prepare handover", "wrap up", "summarize session", or "handoff".
-- Proactively when a session reaches high token depth and future turns will benefit from a fresh context window.
+AI coding agents burn excessive tokens by repeatedly re-reading large files, dumping full terminal logs into chat, re-printing verbose checklists in every response, and suffering mid-session amnesia. 
 
-### Standard `HANDOVER.md` Anatomy
-Write or update `HANDOVER.md` in the project root with concise, filler-free markdown:
+To slash token waste and preserve context across sessions, agents externalize active state into a lightweight `.devmind/` directory in the project root:
 
+```
+.devmind/
+├── task.md        # Active task & progress checklist (live scratchpad)
+├── memory.md      # Persistent repository facts, stack choices & tracked shortcuts
+└── handover.md    # Session continuity summary for zero-loss resumption
+```
+
+### The 4 Token Optimization Rules
+
+1. **Slice, Don't Dump**: Never read entire 1,000-line files when 30 lines are relevant. Use targeted grep and line-number ranges. Never echo multi-page terminal outputs or bundle files back to the user.
+2. **Externalize Progress**: Update `.devmind/task.md` instead of re-generating lengthy checklists in chat turns. In chat, output a single line: `Updated .devmind/task.md [Step 2/4 complete]`.
+3. **Fast-Boot from Memory**: At the start of a turn or session, read `.devmind/task.md` and `.devmind/memory.md` (~250 tokens) to immediately rehydrate context instead of re-analyzing configs and directories (~3,000+ tokens).
+4. **Zero Filler**: Lead directly with code or concrete answers. No pleasantries, preambles, or unsolicited design theory essays.
+
+### Git Tracking Protocol (Mandatory User Choice)
+
+When creating `.devmind/` in a project for the first time, the agent **MUST** ask the user:
+> *"Should `.devmind/` be committed to Git (to share task state, memory, and handover notes with your team and other AI agents) or added to `.gitignore` (keep it private to your local machine)?"*
+
+- If the user selects **local / gitignore**: Immediately append `.devmind/` to `.gitignore`.
+- If the user selects **commit / git**: Track `.devmind/` in Git alongside project code.
+
+---
+
+### Standard File Anatomies in `.devmind/`
+
+#### 1. `.devmind/task.md` (Live Progress)
+```markdown
+# Active Task Progress
+
+## 🎯 Goal: [1-sentence goal]
+## 📋 Checklist:
+- [x] Step 1
+- [ ] Step 2 <!-- CURRENT -->
+- [ ] Step 3
+## ⚡ Active State: `path/to/file.ts`
+```
+
+#### 2. `.devmind/memory.md` (Repository Facts & Shortcuts)
+```markdown
+# Repository Memory
+
+## 📌 Verified Stack: Node 20+, pnpm, Next.js 14, Prisma, PostgreSQL
+## 🧭 Project Invariants: Strict Zod validation on API inputs, vanilla CSS tokens
+## 🏷️ Tracked Shortcuts (`// devmind:`):
+- `// devmind: in-memory cache, migrate to Redis if horizontally scaled`
+```
+
+#### 3. `.devmind/handover.md` (Session Handover)
+*Generate or update upon milestone completion or when the user asks to wrap up/hand off (fallback to root `HANDOVER.md` if existing):*
 ```markdown
 # Session Handover
-
-> **Purpose**: Single source of truth for the next AI agent or engineer resuming this project. Read this file first to resume immediately with zero context loss.
 
 ## 📌 Current Status & Active Stack
 - **Repository / Area**: [Project Name / Subsystem]
@@ -194,7 +238,6 @@ Write or update `HANDOVER.md` in the project root with concise, filler-free mark
 
 ## 🧭 Decisions & Deliberate Shortcuts
 - [Ceiling] -> [Upgrade Path] (marked in code with `// devmind: <ceiling>, <upgrade-path>`)
-- Architectural trade-offs and rejected alternatives.
 
 ## 🎯 Immediate Next Steps (Prioritized)
 1. [ ] [Next prioritized task]
@@ -205,7 +248,7 @@ Write or update `HANDOVER.md` in the project root with concise, filler-free mark
 - `npm run build` -> [exact result]
 
 ## ⚡ Fast-Resume Prompt for Next Agent
-> "Continue work on this codebase. Read `HANDOVER.md` and `AGENTS.md`, inspect git status and recent test results, and proceed with Step 1 from the Immediate Next Steps list."
+> "Continue work on this codebase. Read `.devmind/task.md` and `.devmind/handover.md`, inspect git status and recent test results, and proceed with Step 1 from the Immediate Next Steps list."
 ```
 
 ---
@@ -216,7 +259,8 @@ Write or update `HANDOVER.md` in the project root with concise, filler-free mark
 - **MUST** climb the Simplicity Ladder from Rung 1 down.
 - **MUST** fix root causes over symptoms by grepping callers.
 - **MUST** output the Anti-Amnesia Receipt badge: `🧠 [DevMind: <skill> applied | Checked: <rules>]`.
-- **MUST** create or update `HANDOVER.md` upon session milestone completion or handoff request.
+- **MUST** ask the user whether to commit `.devmind/` or add it to `.gitignore` upon creating the directory.
+- **MUST** update `.devmind/task.md` and `.devmind/handover.md` to conserve context tokens.
 - **MUST NOT** introduce single-implementation abstractions or speculative config.
 - **MUST NOT** weaken security, validation, or accessibility controls for brevity.
 - **MUST NOT** report unverified checks or passing tests without executing them.
