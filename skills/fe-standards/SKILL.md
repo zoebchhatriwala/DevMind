@@ -11,7 +11,7 @@ trigger: model_decision
 
 > **Scope**: Any web frontend  -  React, Next.js, Vite, Remix, or modern UI framework.  
 > **Accessibility Baseline**: **WCAG 2.2 AA** non-negotiable standard across all interactive controls and typography.  
-> **Core Principle**: Deliver accessible, token-driven, resilient UI with zero emojis as icons, verified optical alignment, human empathetic copy, and zero agent amnesia.
+> **Core Principle**: Deliver accessible, token-driven, resilient UI with zero emojis as icons, verified optical alignment, human empathetic copy, zero em dashes, mobile-first responsive architecture, and zero agent amnesia.
 
 ---
 
@@ -19,21 +19,14 @@ trigger: model_decision
 
 Before building or editing any UI component, page, hook, or stylesheet, verify these 5 non-negotiable gates:
 
-1. **Strictly Zero Raw Emojis as UI Icons**: NEVER use raw Unicode emojis (`⚠️`, `❌`, `✅`, `🔥`, `🗑️`, `✏️`) as UI icons, button graphics, or status indicators. In greenfield projects, ASK the user which vector icon library they prefer (Lucide React, Heroicons, Radix Icons, Phosphor, FontAwesome, or other; never assume a default).
-2. **Optical Icon Alignment Contract**: All icons paired with text MUST be centered using flexbox (`display: inline-flex; align-items: center; gap: var(--space-2);` or Tailwind `inline-flex items-center gap-2`), normalized `line-height: 1`, explicit sizing (`--icon-sm` / `w-4 h-4`), and `flex-shrink: 0`. Decorative icons MUST have `aria-hidden="true"`; icon-only buttons MUST have `aria-label` and `title`.
-3. **Design Tokens First (`tokens.css`)**: Scaffold or inspect `tokens.css` before writing components. Never hardcode arbitrary hex colors (`#1a73e8`), random margins (`17px`), or arbitrary font sizes. Use centralized CSS custom properties.
-4. **Native Platform First & No Blocking Alert Dialogs**: NEVER invoke blocking `window.alert()`, `confirm()`, or `prompt()`. Prefer the native HTML `<dialog>` element (via `.showModal()`) or accessible dialog components with focus traps. Leverage semantic HTML (`<input type="date">`, `<details>`) and CSS transitions before installing external component packages.
-5. **State Consistency (8-State Matrix)**: Every interactive element MUST define behavior for: default, hover, focus-visible, active, disabled, loading, error, and success states.
-6. **Intent-Driven Design & Ban on Generic AI Slop**:
-   - Deeply ground every UI in the user's specific domain (SaaS, developer tooling, CRM, finance, logistics, e-commerce).
-   - **BANNED AI SLOP**: Strictly ban stereotypical dark violet/cyan gradient backgrounds, arbitrary floating glowing blobs, unreadable glassmorphism, fake vanity statistics ("100k+ Users", "99.9% Uptime") on functional apps, and disconnected landing page fluff.
-   - **MANDATORY SAAS WAYFINDING**: Every SaaS interface must provide clear, human wayfinding:
-     - Clear App Shell (Sidebar or TopNav) with active route indicators (`aria-current="page"`).
-     - Hierarchical Breadcrumbs (`Billing > Invoices > INV-2024-001`) on nested views.
-     - Standard Page Header: Title, descriptive subtitle, and Primary Action button top-right.
-     - Contextual Back navigation on detail/edit screens.
-     - Realistic, domain-specific seed data (real statuses, currency, timestamps; zero "Lorem Ipsum" or "Feature 1").
-     - Actionable empty states: explain what's missing + a clear "Create first [Item]" primary action button.
+1. **Vector Icon Library & Optical Alignment**: Strictly zero raw Unicode emojis (`⚠️`, `❌`, `✅`, `🔥`, `🗑️`, `✏️`) as UI icons. Ask user for their preferred vector library (Lucide, Heroicons, Radix, Phosphor, FontAwesome). All icons paired with text must be optically centered using flexbox (`inline-flex items-center gap-2`), normalized line-height, and `flex-shrink: 0`. Icon-only buttons must declare `aria-label` and `title`; decorative icons require `aria-hidden="true"`.
+2. **Design Tokens First (`tokens.css`)**: Scaffold or inspect `tokens.css` before writing components. Never hardcode arbitrary hex colors (`#1a73e8`), random margins (`17px`), or arbitrary font sizes. Use centralized CSS custom properties for colors, spacing, typography, radius, shadows, touch targets ($\ge 44\text{px}$), and standard breakpoints.
+3. **Native Platform First & No Blocking Alert Dialogs**: NEVER invoke blocking `window.alert()`, `confirm()`, or `prompt()`. Prefer the native HTML `<dialog>` element (via `.showModal()`) or accessible dialog components with focus traps. Leverage semantic HTML (`<button>`, `<nav>`, `<main>`, `<input type="date">`, `<details>`) and CSS transitions before installing external component packages.
+4. **State Consistency (8-State Matrix)**: Every interactive element MUST define behavior for: default, hover, focus-visible, active, disabled, loading, error, and success states.
+5. **Intent-Driven UI, Responsive Layout & Value-Driven Copy**:
+   - **Domain Architecture & Anti-Slop**: Ground UI in real domain workflows. Strictly ban generic AI design slop (dark purple/cyan gradients, glowing blobs, unreadable glassmorphism, fake vanity metrics). Mandate SaaS wayfinding: AppShell navigation (`aria-current="page"`), hierarchical breadcrumbs, structured page headers, contextual back buttons, realistic seed data (zero "Lorem Ipsum"), and actionable empty states.
+   - **Mobile-First Responsive Layout**: All screens, components, and tables must be responsive by default down to 320px width without horizontal viewport scrolling. Use mobile-first `min-width` breakpoints, fluid grids, collapsible AppShell drawers, and scroll-contained tables.
+   - **Human-Centric & Value-Driven Copy**: Interface messaging must be engaging, natural, and easy to understand. Focus on user value and reassurance rather than technical jargon or operational plumbing (e.g., instead of "Data encrypted using AES-256", write "Your data is protected with advanced encryption"). Strictly ban em dashes (`—`) in UI copy, preferring concise sentences, colons, or spaced hyphens.
 
 ### Operational Modes:
 - **Mode A: Greenfield / New Feature Scaffolding**: Run through the Section 0 Stack Alignment Checklist below in a single friendly turn.
@@ -177,6 +170,78 @@ export function InvoicesPage() {
     </div>
   );
 }
+```
+
+### 5. Mobile-First Responsive Layout vs. Fixed Desktop-Only Widths
+```tsx
+// ❌ [DON'T] Fixed desktop widths, hidden overflow blowing out viewport, fixed sidebars blocking mobile screens
+<div className="w-[1280px] flex">
+  <aside className="w-64 fixed h-screen">...</aside>
+  <main className="ml-64 w-[1000px]">
+    <table className="w-[1100px]">...</table> {/* Blows out mobile screen horizontally */}
+  </main>
+</div>
+
+// ✅ [DO] Mobile-first fluid layout, responsive AppShell drawer, auto-fit grid, scroll-contained table
+import { Menu, X } from 'lucide-react';
+
+export function ResponsiveDashboard() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  return (
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 flex flex-col lg:flex-row">
+      {/* Mobile Top Header with Drawer Trigger */}
+      <header className="lg:hidden flex items-center justify-between p-4 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
+        <span className="font-semibold text-sm">DevMind SaaS</span>
+        <button
+          type="button"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-2 rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-800"
+          aria-expanded={mobileMenuOpen}
+          aria-label={mobileMenuOpen ? "Close navigation" : "Open navigation"}
+        >
+          {mobileMenuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
+        </button>
+      </header>
+
+      {/* Responsive Sidebar / Mobile Drawer */}
+      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 transform transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'}`}>
+        <AppNav onNavigate={() => setMobileMenuOpen(false)} />
+      </aside>
+
+      {/* Main Fluid Work Area */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Auto-fit responsive card grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <MetricCard title="Total Revenue" value="$42,500.00" />
+          <MetricCard title="Active Seats" value="18 / 25" />
+        </div>
+
+        {/* Scroll-contained data table (prevents page-level horizontal blowout) */}
+        <div className="overflow-x-auto -mx-4 sm:mx-0 rounded-lg border border-neutral-200 dark:border-neutral-800" tabIndex={0} role="region" aria-label="Recent transactions">
+          <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-800">
+            {/* Table headers & rows */}
+          </table>
+        </div>
+      </main>
+    </div>
+  );
+}
+```
+
+### 6. Natural Human UX Copy vs. AI Em Dashes
+```tsx
+// ❌ [DON'T] AI em dashes in headings, buttons, toasts, and descriptions
+<h1>Project Settings — Team Permissions</h1>
+<p>Manage member roles — changes take effect immediately.</p>
+<Button>Save changes — instant apply</Button>
+toast.error("Network timeout — please retry");
+
+// ✅ [DO] Clear, punchy sentences, colons, or spaced hyphens
+<h1>Project Settings: Team Permissions</h1>
+<p>Manage member roles. Changes take effect immediately upon saving.</p>
+<Button>Save changes</Button>
+toast.error("Network connection timed out. Please check your connection and try again.");
 ```
 
 ---
@@ -366,9 +431,9 @@ Every frontend interface built with this skill must adhere to the 30 foundationa
 | **Keyboard access** | Every interactive element must be usable without a mouse | Fully operable via Tab, Enter, Space, and Arrow keys |
 | **Focus** | Visible, consistent focus indicators; never remove focus styling without replacement | `:focus-visible` outline: `2px solid var(--color-primary)` with `2px offset` |
 | **Color contrast** | Meet WCAG AA contrast requirements for text and meaningful UI elements | Minimum $4.5:1$ for normal text, $3:1$ for large text and meaningful icons/borders |
-| **Responsive design** | Mobile, tablet, desktop, and intermediate widths must work without horizontal scrolling | Fluid layouts, CSS Grid/Flexbox, tested down to 320px width |
+| **Responsive design** | Mobile-first architecture; all viewports from 320px to 4K must function without horizontal page scrolling | Standard breakpoints (640, 768, 1024, 1280), fluid grids, responsive AppShell drawer, scroll-contained tables |
 | **Touch targets** | Interactive controls should have sufficiently large touch targets and adequate spacing | Minimum $\ge 44 \times 44\text{px}$ touch area for buttons, inputs, links, checkboxes |
-| **Typography** | Consistent type scale, readable line height, clear hierarchy, predictable font weights; human, natural, engaging UX copy across all typographic elements | Standard scale (12px to 32px), `line-height: 1.5` for body, 1.2 for headings. Conversational, warm, and zero jargon |
+| **Typography** | Consistent type scale, readable line height, clear hierarchy; human, natural UX copy; strictly zero em dashes (`—`) | Standard scale (12px to 32px), `line-height: 1.5` for body, 1.2 for headings. Conversational tone; zero em dashes (split into clear sentences or use colons/spaced hyphens) |
 | **Spacing** | Use a consistent spacing/token system instead of arbitrary margins | 4-point scale (`--space-1` to `--space-16`); no arbitrary `margin: 17px` |
 | **Layout** | Prefer predictable grids, flexbox, and responsive constraints over hard-coded positioning | Avoid hard-coded absolute positioning; use responsive constraints |
 | **Components** | Reuse established components; don't create duplicate versions of the same control | Import primitives from `src/components/ui/`; zero ad-hoc duplicates |
@@ -466,6 +531,19 @@ brand palette if one exists; otherwise generate a harmonious one.
   --z-overlay:  30;
   --z-modal:    40;
   --z-toast:    50;
+
+  /* Responsive Breakpoints (Mobile-First) */
+  --breakpoint-sm:  640px;   /* Large phones / landscape */
+  --breakpoint-md:  768px;   /* Tablets / portrait */
+  --breakpoint-lg:  1024px;  /* Laptops / landscape tablets */
+  --breakpoint-xl:  1280px;  /* Desktop monitors */
+  --breakpoint-2xl: 1536px;  /* Ultrawide screens */
+
+  /* Responsive Container Max Widths */
+  --container-sm:   640px;
+  --container-md:   768px;
+  --container-lg:   1024px;
+  --container-xl:   1280px;
 }
 
 /* Dark mode */
@@ -509,6 +587,111 @@ Every interactive component (buttons, inputs, select, cards) must support the fu
 
 ---
 
+### 3.4 Responsive Web Design Standards (Mobile-First Architecture)
+
+Every web application built under `fe-standards` must deliver an uncompromising mobile-first experience that adapts cleanly across the full viewport spectrum from compact mobile devices (320px width) to ultrawide workstations (4K / 3840px).
+
+#### 1. Core Mobile-First Principle
+- **Base CSS is Mobile CSS**: Write default component rules without media queries targeting the narrowest viewport ($\ge 320\text{px}$).
+- **Progressive Upward Enhancement**: Use `min-width` queries only (`@media (min-width: 640px)`, `@media (min-width: 768px)`, `@media (min-width: 1024px)`) or Tailwind breakpoint prefixes (`sm:`, `md:`, `lg:`, `xl:`).
+- **Prohibit Desktop-Down Overrides**: Never write desktop-first styles overwritten by fragile `max-width` hacks.
+
+#### 2. Standard Breakpoint Spectrum
+
+| Token | Breakpoint | Target Devices | Typical Layout State |
+| :--- | :--- | :--- | :--- |
+| `--breakpoint-sm` | `640px` | Large phones, phablets | Single column cards expand to 2-column grid; compact dialogs |
+| `--breakpoint-md` | `768px` | Tablets portrait, iPad Mini | Filter toolbars expand; stacked forms unwrap into 2 columns |
+| `--breakpoint-lg` | `1024px` | Small laptops, iPad Pro landscape | Collapsed mobile drawer promotes to persistent sidebar AppShell |
+| `--breakpoint-xl` | `1280px` | Desktop workstations | Standard 3-column or 4-column metrics; high-density data tables |
+| `--breakpoint-2xl`| `1536px` | Ultrawide displays | Fixed max-container bounds (`1280px` to `1440px`) centered with margins |
+
+#### 3. Viewport Constraints & Zero Horizontal Blowout
+- **Zero Horizontal Page Scrolling**: The root document (`html`, `body`) and primary viewports must NEVER scroll horizontally.
+- **Fluid Container Bounds**: Always constrain page content with fluid wrappers:
+  ```css
+  .container-shell {
+    width: 100%;
+    max-width: var(--container-xl);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+  @media (min-width: 640px) {
+    .container-shell {
+      padding-left: var(--space-6);
+      padding-right: var(--space-6);
+    }
+  }
+  @media (min-width: 1024px) {
+    .container-shell {
+      padding-left: var(--space-8);
+      padding-right: var(--space-8);
+    }
+  }
+  ```
+- **Word Wrapping & Text Overflow**: Set `overflow-wrap: break-word` and `hyphens: auto` on paragraphs and table cells to avoid viewport blowout from long URLs or hashes.
+- **Intrinsic Minimum Width**: Flex and grid children must declare `min-width: 0` to prevent content from expanding past viewport boundaries.
+
+#### 4. Fluid Grids & Container Queries
+- **Auto-Fit Grids**: Prefer intrinsic fluid grids over rigid column declarations:
+  ```css
+  /* Fluid card grid: automatically reflows from 1 column on mobile to N columns on desktop */
+  .fluid-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: var(--space-4);
+  }
+  ```
+- **Container Queries for Reusable Components**: For cards, widgets, and dynamic modules embedded in sidebars or multi-column layouts, use CSS Container Queries (`container-type: inline-size`) so elements adapt to their parent container rather than window viewport:
+  ```css
+  .card-container {
+    container-type: inline-size;
+  }
+  @container (min-width: 480px) {
+    .card-content {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+    }
+  }
+  ```
+
+#### 5. Responsive AppShell & Navigation Architecture
+- **Desktop ($\ge 1024\text{px}$)**: Persistent left sidebar navigation or comprehensive top navigation with visible breadcrumbs.
+- **Mobile / Tablet ($< 1024\text{px}$)**:
+  - Top bar with brand mark and accessible hamburger trigger button (`aria-expanded`, `aria-controls="mobile-drawer"`, `aria-label="Toggle navigation"`).
+  - Off-canvas slide-out drawer or bottom sheet with backdrop scrim (`bg-black/50 backdrop-blur-xs`), body scroll-lock (`document.body.style.overflow = 'hidden'`), focus trap, and Escape key dismissal.
+  - Or bottom navigation bar for high-frequency mobile SaaS actions (max 4 or 5 core destinations).
+
+#### 6. Responsive Data Display & Data Tables
+- **Scroll-Contained Tables**: Tabular data must never push the whole page out. Always wrap tables in a localized, keyboard-focusable scroll container:
+  ```tsx
+  <div
+    className="overflow-x-auto -mx-4 sm:mx-0 rounded-lg border border-neutral-200 dark:border-neutral-800"
+    tabIndex={0}
+    role="region"
+    aria-label="Invoices data table"
+  >
+    <table className="min-w-full divide-y divide-neutral-200 dark:divide-neutral-800">
+      {/* Table content */}
+    </table>
+  </div>
+  ```
+- **Mobile Card Reflow**: For consumer or compact record lists on screens $< 768\text{px}$, transform table rows into structured stacked cards with labeled values rather than forcing wide horizontal scrolling.
+
+#### 7. Touch Ergonomics & Safe Areas
+- **Minimum Touch Target**: Every interactive element on mobile must meet the $\ge 44 \times 44\text{px}$ touch target contract (WCAG 2.5.5 / 2.5.8).
+- **Safe Area Insets**: Support notched devices and software home bars:
+  ```css
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  padding-top: max(1rem, env(safe-area-inset-top));
+  ```
+- **Zero Hover Dependencies**: Hover states must be purely progressive visual polish. Never hide essential actions, controls, or information behind hover interactions on touch viewports.
+
+---
+
 ## 4  -  Reusable Components
 
 Every generic UI element lives in `src/components/ui/`. Build as
@@ -527,7 +710,7 @@ Every generic UI element lives in `src/components/ui/`. Build as
 - [ ] `Avatar`
 - [ ] `Spinner` / `Skeleton`
 - [ ] `Icon` / `IconWrapper`  -  vetted SVG icon component wrapper or direct imports from user's chosen library (ask user: Lucide, Heroicons, Radix, etc.); strictly no raw emojis
-- [ ] `Table` + `Pagination` (see Section 8)
+- [ ] `Table` + `Pagination` (see Section 9)
 - [ ] `Breadcrumb`
 - [ ] `Tabs`
 - [ ] `Dropdown` / `Menu`
@@ -895,15 +1078,17 @@ export class ApiError extends Error {
 
 ## 8  -  Purposeful UI & Human UX Copy (No Placeholders, No Jargon, No Implementation Leaks)
 
-All interface typography and copy—headings, labels, instructions, empty states, toasts, validation alerts, and error messages—must be **human, natural, engaging, and respectful**. Copy must never leak internal business logic, database structures, or system architecture, and must strictly avoid technical jargon and tacky, patronizing phrasing.
+All interface typography and copy (headings, labels, instructions, empty states, toasts, validation alerts, and error messages) must be **engaging, natural, easy to understand, and respectful**. Copy must never leak internal business logic, database structures, system architecture, or operational mechanics, and must strictly avoid technical jargon, em dashes (`—`), and tacky, patronizing phrasing. Focus on communicating value in clear, user-friendly language.
 
 ### 8.1 Voice, Tone & Typography Principles
 
 | Principle | Guideline | Rule |
 |-----------|-----------|------|
 | **Human & Conversational** | Speak like a helpful, competent human colleague | Use natural, clear, concise language. Prefer plain language over abstract system states. |
+| **Value-Driven Communication** | Lead with user benefit rather than technical mechanics | Focus on what the user gains, achieves, or experiences. Never describe the internal implementation details, algorithms, or operational plumbing. |
 | **Respectful & Empathetic** | Treat the user's time and intelligence with respect | Acknowledge issues directly without deflection, panic, or false cheerfulness. |
 | **Action-Oriented** | Always explain what happened and what to do next | Every notice, empty state, and error must present a clear, frictionless next action. |
+| **Strictly Zero Em Dashes** | Ban em dashes across all interface text | Never use em dashes (`—` / `&mdash;` / `\u2014`) in UI copy. Use short sentences, colons, commas, or spaced hyphens (` - `). |
 | **Zero Implementation Leaks** | Never expose internal data models or architecture | Ban database table names, SQL errors, internal enum keys, stack traces, and API route paths. |
 | **No Technical Jargon** | Translate system mechanics into user-centric context | Ban developer terms (e.g., "serialization failed", "null pointer", "payload syntax error", "404 route"). |
 | **No Tacky or Gimmicky Copy** | Keep the tone professional, warm, and mature | Prohibit cringe phrases, faux-playful slang, and patronizing humor (e.g., "Whoopsie-daisy!", "Our hamsters took a nap", "Boom! You did it!"). |
@@ -914,6 +1099,7 @@ All interface typography and copy—headings, labels, instructions, empty states
 
 | Context | [NO] Leaky, Jargon-Heavy, or Tacky Copy | [YES] Human, Natural & Actionable Copy | Why |
 |---------|-----------------------------------------|----------------------------------------|-----|
+| **Implementation & Operational Logic** | `Data encrypted using AES-256 cipher.` or `Worker job #402 dispatched to queue.` | `Your data is protected with advanced encryption.` or `We're processing your file and will notify you when it's ready.` | Communicates clear human value, peace of mind, and progress rather than internal technical specs or operational plumbing. |
 | **Data Fetch Error** | `Error 500: Failed to query pg_table 'user_accounts'. Connection reset.` | `We couldn't load your account details right now. Please refresh the page or try again in a few moments.` | Hides database engine & table name; offers user next step. |
 | **Item Not Found** | `404: Resource /api/v1/projects/proj_9821 not found in registry.` | `We couldn't find that project. It may have been deleted or the link might be out of date. [Return to Projects]` | Avoids HTTP status codes & internal URIs; gives path back. |
 | **Validation Error** | `field 'tax_ident_no' must satisfy regex ^\d{9}$ constraint` | `Please enter a valid 9-digit tax ID number without spaces or dashes.` | Replaces backend column name and regex jargon with clear user instructions. |
@@ -921,7 +1107,7 @@ All interface typography and copy—headings, labels, instructions, empty states
 | **Empty State** | `Array<Workspace> length is 0. No records present.` or `Whoops! Nothing here yet, superstar! 🚀` | `You don't have any active projects yet. Create your first project to invite team members and start tracking tasks.` | Eliminates data structure jargon and tacky cheerleading. |
 | **Conflict / Duplicate** | `psql unique_violation on constraint 'idx_users_email_uq'` | `An account with this email address already exists. [Sign in instead] or [Reset password].` | Protects schema constraints; provides immediate login / recovery path. |
 | **Destructive Action** | `Delete record from DB? Cascade delete active.` | `Delete this project? This will permanently remove all tasks, comments, and attachments for all team members. This action cannot be undone.` | Clarifies real-world consequences instead of database mechanics. |
-| **Server Overload** | `Oopsie! Our servers went on strike! 🛠️ Try again later!` | `Our service is currently experiencing heavy traffic. We're on it—please check back in a few minutes.` | Eliminates immature, dismissive slang while retaining calm competence. |
+| **Server Overload** | `Oopsie! Our servers went on strike! 🛠️ Try again later!` | `Our service is currently experiencing heavy traffic. We're on it. Please check back in a few minutes.` | Eliminates immature, dismissive slang and em dashes while retaining calm competence. |
 
 ---
 
@@ -937,19 +1123,27 @@ All interface typography and copy—headings, labels, instructions, empty states
    - Avoid multiple exclamation marks (`!!!`), slang acronyms, or patronizing colloquialisms.
 4. **Natural Sentence Case**:
    - Use sentence case for headings, buttons, and form labels (e.g., "Create project", "Account settings", "Save changes") unless following a brand-specific title-casing rule. Avoid ALL CAPS for body or helper text.
+5. **Strictly Prohibit Em Dashes (`—`) in UI Copy**:
+   - Prohibited across all UI copy: Em dashes (`—`, `&mdash;`, `\u2014`).
+   - Why: Em dashes are a hallmark of AI-generated text, disrupt UI reading cadence, create awkward line wrapping or orphan words on mobile viewports, and sound overly literary or artificial.
+   - Enforcement & Alternatives:
+     - Split compound statements into two clear, punchy sentences (`Saved successfully. You can now invite team members.`, not `Saved successfully — you can now invite team members.`).
+     - Use colons for attributes or explanatory relationships (`Due date: Oct 28, 2026`, not `Due date — Oct 28, 2026`).
+     - Use commas or parentheses for non-restrictive clauses (`Your subscription, Pro Plan, is active.`).
+     - Use standard spaced hyphens (` - `) only for numerical ranges or item dividers (`Mon - Fri, 9am - 5pm`).
+6. **Focus on User Value over Technical Architecture or Operational Logic**:
+   - Avoid technical jargon, internal implementation details, or operational logic across all user-facing copy.
+   - Communicate the real-world value, user benefit, and peace of mind in plain language.
+   - Ground copy in outcomes rather than system mechanics (e.g., instead of citing underlying specs or plumbing like "Data encrypted using AES-256", write "Your data is protected with advanced encryption"; instead of "Cache purged across edge POPs", write "Your changes are now live").
 
 ---
 
-### 8.4 Purposeful UI (No Placeholders)
+### 8.4 Purposeful UI & Form Field Clarity (No Placeholders)
 
-- **Every input has a visible `<label>`**  -  never placeholder-only inputs.
-- **Every button has descriptive text**  -  no icon-only buttons without accessible `aria-label`.
-- **Zero raw Unicode emojis as UI icons**  -  never use raw emojis (`❌`, `✅`, `⚠️`, `🗑️`, `✏️`) as buttons, status indicators, or icons; always ask the user for their preferred vector icon library (e.g. Lucide React, Heroicons, Radix, Phosphor, FontAwesome) and import clean SVG components.
-- **Icons properly aligned with text**  -  always center icons optically with adjacent text or elements using `inline-flex items-center gap-2`, normalizing line-height, and specifying `shrink-0`.
-- **Every form field has a purpose**  -  if the API doesn't use it, remove it.
-- **No lorem ipsum or mock names**  -  use realistic, domain-relevant copy (e.g., "Jane Cooper", "Acme Logistics").
-- **No `// TODO: implement`** in shipped components.
-- **Empty states are designed**  -  vetted SVG icon (never emojis) + human title + informative description + actionable CTA button.
+- **Visible Labels**: Every form input has an explicit, visible `<label htmlFor="...">`  -  never placeholder-only inputs.
+- **Descriptive Action Labels**: Every button has descriptive text  -  no ambiguous "Click here" or unlabelled icon buttons.
+- **Purposeful Form Fields**: Every form field must serve an active API contract; eliminate speculative or unused inputs.
+- **Clean Production Code**: Zero `// TODO: implement` comments or placeholder stubs in shipped components.
 
 #### Form Field Contract
 
@@ -1525,6 +1719,8 @@ Before marking any frontend task complete, verify every item:
 - [ ] Touch targets meet minimum $\ge 44 \times 44\text{px}$ with adequate spacing
 - [ ] All interactive components define state consistency (default, hover, focus, active, disabled, loading, error, success)
 - [ ] UX copy is human, natural, engaging, and empathetic; zero technical jargon, zero tacky/gimmicky phrasing, and zero internal implementation or business-logic leaks (Section 8)
+- [ ] Strictly zero em dashes (`—`) in any UI copy, headings, labels, buttons, toasts, tooltips, or error banners (Section 8.3)
+- [ ] Responsive design verified: mobile-first architecture tested down to 320px width without horizontal page scrolling, fluid layout grids, and responsive AppShell navigation (Section 3.4)
 - [ ] Intent-driven design verified: zero generic AI slop (no arbitrary purple gradients or floating blobs), wayfinding intact (AppShell, breadcrumbs, page header, and back buttons), and realistic domain seed data used (Section 3.0)
 - [ ] No placeholder copy, lorem ipsum, or `// TODO` components
 - [ ] All tables and dynamic lists support server-side pagination and filters (offset-based or cursor-based per user ask) (Section 9)

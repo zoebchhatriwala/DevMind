@@ -115,7 +115,10 @@ Once the pre-coding review is complete:
 4. **Shortest working diff**: Keep changes tightly focused on the requirement. Understand the problem thoroughly first—the smallest edit in the wrong place is just a second bug.
 5. **Anchor to affirmative templates**: Consult the concrete code patterns in the active skill (e.g., RFC 7807 problem details, Pino structured logging, WCAG states) rather than statistical default implementations.
 6. **Mitigate context drift**: Re-verify active changes against the skill's execution checklist before concluding.
-7. **Intent-Driven UI over Generic AI Slop**: When authoring frontend interfaces, deeply ground the design in the user's specific domain and mental model. Strictly ban generic AI design slop (arbitrary dark purple/cyan gradients, glowing blobs, unreadable glassmorphism, and fake vanity metrics on internal tools). Mandate SaaS wayfinding: clear App Shell navigation, hierarchical breadcrumbs, structured page headers, and realistic domain seed data.
+7. **Intent-Driven UI, Responsive Layout & Value-Driven Copy**: When authoring frontend interfaces, ground design and messaging in the user's specific domain:
+   - **Architecture & Wayfinding**: Mandate clear SaaS wayfinding (App Shell navigation, hierarchical breadcrumbs, structured page headers, realistic domain seed data). Strictly ban generic AI design slop (arbitrary dark purple/cyan gradients, glowing blobs, unreadable glassmorphism, fake vanity metrics).
+   - **Mobile-First Responsive Design**: Enforce responsive layouts from 320px to 4K with zero horizontal page scroll using fluid grids and collapsible AppShell navigation.
+   - **Human-Centric & Value-Driven Copy**: Interface typography and messaging must be engaging, natural, and easy to understand. Focus on communicating user value and reassurance rather than technical jargon or operational plumbing (e.g., instead of "Data encrypted using AES-256", write "Your data is protected with advanced encryption"). Strictly prohibit em dashes (`—`) in all UI copy, preferring concise sentences, colons, or spaced hyphens.
 
 ---
 
