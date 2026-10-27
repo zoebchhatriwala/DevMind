@@ -64,17 +64,18 @@ export class UserController {
 }
 ```
 
-### 2. Structured Logging vs. console.log
+### 2. Structured Logging vs. console.log / Log Theater
 ```ts
-// ❌ [DON'T] Bare console.log leaking PII and lacking context
+// ❌ [DON'T] Bare console.log leaking PII, or performative prompt/log theater
 console.log('User created:', user);
+logger.info('Engaging deep thinking pipeline phase 1 with zero data loss');
 
-// ✅ [DO] Structured Pino logging with correlation ID and redacted secrets
+// ✅ [DO] Structured Pino logging with correlation ID and domain event
 logger.info({
   event: 'user_registered',
   userId: user.id,
   reqId: req.id,
-}, 'User account created successfully');
+}, 'User account created');
 ```
 
 ### 3. Runtime Input Validation

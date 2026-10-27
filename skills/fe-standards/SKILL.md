@@ -399,6 +399,8 @@ DevMind enforces **Intent-Driven SaaS Interfaces**: clean, functional, domain-gr
 | **Wayfinding** | Isolated cards with no navigation or back button | App Shell with active route indicators, hierarchical breadcrumbs, back buttons |
 | **Page Layout** | Giant hero with fake marketing stats ("100k+ Users") | Structured Page Header: Title, descriptive subtitle, primary action button top-right |
 | **Data Display** | Static cards with placeholder text ("Feature 1") | Domain-calibrated tables, filters, search, pagination, realistic entity seed data |
+| **Feature Copy** | Prompt leaks & AI theater ("Deep Reasoning Matrix", "Zero-Loss Pipeline") | Calm, domain-grounded human value ("Payment verification", "Clinical notes", "Review suggestions") |
+| **Progress & Status** | Fake timed steppers simulating AI thinking ("Consulting neural vectors...") | Honest indeterminate spinner or real event progress ("Analyzing document...", "Saving...") |
 | **Empty States** | Blank void or unstyled "No data" | Actionable empty state: clear explanation + primary "Create first [Item]" button |
 | **Interactions** | Decorative buttons that do nothing | Full 8-state interaction coverage with working modals, drawers, or route changes |
 
@@ -433,13 +435,13 @@ Every frontend interface built with this skill must adhere to the 30 foundationa
 | **Color contrast** | Meet WCAG AA contrast requirements for text and meaningful UI elements | Minimum $4.5:1$ for normal text, $3:1$ for large text and meaningful icons/borders |
 | **Responsive design** | Mobile-first architecture; all viewports from 320px to 4K must function without horizontal page scrolling | Standard breakpoints (640, 768, 1024, 1280), fluid grids, responsive AppShell drawer, scroll-contained tables |
 | **Touch targets** | Interactive controls should have sufficiently large touch targets and adequate spacing | Minimum $\ge 44 \times 44\text{px}$ touch area for buttons, inputs, links, checkboxes |
-| **Typography** | Consistent type scale, readable line height, clear hierarchy; human, natural UX copy; strictly zero em dashes (`—`) | Standard scale (12px to 32px), `line-height: 1.5` for body, 1.2 for headings. Conversational tone; zero em dashes (split into clear sentences or use colons/spaced hyphens) |
+| **Typography** | Consistent type scale, readable line height, clear hierarchy; human, natural UX copy; strictly zero em dashes (`—`); zero prompt/pipeline leaks | Standard scale (12px to 32px), `line-height: 1.5` for body, 1.2 for headings. Conversational tone; zero em dashes; describe domain value, never internal prompt mechanisms |
 | **Spacing** | Use a consistent spacing/token system instead of arbitrary margins | 4-point scale (`--space-1` to `--space-16`); no arbitrary `margin: 17px` |
 | **Layout** | Prefer predictable grids, flexbox, and responsive constraints over hard-coded positioning | Avoid hard-coded absolute positioning; use responsive constraints |
 | **Components** | Reuse established components; don't create duplicate versions of the same control | Import primitives from `src/components/ui/`; zero ad-hoc duplicates |
 | **Forms** | Explicit labels, useful validation, clear errors, correct input types, autocomplete where appropriate | Every input has visible `<label htmlFor="...">`, `autoComplete`, and Zod validation |
 | **Errors** | Explain what went wrong and how the user can fix it | Human, empathetic copy with an actionable next step; zero raw HTTP error codes, zero internal database or architecture leaks, zero tacky/gimmicky phrasing |
-| **Loading** | Provide appropriate loading, skeleton, progress, or pending states | Skeleton loaders for content; `aria-busy="true"` on submitting buttons |
+| **Loading** | Provide appropriate loading, skeleton, progress, or pending states; strictly ban fake timed steppers | Skeleton loaders for content; `aria-busy="true"` on submitting buttons; show real progress only, never artificial delay timers simulating "neural thinking" |
 | **Empty states** | Explain why there is no content and provide an appropriate next action | Empty state contract: icon + title + explanation + actionable CTA |
 | **Success states** | Clearly communicate completed actions without unnecessary interruption | Ephemeral toast or non-blocking inline banner with undo when appropriate |
 | **Destructive actions** | Make consequences clear and require appropriate confirmation | `<ConfirmDialog>` with explicit red/danger action and clear warning copy |

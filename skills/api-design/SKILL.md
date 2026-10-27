@@ -19,7 +19,7 @@ trigger: model_decision
 
 Before designing or modifying any API route, schema, or contract, verify these 5 non-negotiable gates:
 
-1. **Semantic REST URIs & Protocol Simplicity**: URIs identify resource entities with plural nouns in kebab-case (e.g. `/api/v1/payment-methods`). Never put action verbs in the path (`/getUser`, `/cancelOrder`). Favor straightforward REST endpoints with Zod contracts over introducing GraphQL or complex RPC frameworks unless multi-entity query overfetching is a proven bottleneck.
+1. **Semantic REST URIs & Protocol Simplicity**: URIs identify resource entities with plural nouns in kebab-case (e.g. `/api/v1/payment-methods`). Never put action verbs (`/getUser`, `/cancelOrder`) or prompt buzzwords (`/api/v1/deep-thinking-pipeline`) in the path. Favor straightforward REST endpoints with Zod contracts over introducing GraphQL or complex RPC frameworks unless multi-entity query overfetching is a proven bottleneck.
 2. **RFC 7807 Problem Details Envelopes**: Never return generic `{ error: "msg" }` or 200 OK with an error payload. Errors MUST use the RFC 7807 standard (`application/problem+json`) with standard fields: `type`, `title`, `status`, `detail`, `instance`, and `invalidParams`.
 3. **Mandatory Pagination & Filtering on Lists**: Every endpoint returning a collection MUST enforce server-side pagination (offset-based with `page`/`pageSize` or keyset cursor-based with `cursor`/`limit`) plus search/attribute filtering. Unbounded queries are strictly prohibited.
 4. **State Mutation Idempotency**: All critical write endpoints (billing, order checkout, resource creation) MUST accept the `Idempotency-Key` header and use distributed cache locking (Redis) to prevent duplicate execution.
@@ -35,14 +35,13 @@ Before designing or modifying any API route, schema, or contract, verify these 5
 
 ### 1. Semantic Resource URIs
 ```ts
-// ❌ [DON'T] Use RPC-style verbs or camelCase paths
+// ❌ [DON'T] Use RPC verbs or prompt buzzwords
 // POST /api/v1/getUser
-// POST /api/v1/updateUserStatus
-// GET  /api/v1/userOrders?userId=123
+// POST /api/v1/trigger-deep-thinking-pipeline
 
 // ✅ [DO] Plural nouns, proper HTTP verbs, sub-resource scoping
 // GET    /api/v1/users/:id
-// PATCH  /api/v1/users/:id/status
+// POST   /api/v1/documents/:id/verify
 // GET    /api/v1/users/:id/orders
 ```
 

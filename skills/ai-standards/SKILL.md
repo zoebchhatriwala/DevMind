@@ -17,7 +17,7 @@ trigger: model_decision
 
 ## 🚨 Pre-Flight Gate (Read Before Coding)
 
-Before writing or modifying any AI platform code, verify these 5 non-negotiable gates:
+Before writing or modifying any AI platform code, verify these 6 non-negotiable gates:
 
 1. **Deterministic Code First**: Never invoke an LLM for operations that deterministic code (regex, math, SQL, permission checks, sorting, string manipulation) handles with 100% reliability.
 2. **Hybrid Search + Neural Reranking for RAG**: Dense vector search alone fails on exact keywords, SKUs, error codes (`ERR-104`), and acronyms. Production RAG MUST combine sparse BM25 with dense vector embeddings via Reciprocal Rank Fusion (RRF), followed by a cross-encoder neural reranker (Cohere, BGE, or FlashRank) to compress candidate pools to the top 3–5 high-precision chunks.
@@ -27,6 +27,7 @@ Before writing or modifying any AI platform code, verify these 5 non-negotiable 
    - **Context Precision / Recall**: Did retrieval surface the necessary and sufficient context? ($\ge 0.85$)
    - **Faithfulness / Groundedness**: Is the answer derived *only* from the retrieved context without hallucination? ($\ge 0.90$)
    - **Answer Relevance**: Does the output directly answer the question? ($\ge 0.90$)
+6. **Silent Competence & Server-Side Isolation**: Keep prompts and model execution isolated to server-side code (actions, handlers, services). Never expose system prompts or raw internal reasoning traces to client bundles or user UI. Describe features by their human domain utility, never prompt-scaffolding buzzwords.
 
 ### Operational Modes:
 - **Mode A: Greenfield / New AI Pipeline**: Run the Section 0 Architecture Interview below in a single friendly turn.
@@ -327,6 +328,11 @@ Unbounded arrays of messages (`messages: [...history]`) cause quadratic cost gro
 - Use Server-Sent Events (SSE) for chat responses.
 - Always attach an `AbortController` to cancel generation when the client disconnects, preventing wasted GPU compute.
 - Emit citation tags (`[1]`, `[Doc Title](url)`) mapped directly to retrieved chunk IDs.
+
+### 3.3 Silent Competence & Clean Product Integration
+- **Server Isolation**: Prompts and AI orchestration belong exclusively in backend handlers or server actions. Never inline system prompts, keys, or templates in client-side components.
+- **Humble Product Language**: Model outputs must be formatted as clean product data (JSON, markdown content), not conversational assistant filler ("Here is the requested analysis...").
+- **No Raw Trace Spilling**: Chain-of-thought, thinking tokens, and intermediate prompt scaffolding must not leak into client-facing UI unless building a deliberate, developer-only debug drawer.
 
 ---
 
