@@ -19,6 +19,7 @@ const SKILL_GLOBS = {
   'deployment': '**/{.github,deploy,infra}/**,**/Dockerfile*,**/docker-compose*,**/*.tf',
   'api-design': '**/{api,routes,controllers,contracts}/**,**/*.openapi.*,**/*.swagger.*',
   'ai-standards': '**/{ai,rag,prompts,llm,embeddings,agents}/**',
+  'strata': '**/*',
 };
 
 /**
@@ -124,6 +125,7 @@ When a user request touches any of the following file globs or task types, you *
 | **\`deployment\`** | Dockerfiles, docker-compose, CI/CD workflows (.github/workflows), Kubernetes, Terraform, health probes | \`**/{.github,deploy,infra}/**\`, \`**/Dockerfile*\`, \`**/docker-compose*\`, \`**/*.tf\` |
 | **\`fe-standards\`** | UI components, pages, client state, forms, data fetching hooks, CSS/Tailwind, accessibility, frontend performance | \`**/*.{tsx,jsx,css,scss,html,vue,svelte}\` |
 | **\`security-standards\`** | User input validation, file uploads, secrets/env vars, rate limiting, CORS, CSP headers, encryption, PII/payments | \`**/*\` |
+| **\`strata\`** | Visual code map, "generate code map", "visualize code", "show what I built", user journeys, trust boundaries, blast radius | \`**/*\` |
 
 <EXECUTION_RULE>
 ### CRITICAL PROTOCOL FOR ALL CODING AGENTS:
@@ -195,13 +197,45 @@ $$\\text{Understand} \\longrightarrow \\text{Inspect} \\longrightarrow \\text{Ev
 
 ## Domain Standards Catalog & Progressive Disclosure
 
-DevMind provides 8 specialized domain guides. When working in any of these areas, consult the referenced guide:
+DevMind provides ${skills.length} specialized domain guides. When working in any of these areas, consult the referenced guide:
 
 | Skill | Domain | Standards & Baseline | Reference Guide |
 | :--- | :--- | :--- | :--- |
 ${skills.map(s => `| **${s.name}** | ${s.description.split('.')[0]} | Governed by AGENTS.md | [${s.name}](./references/${s.name}.md) |`).join('\n')}
 
 For universal engineering baseline directives, consult [AGENTS.md](./references/AGENTS.md).
+
+---
+
+## 7 - Strata: Behavioral Architecture Mapping & Code Visualization
+
+Strata provides a visual map of the application designed for vibe coders to understand what AI built without reading code, and for senior engineers to review blast radius and trust boundaries before shipping.
+
+### Activation Triggers & Agent Execution
+When the user asks to **"generate code map"**, **"visualize this app"**, **"show what I built"**, or **"strata"**:
+1. Do not ask the user to run an npm command (user projects do not have a strata script).
+2. The agent executes the analysis, evaluates the 10 checks, and writes \`.devmind/strata.html\` in the project root.
+3. Deliver the clickable file link: \`file://<project-root>/.devmind/strata.html\`.
+
+### The 3 Visual Overlays (One Map, Three Questions)
+1. **Structure Overlay ("What did I actually build?")**: Organizes components by behavior across 3 tiers (Browser, Server, Database & Services) with plain-language labels and connection wires.
+2. **Flow Overlay ("What happens when a user does X?")**: Interactive user journeys with animated glowing flows; dead ends highlight where light stops (unhandled buttons or swallowed errors).
+3. **Security Overlay ("What could go wrong?")**: Draws physical trust boundaries as glowing walls (Browser Wall, Database & Cloud Wall). Highlights leaked secrets, open database tables, and unauthenticated endpoints. Clicking any red spot reveals exact file:line evidence, confidence rating, blast radius, and a **"Copy Fix Prompt"** button for immediate AI remediation.
+
+### The 10 High-Value Reliable Checks
+- \`SEC-001\`: Secret Key Leaked to Browser Client
+- \`SEC-002\`: Public Database Table Without RLS / Access Rules
+- \`SEC-003\`: Unauthenticated Server Route / Action
+- \`SEC-004\`: Direct User Input in Database Query (Injection)
+- \`SEC-005\`: Unverified External Webhook Signature
+- \`FLOW-006\`: Dead Weight: Orphaned AI-Generated Code
+- \`FLOW-007\`: Silent Failure: Swallowed Error in Critical Flow
+- \`FLOW-008\`: Dead-End UI Action: Missing Event Handler
+- \`SEC-009\`: Missing Input Validation Boundary (Zero Zod)
+- \`SEC-010\`: Client-Side Price or Privilege Authority Tampering
+
+### The Change Ledger
+Summarizes recent AI edits by **consequences** rather than line diffs (e.g. "Added Stripe service, introduced STRIPE_SECRET_KEY, and connected orders table without RLS").
 
 ---
 
@@ -214,6 +248,7 @@ To slash token waste and preserve context across sessions, agents externalize ac
 - \`.devmind/memory.md\`: Persistent repository facts, stack choices & tracked shortcuts (\`// devmind:\`).
 - \`.devmind/rules.md\`: Project-specific user rules, conventions & constraints.
 - \`.devmind/handover.md\`: Session continuity summary for zero-loss resumption (fallback: root \`HANDOVER.md\`).
+- \`.devmind/strata.html\`: Interactive behavioral map & security boundary visualization.
 
 ### The 4 Token Optimization Rules
 1. **Slice, Don't Dump**: Never read entire 1,000-line files when 30 lines are relevant. Use targeted grep and line ranges.

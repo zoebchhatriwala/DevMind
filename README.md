@@ -67,9 +67,26 @@ To prevent agents from forgetting standards mid-session, they print a single-lin
 ```
 This forces the rules directly into the model's immediate context window, preventing context drift across long conversations.
 
+### 7. Strata: Code Visualization for Vibe Coders & Seniors
+Vibe coders often struggle to read complex AI-generated code, while senior engineers need to review the blast radius of AI edits fast. DevMind includes **Strata**, an interactive visual architecture map generated on demand by your AI agent.
+
+Just ask your AI agent in chat:
+> *"Generate code map"*  
+> *"Visualize this app"*  
+> *"Show me what I built"*
+
+The agent inspects your codebase, evaluates trust boundaries, and automatically generates an interactive map at `.devmind/strata.html`:
+- **Structure Overlay**: Visualizes screens, buttons, routes, database tables, and external services arranged by behavior across three zones: Browser, Server, and Database/Services.
+- **Flow Overlay**: Lights up user journeys (e.g. checkout, login, password reset) and highlights dead ends (unhandled buttons or swallowed errors).
+- **Security Overlay**: Draws physical trust boundaries as glowing walls (Browser Wall, Database Wall) and detects leaked secrets, public tables without RLS, and unauthenticated endpoints.
+- **Clickable Red Spots with AI Fix Prompts**: Every flagged risk displays exact file:line evidence and provides a 1-click **"Copy Fix Prompt"** button to feed back into your AI tool.
+- **The Change Ledger**: Summarizes AI edits by *consequences* rather than confusing diffs.
+- **Junior & Senior Modes**: Switch between plain-language labels and technical blast radius metrics.
+- Standalone, offline HTML generated at `.devmind/strata.html` (no npm dependencies needed in your project).
+
 ---
 
-## The 8 Skill Domains
+## The 9 Skill Domains
 
 DevMind includes specialized, modular rules across the full stack:
 
@@ -83,6 +100,7 @@ DevMind includes specialized, modular rules across the full stack:
 | **[`deployment`](./skills/deployment/)** | Docker, CI/CD & Cloud | Multi-stage rootless Dockerfiles (`USER nonroot`), explicit health probes, SHA-pinned GitHub Actions, Trivy vulnerability scans, and zero hardcoded secrets. |
 | **[`fe-standards`](./skills/fe-standards/)** | UI, Accessibility & Design | Intent-driven SaaS UI (zero generic AI slop, no arbitrary purple gradients/blobs), full wayfinding (AppShell, breadcrumbs, page headers), WCAG 2.2 AA accessibility, 8-state interaction matrices, semantic CSS tokens, and real icon libraries (no unstyled emojis). |
 | **[`security-standards`](./skills/security-standards/)** | AppSec & Defense-in-Depth | NIST SSDF & OWASP ASVS compliance, Argon2id hashing, AES-256-GCM encryption, magic-byte file validation, rate limiting, and zero-tolerance dependency audit. |
+| **[`strata`](./skills/strata/)** | Code Visualization & Trust Boundaries | Visual app maps for vibe coders, 3 behavioral zones (Browser/Server/Database), 10 high-value security checks with copyable AI fix prompts, animated journey flows, and AI Change Ledger. |
 
 ---
 

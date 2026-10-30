@@ -20,6 +20,7 @@ When a user request touches any of the following file globs or task types, you *
 | **`deployment`** | Dockerfiles, docker-compose, CI/CD workflows (.github/workflows), Kubernetes, Terraform, health probes | `**/{.github,deploy,infra}/**`, `**/Dockerfile*`, `**/docker-compose*`, `**/*.tf` |
 | **`fe-standards`** | UI components, pages, client state, forms, data fetching hooks, CSS/Tailwind, accessibility, frontend performance | `**/*.{tsx,jsx,css,scss,html,vue,svelte}` |
 | **`security-standards`** | User input validation, file uploads, secrets/env vars, rate limiting, CORS, CSP headers, encryption, PII/payments | `**/*` |
+| **`strata`** | Visual code map, "generate code map", "visualize code", "show what I built", user journeys, trust boundaries, blast radius | `**/*` |
 
 <EXECUTION_RULE>
 ### CRITICAL PROTOCOL FOR ALL CODING AGENTS:
@@ -181,6 +182,65 @@ For trivial changes, keep it proportionate—one or two lines are sufficient.
 
 ---
 
+## 7. Strata: Behavioral Architecture Mapping & Code Visualization
+
+Strata provides a visual map of the application designed for vibe coders to understand what AI built without reading code, and for senior engineers to review blast radius and trust boundaries before shipping.
+
+### Activation Triggers & Agent Execution
+- **Natural Language Triggers**: Activates when the user asks:
+  - *"generate code map"* or *"code map"*
+  - *"visualize this app"* or *"visualize code"*
+  - *"show me what I built"* or *"what did I build?"*
+  - *"map the architecture"* or *"check blast radius"*
+  - *"strata"* or *"/strata"*
+- **Agent Execution Protocol**:
+  1. **DO NOT tell or ask the user to run an npm command**; the user's project does not have a `strata` npm script.
+  2. As the AI coding agent, handle the task end-to-end:
+     - Scan the project structure across Browser, Server, and Database/Services zones.
+     - Evaluate the 10 high-value security & flow checks (`SEC-001` through `SEC-010`).
+     - Extract recent AI edit consequences for the Change Ledger.
+     - Generate or update `.devmind/strata.html` in the project root.
+  3. Deliver the direct clickable file link in your response: `file://<project-root>/.devmind/strata.html`.
+
+### The 3 Visual Overlays (One Map, Three Questions)
+1. **Structure Overlay ("What did I actually build?")**:
+   - Organizes components by behavior across 3 distinct zones (Browser, Server, Database & External Services) rather than arbitrary folder trees.
+   - Plain-language labels on all cards ("Checkout Button", "Customer Database", "Charges the Card", "Sends Receipt Email").
+   - Clear directional wires showing connections without having to open files.
+2. **Flow Overlay ("What happens when a user does X?")**:
+   - Interactive user journeys (e.g. User Checkout & Payment, Authentication & Onboarding, Password Reset).
+   - Selecting a journey lights up the active path with animated glowing flows.
+   - Dead ends show immediately where light stops (unhandled buttons, empty stubs, or unhandled errors).
+3. **Security Overlay ("What could go wrong?")**:
+   - Draws physical trust boundaries as glowing walls:
+     - **Browser Wall (Client Gateway)**: Boundary between browser and server runtime.
+     - **Database & Cloud Wall**: Boundary isolating backend logic from database tables and external services.
+   - Cross-boundary leaks and ungated crossings are flagged in glowing red.
+   - Dead-weight / orphaned AI code is greyed out with dashed borders.
+   - Clickable Red Spots: Reveals exact file:line evidence, confidence score, plain-language explanation, senior threat model, blast radius, and a **"Copy Fix Prompt"** button for immediate AI remediation.
+
+### The 10 High-Value Security & Flow Checks
+1. `SEC-001`: Secret Key Leaked to Browser Client (`process.env.STRIPE_SECRET_KEY` in client components).
+2. `SEC-002`: Public Database Table Without RLS (Client-side Supabase/Firebase query without RLS policy).
+3. `SEC-003`: Unauthenticated Server Route / Action (State-mutating route lacking auth/session verification).
+4. `SEC-004`: Direct User Input in Database Query (SQL/NoSQL injection via unescaped string interpolation).
+5. `SEC-005`: Unverified External Webhook Signature (Stripe webhook without cryptographic signature verification).
+6. `FLOW-006`: Dead Weight: Orphaned AI-Generated Code (Components or routes with 0 inbound references).
+7. `FLOW-007`: Silent Failure: Swallowed Error in Critical Flow (Empty catch block in payment/auth).
+8. `FLOW-008`: Dead-End UI Action: Missing Event Handler (Interactive button with empty stub or `#`).
+9. `SEC-009`: Missing Input Validation Boundary (Route Handler or Action parsing raw body without Zod).
+10. `SEC-010`: Client-Side Price or Privilege Authority Tampering (Client sending authoritative amount/role).
+
+### The Change Ledger
+- Summarizes recent AI edits by **consequences** rather than cryptic line diffs (e.g. "This edit added a new outside service (Stripe), an environment secret (STRIPE_SECRET_KEY), and connected the user orders table without RLS").
+- Quantifies blast radius (+X components, +Y routes, +Z tables).
+
+### Dual Audience Modes
+- **Junior Mode**: Plain-language labels, "Explain This Part" intuitive analogies, guided tours of the app.
+- **Senior Mode**: Technical symbols, coupling scores, runtime traffic weights, blast radius highlighting, raw code viewer.
+
+---
+
 ## 8. Token Optimization & The `.devmind/` Memory Vault
 
 AI coding agents burn excessive tokens by repeatedly re-reading large files, dumping full terminal logs into chat, re-printing verbose checklists in every response, and suffering mid-session amnesia. 
@@ -192,7 +252,8 @@ To slash token waste and preserve context across sessions, agents externalize ac
 ├── task.md        # Active task & progress checklist (live scratchpad)
 ├── memory.md      # Persistent repository facts, stack choices & tracked shortcuts
 ├── rules.md       # Project-specific user rules, conventions & constraints
-└── handover.md    # Session continuity summary for zero-loss resumption
+├── handover.md    # Session continuity summary for zero-loss resumption
+└── strata.html    # Interactive behavioral map & security boundary visualizer
 ```
 
 ### The 4 Token Optimization Rules
