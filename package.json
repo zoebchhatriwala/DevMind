@@ -5,18 +5,34 @@
   "type": "module",
   "main": "dist/bundles/manifest.json",
   "bin": {
-    "devmind": "./scripts/build.mjs"
+    "devmind": "./bin/devmind.mjs"
   },
   "scripts": {
+    "devmind": "node bin/devmind.mjs",
+    "install:wizard": "node bin/devmind.mjs install",
+    "verify": "node scripts/verify.mjs",
+    "inspect": "node scripts/inspect.mjs",
+    "contrast": "node scripts/contrast.mjs",
+    "browser:audit": "node scripts/browser-audit.mjs",
+    "quality": "node scripts/quality.mjs",
+    "review": "node scripts/review.mjs",
+    "eval": "node scripts/eval.mjs",
+    "lint": "node scripts/verify.mjs",
+    "strata": "node scripts/strata.mjs",
+    "init": "node scripts/init.mjs",
+    "handover": "node scripts/handover.mjs",
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate.mjs",
-    "test": "node scripts/validate.mjs",
+    "test": "node scripts/test.mjs",
     "install:gemini": "node scripts/build.mjs --install-gemini",
     "prepack": "npm run build"
   },
   "files": [
+    "bin",
+    "scripts",
     "skills",
     "dist",
+    "templates",
     "AGENTS.md",
     "README.md",
     "LICENSE"

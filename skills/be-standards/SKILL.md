@@ -2,9 +2,6 @@
 name: be-standards
 description: >-
   MANDATORY TRIGGER: Invoke BEFORE writing or refactoring backend services, business logic, background jobs, queues, caching, logging, dependency injection, or server error handling.
-  Keywords & Triggers: backend, server, Express, Fastify, NestJS, Hono, Node.js, Bun, Deno, REST API service, business logic, service layer, controller, repository, dependency injection, background jobs, worker, BullMQ, queues, Redis cache, caching, cache invalidation, structured logging, Pino logger, request ID, correlation ID, error handling, AppError, try catch, server error, collection pagination, Zod DTO validation, backend architecture, backend refactor.
-  File globs: **/*.{ts,js,mjs,cjs,go,py,rs}
-trigger: model_decision
 ---
 
 # be-standards: Backend Engineering Protocol

@@ -2,9 +2,6 @@
 name: auth-patterns
 description: >-
   MANDATORY TRIGGER: Invoke BEFORE touching login, signup, JWT, OAuth, sessions, RBAC/permissions, middleware/guards, password hashing, CSRF, or token refresh logic.
-  Keywords & Triggers: login, sign in, signup, register, user authentication, auth, passwords, forgot password, reset password, change password, password hashing, Argon2id, bcrypt, session management, session cookies, HttpOnly cookies, SameSite cookies, JWT, access token, refresh token rotation, token reuse detection, OAuth 2.0, social login, Google login, GitHub login, PKCE, NextAuth, Auth.js, Clerk, Supabase auth, roles, permissions, RBAC, ABAC, protected routes, auth guards, middleware auth, multi-tenant IDOR, 2FA, TOTP, MFA, passkeys, WebAuthn.
-  File globs: **/{auth,middleware,session,security}/**
-trigger: model_decision
 ---
 
 # auth-patterns: Authentication & Authorization Engineering Protocol

@@ -2,9 +2,6 @@
 name: api-design
 description: >-
   MANDATORY TRIGGER: Invoke BEFORE creating, modifying, or reviewing any REST/GraphQL/RPC route, controller, OpenAPI spec, DTO, pagination, error payload, or webhook handler.
-  Keywords & Triggers: create API endpoint, REST route, HTTP methods (GET, POST, PUT, PATCH, DELETE), API controllers, route handlers, query parameters, request body, DTO validation, collection pagination, keyset cursor pagination, offset pagination, filtering, sorting, RFC 7807 problem details, error format, OpenAPI 3.1, Swagger spec, tRPC router, GraphQL schema, resolvers, webhooks, Stripe webhooks, HMAC signature verification, Idempotency-Key, rate limiting headers, API versioning.
-  File globs: **/{api,routes,controllers,contracts}/**,**/*.openapi.*,**/*.swagger.*
-trigger: model_decision
 ---
 
 # api-design: API Architecture & Contract Design Protocol

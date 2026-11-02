@@ -14,5 +14,6 @@ Thumbs.db
 # Build artifacts & dependencies
 dist/
 node_modules/
-.devmind/
+/.devmind/
+!templates/.devmind/
 

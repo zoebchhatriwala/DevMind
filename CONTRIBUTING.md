@@ -67,12 +67,12 @@ Every merged skill must satisfy:
 
 ### 1. Frontmatter & Discovery (Search Optimization)
 
-- Valid YAML frontmatter with `name`, `description`, and `trigger: model_decision`.
-- `description` contains rich, high-density keywords and trigger phrases (exact-match and semantic synonyms) so agents activate it accurately.
+- Portable YAML frontmatter with `name` and `description`. Distribution-specific triggers belong in generated adapter metadata.
+- `description` briefly names the capability and when it applies. Avoid keyword inventories and broad triggers unrelated to the task.
 
 ### 2. Structure & Completeness
 
-- **Section 0**: User interview table for architectural decisions with sensible defaults.
+- **Pre-flight**: Inspect existing conventions. Ask only about consequential unknowns in new architecture, with recommended defaults.
 - Actionable, authoritative rules: "Use X with parameters Y", never vague suggestions.
 - Real, runnable TypeScript/SQL/YAML code examples without placeholders or pseudo-code.
 - Covers unhappy paths (errors, empty states, rate limits, timeouts).

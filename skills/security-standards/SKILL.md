@@ -2,9 +2,6 @@
 name: security-standards
 description: >-
   MANDATORY TRIGGER: Invoke BEFORE handling user input validation, file uploads, secrets/env vars, rate limiting, CORS, CSP headers, encryption, or payment/PII flows.
-  Keywords & Triggers: security, application security, sanitize input, validate input, Zod validation, file upload security, magic bytes, antivirus scan, secrets, credentials, API keys, .env, environment variable validation, rate limiting, brute force protection, CORS, Content-Security-Policy, CSP headers, XSS prevention, DOMPurify, CSRF defense, SQL injection prevention, parameterized queries, command injection, execFile, constant-time comparison, timingSafeEqual, encryption at rest, AES-256-GCM, PII, sensitive user data, compliance, OWASP ASVS, NIST SSDF.
-  File globs: **/*
-trigger: model_decision
 ---
 
 # security-standards: Application Security Protocol
@@ -19,7 +16,7 @@ trigger: model_decision
 
 Before handling user input, auth, credentials, files, or sensitive flows, verify these 5 non-negotiable gates:
 
-1. **Strict Input Validation & Canonicalization**: Every input parameter (body, query, headers, files) MUST pass through strict Zod schemas with unknown properties stripped (`.strict()`). Canonicalize filenames and paths before filesystem access.
+1. **Strict Input Validation & Canonicalization**: Validate untrusted input (body, query, headers, files) at its trust boundary using the project's schema tools. Zod `.strict()` rejects unknown properties; choose stripping or rejection deliberately. Canonicalize filenames and paths before filesystem access.
 2. **Zero Hardcoded Secrets**: Secrets, tokens, connection strings, or private keys MUST NEVER appear in code, comments, tests, or committed env files. Validate environment configuration at boot with Zod.
 3. **Constant-Time Secret Comparisons**: NEVER use standard equality operators (`===`, `!==`) when comparing password hashes, webhook signatures, or session tokens. ALWAYS use `crypto.timingSafeEqual` to eliminate timing side-channel attacks.
 4. **Zero Shell & Injection Vectors**: NEVER execute user input in shell commands (`child_process.exec`). Use parameterized database queries and safe APIs (`child_process.execFile` with argument arrays). Never use `dangerouslySetInnerHTML` without `DOMPurify`.

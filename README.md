@@ -58,7 +58,7 @@ AI coding agents waste thousands of tokens repeating checklists in chat turns, d
 - **`rules.md`**: Custom project-specific user rules, team conventions, and hard constraints that agents must obey on every turn.
 - **`handover.md`**: Standardized session summary for zero-loss resumption across agent sessions.
 
-**Git Tracking Choice**: When `.devmind/` is first created, the agent asks whether to commit it to Git (to share session memory with your team and other AI agents) or append it to `.gitignore` (keep it local to your machine only).
+**Git Tracking Choice**: `.devmind/` is ignored locally by default. Track it only when the team explicitly chooses shared task memory.
 
 ### 6. Anti-Amnesia Receipts
 To prevent agents from forgetting standards mid-session, they print a single-line receipt badge at the top of their response:
@@ -76,6 +76,8 @@ Just ask your AI agent in chat:
 > *"Show me what I built"*
 
 The agent inspects your codebase, evaluates trust boundaries, and automatically generates an interactive map at `.devmind/strata.html`:
+
+The automated helper currently inventories observed files and dependency names and attaches source-check findings. It does not establish runtime edges, user journeys, traffic scores, or commit blast radius. Those require traced evidence and agent review; missing information stays unknown. The overlays below support manually reviewed map data and the included demo, rather than proving those behaviors from filenames alone.
 - **Structure Overlay**: Visualizes screens, buttons, routes, database tables, and external services arranged by behavior across three zones: Browser, Server, and Database/Services.
 - **Flow Overlay**: Lights up user journeys (e.g. checkout, login, password reset) and highlights dead ends (unhandled buttons or swallowed errors).
 - **Security Overlay**: Draws physical trust boundaries as glowing walls (Browser Wall, Database Wall) and detects leaked secrets, public tables without RLS, and unauthenticated endpoints.
@@ -98,23 +100,78 @@ DevMind includes specialized, modular rules across the full stack:
 | **[`be-standards`](./skills/be-standards/)** | Backend Logic & Services | Strict DTO validation, clean service/repository boundaries, Pino structured logging (secrets redacted), collection pagination, and safe graceful shutdowns. |
 | **[`db-standards`](./skills/db-standards/)** | Databases & Migrations | Zero-downtime expand-contract migrations, foreign key indexes, N+1 query elimination, keyset cursor pagination, and ACID transaction boundaries. |
 | **[`deployment`](./skills/deployment/)** | Docker, CI/CD & Cloud | Multi-stage rootless Dockerfiles (`USER nonroot`), explicit health probes, SHA-pinned GitHub Actions, Trivy vulnerability scans, and zero hardcoded secrets. |
-| **[`fe-standards`](./skills/fe-standards/)** | UI, Accessibility & Design | Intent-driven SaaS UI (zero generic AI slop, no arbitrary purple gradients/blobs), full wayfinding (AppShell, breadcrumbs, page headers), WCAG 2.2 AA accessibility, 8-state interaction matrices, semantic CSS tokens, and real icon libraries (no unstyled emojis). |
+| **[`fe-standards`](./skills/fe-standards/)** | UI, Accessibility & Design | Task-specific composition, complete interactions, existing design-system reuse, honest content, WCAG 2.2 AA, and real browser verification. No forced SaaS templates or blanket palette bans. |
 | **[`security-standards`](./skills/security-standards/)** | AppSec & Defense-in-Depth | NIST SSDF & OWASP ASVS compliance, Argon2id hashing, AES-256-GCM encryption, magic-byte file validation, rate limiting, and zero-tolerance dependency audit. |
 | **[`strata`](./skills/strata/)** | Code Visualization & Trust Boundaries | Visual app maps for vibe coders, 3 behavioral zones (Browser/Server/Database), 10 high-value security checks with copyable AI fix prompts, animated journey flows, and AI Change Ledger. |
 
 ---
 
-## Quick Setup
+## Quick Setup & Interactive Installer
 
-Clone the repository and build the compiled rules for your tool of choice:
+DevMind provides an interactive installer CLI for local and global installation across all major AI coding agents:
+
+### 1. Interactive Installer Wizard (Recommended)
+Run with zero installation to launch the interactive terminal setup wizard:
 
 ```bash
-git clone https://github.com/zoebchhatriwala/DevMind.git
-cd DevMind
-npm run build
+npx devmind
+```
+The wizard prompts you interactively:
+- **Scope**: Local project workspace (`./.devmind`, `.cursor/`, `CLAUDE.md`, `.agents/`) or Global user environment (`~/.gemini/config/skills/devmind`, `~/.claude/skills/devmind`, `~/.cursor/rules/`).
+- **Target Agents**: Google Antigravity, Cursor, Claude Code, Windsurf, GitHub Copilot, Cline/Roo Code, or All.
+- **Helper Scripts**: Installs executable JS helper scripts directly into `.devmind/scripts/` for your AI agents to use.
+
+### 2. Fast Non-Interactive Installation
+```bash
+# Equip current project with all agent hooks & memory vault
+npx devmind install --local --target all
+
+# Install globally across all user profile directories on your machine
+npx devmind install --global --target all
+
+# Install for a specific agent (e.g. Antigravity or Cursor)
+npx devmind install --global --target antigravity
+npx devmind install --local --target cursor
 ```
 
-This generates drop-in configurations inside `dist/`:
+### 3. OpenSkills / Agent Skills Compatible
+Install directly via the open-source `skills` CLI:
+```bash
+npx skills add zoebchhatriwala/DevMind
+```
+
+---
+
+## 🧰 Executable Helper Scripts (For AI Agents & Developers)
+
+DevMind equips AI agents (and developers) with zero-dependency Node.js automation scripts located in `scripts/` (and `.devmind/scripts/` when installed locally):
+
+Use `inspect` before creating code, `verify` after changes, and the existing project checks plus a browser before declaring UI work complete. The frontend guide now requires a short design brief, domain-specific composition, working controls, and observed mobile/desktop behavior. A clean scanner cannot prove visual quality, security, or accessibility.
+
+`verify` exits 0 when no errors match, 1 for findings, and 2 for usage/scan failures. Add `--strict` to also fail on warnings. JSON includes implemented rules, manual checks, exclusions, and limitations. Automatic `--fix` was removed: the verifier never rewrites source or local preferences. Tests, fixtures, generated folders, and symbolic links are excluded from source checks; scripts are included. Custom gitignore patterns are not interpreted.
+
+Run `npm run build` and `npm test` to validate behavioral fixtures and distribution artifacts. Core tools have no required package dependencies. Browser tests reuse existing Playwright and a browser; AST tests reuse an installed TypeScript compiler. Optional tests report skips when those tools are absent. Set `DEVMIND_TEST_TOOLING` to an existing tooling directory and `DEVMIND_TEST_CHANNEL` to `chrome` or `msedge` when appropriate. Set `DEVMIND_REQUIRE_TOOLING=1` to make missing browser/parser packages fail the test gate.
+
+Built skill folders include their tools and shared modules. Rules-only distributions include a `scripts/` folder; the CLI installer puts tools in `.devmind/scripts/` for local projects and `~/.devmind/scripts/` for global rules installations.
+
+| Helper Script | Purpose & Capabilities | Terminal Command |
+| :--- | :--- | :--- |
+| **`scripts/inspect.mjs`** | Read-only project discovery: packages, component/helper candidates, tokens, and quality tooling. Does not run discovered commands or print dependency/script values. | `npx devmind inspect . --json` |
+| **`scripts/verify.mjs`** | Read-only AST checks using an installed TypeScript parser, plus labeled lexical/review hints for secret exposure, raw SQL, errors, interactions, types, and accessibility. | `npx devmind verify . --json --strict` |
+| **`scripts/contrast.mjs`** | Solid hex color contrast with AA thresholds. Default checks normal text; use `--large` or `--non-text` for the 3:1 threshold. | `npx devmind contrast "#111827" "#ffffff" --json` |
+| **`scripts/browser-audit.mjs`** | Isolated local browser screenshots, explicit keyboard/pointer assertions, DOM hints, and runtime error counts. Reuses installed Playwright. | `npx devmind browser-audit . http://127.0.0.1:3000 --plan browser-plan.json --json` |
+| **`scripts/quality.mjs`** | Discover existing root package formatting/lint/type/test scripts; execute only with `--run`. Missing scripts remain unverified. | `npx devmind quality . --run --json` |
+| **`scripts/review.mjs`** | Combine current source/check/browser/reviewer evidence. Reject stale source fingerprints, altered screenshots, and missing observations. | `npx devmind review . --quality .devmind/quality.json --browser .devmind/browser/report.json --assessment .devmind/assessment.json --json` |
+| **`scripts/eval.mjs`** | Prepare five isolated tasks and evaluate actual candidate behavior. Compare identical case definitions and browser environments. | `npx devmind eval --list` |
+| **`scripts/strata.mjs`** | Behavioral architecture mapper: automatically inspects project across Browser, Server, and Database zones, checks trust boundaries, and generates self-contained `.devmind/strata.html`. | `npx devmind strata` or `node scripts/strata.mjs` |
+| **`scripts/init.mjs`** | Memory Vault bootstrapper: auto-detects tech stack (runtime, framework, DB, styling) and generates `.devmind/task.md`, `memory.md`, and `rules.md` with `.gitignore` safety. | `npx devmind init` or `node scripts/init.mjs` |
+| **`scripts/handover.mjs`** | Session continuity: inspects git diffs and tracked shortcuts (`// devmind:`) to update `.devmind/handover.md`. | `npx devmind handover` or `node scripts/handover.mjs` |
+
+The frontend skill loads [annotated design examples](skills/fe-standards/references/fe-design-examples.md) and [verification/evaluation procedures](skills/fe-standards/references/fe-verification.md) only when relevant. Small patches use affected checks; page/journey changes use fuller evidence. `eval` reports `behaviorStatus` separately from overall reviewed status, so successful functional checks do not hide missing reviewer evidence. The evaluator does not invoke a model itself or claim broad improvement from one case.
+
+---
+
+## Manual Multi-Agent Drop-In (dist/)
 
 ### Cursor IDE
 Copy the auto-attaching rules into your project:

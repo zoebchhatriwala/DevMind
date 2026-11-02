@@ -2,9 +2,6 @@
 name: ai-standards
 description: >-
   MANDATORY TRIGGER: Invoke BEFORE writing or modifying any LLM/AI integration, prompt templates, agent workflows, RAG pipelines, embeddings, tool calls, or model routing.
-  Keywords & Triggers: RAG, retrieval augmented generation, hybrid search, BM25, dense vector search, pgvector, vector database, Pinecone, Chroma, Qdrant, embeddings, reranking, cross-encoder, Cohere rerank, BGE reranker, RRF, reciprocal rank fusion, contextual chunking, semantic chunking, prompt engineering, system prompts, prompt-master, XML delimiters, few-shot prompts, grounding anchors, chat systems, conversation history, sliding window compaction, streaming SSE, agent systems, tool calling, function calling, ReAct loop, LangGraph, Vercel AI SDK, evaluation, evals, RAG triad, faithfulness, groundedness, context precision, answer relevance, DeepEval, Ragas, golden dataset, LLM as a judge.
-  File globs: **/{ai,rag,prompts,llm,embeddings,agents}/**
-trigger: model_decision
 ---
 
 # ai-standards: AI Platform, RAG, Agent & Evaluation Protocol

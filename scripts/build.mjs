@@ -3,6 +3,7 @@ import { readdir, readFile, writeFile, mkdir, rm, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { homedir } from 'node:os';
+import { HELPER_FILES } from './lib/helpers.mjs';
 
 const ROOT_DIR = resolve('.');
 const SKILLS_DIR = join(ROOT_DIR, 'skills');
@@ -97,201 +98,108 @@ async function loadSkills() {
   return skills;
 }
 
-function generateMasterSkillMd(skills, agentsMd) {
+function generateMasterSkillMd(skills) {
+  const catalog = skills.map(skill => `| ${skill.name} | [Domain guide](./references/${skill.name}.md) |`).join('\n');
   return `---
 name: devmind
 description: >-
-  MANDATORY TRIGGER: Universal fullstack engineering standards, architecture reviewer, and quality baseline for AI coding agents. Governed by AGENTS.md. Activates when designing, implementing, refactoring, or auditing frontend, backend, security, databases, authentication, CI/CD, APIs, and AI/RAG systems.
-trigger: model_decision
+  MANDATORY TRIGGER: Build, modify, or review application code using existing project conventions, task-specific UI design, strict trust boundaries, and executable verification. Route to the relevant domain guide without loading unrelated manuals.
 ---
 
-# devmind: Engineering Standards & Zero-Amnesia Protocol
+# DevMind
 
-You are operating under **DevMind**, an engineering baseline combining production-grade architecture with ruthless simplicity (YAGNI). Deliver the cleanest, smallest solution that meets real security, typing, and architectural baselines. The best code is code you didn't have to write.
+Deliver the smallest correct change that completes the user's task. Preserve their stack, brand, scope, and explicit choices. Read [AGENTS.md](./references/AGENTS.md) for the universal baseline; load only the relevant guide below.
 
----
+## 🚨 Pre-Flight Gate
 
-## 🎯 Mandatory Skill Routing Matrix
+Read local project instructions and memory, then inspect git status and the existing implementation. Preserve unrelated edits. For a patch, infer existing decisions without a stack interview. For new architecture, resolve only consequential unknowns, with recommended defaults, before writing files.
 
-When a user request touches any of the following file globs or task types, you **MUST** load and apply the corresponding DevMind skill(s) before authoring or modifying code:
+Run the bundled tool against the actual project directory:
 
-| Domain & Skill | Triggering Task Types & Keywords | File Globs |
-| :--- | :--- | :--- |
-| **\`ai-standards\`** | LLM integration, prompt templates, agent workflows, RAG pipelines, embeddings, tool calls, model routing | \`**/{ai,rag,prompts,llm,embeddings,agents}/**\` |
-| **\`api-design\`** | REST/GraphQL/RPC routes, OpenAPI spec, controllers, DTOs, endpoint pagination, error payloads, webhooks | \`**/{api,routes,controllers,contracts}/**\`, \`**/*.openapi.*\`, \`**/*.swagger.*\` |
-| **\`auth-patterns\`** | Login, signup, JWT, OAuth, sessions, RBAC/ABAC permissions, guards, password hashing, CSRF, refresh tokens | \`**/{auth,middleware,session,security}/**\` |
-| **\`be-standards\`** | Backend services, business logic, background jobs, queues, caching, logging, dependency injection, server errors | \`**/*.{ts,js,mjs,cjs,go,py,rs}\` |
-| **\`db-standards\`** | Database schemas, migrations, ORM models (Prisma/Drizzle/TypeORM/SQL), indexes, transactions, queries | \`**/{schema,migrations,models,entities}/**\`, \`**/*.sql\`, \`**/prisma/**\`, \`**/drizzle/**\` |
-| **\`deployment\`** | Dockerfiles, docker-compose, CI/CD workflows (.github/workflows), Kubernetes, Terraform, health probes | \`**/{.github,deploy,infra}/**\`, \`**/Dockerfile*\`, \`**/docker-compose*\`, \`**/*.tf\` |
-| **\`fe-standards\`** | UI components, pages, client state, forms, data fetching hooks, CSS/Tailwind, accessibility, frontend performance | \`**/*.{tsx,jsx,css,scss,html,vue,svelte}\` |
-| **\`security-standards\`** | User input validation, file uploads, secrets/env vars, rate limiting, CORS, CSP headers, encryption, PII/payments | \`**/*\` |
-| **\`strata\`** | Visual code map, "generate code map", "visualize code", "show what I built", user journeys, trust boundaries, blast radius | \`**/*\` |
+    node <skill>/scripts/inspect.mjs <project> --json
 
-<EXECUTION_RULE>
-### CRITICAL PROTOCOL FOR ALL CODING AGENTS:
-1. **ASSESS TASK SCOPE & TIER**:
-   - **Tier 1: Targeted Edits & Bug Fixes (Micro-Patches)**: For localized bug fixes, UI adjustments, or single-function changes in existing files, **DO NOT** dump entire 50KB domain skill files into context. The universal engineering baseline in AGENTS.md (Simplicity Ladder, Zod boundaries, zero \`any\`, Pino logging, WCAG 2.2 AA) is already active. Fix root causes directly with the shortest working diff.
-   - **Tier 2: Macro-Features & Scaffolding (Architectural Work)**: For new endpoints, database migrations, auth flows, major UI subsystems, or new services:
-     a. Identify primary domains via the Mandatory Skill Routing Matrix.
-     b. Read the relevant \`skills/<domain>/SKILL.md\` Pre-Flight Gates and Golden Patterns.
-     c. Use targeted slice-reading for deep topic references instead of loading full multi-thousand-line files blindly.
-2. **PRINT RECEIPT**: Output a compact badge at the top of your initial plan or implementation response:
-   \`🧠 [DevMind: <skill-name/tier> | Checked: <top 3 rules verified>]\`
-3. **NO COMPROMISE ON QUALITY**: Tiered loading prevents token exhaustion and context amnesia, but never waives strict typing, runtime validation, accessibility, or security invariants.
-</EXECUTION_RULE>
+Inspect the returned components, tokens, helpers, quality scripts, and dependencies before creating alternatives. Stop at the first sufficient option: omit unnecessary work, reuse existing code, use the runtime, use framework primitives, use an installed dependency, then write a small typed function.
 
----
+## Domain guides
 
-## 0 - Before You Write: The Simplicity Ladder
+| Area | Read when relevant |
+| --- | --- |
+${catalog}
 
-Before writing or editing code, climb this ladder and stop at the first rung that holds:
+For UI work, start with fe-standards. For a large domain guide, read its pre-flight gate and relevant topic slices rather than loading the entire file.
+The frontend guide links annotated design examples and verification procedures. Load them for substantial UI work and skill evaluation; use only affected checks for small patches.
 
-\`\`\`
-[1. Does this need to exist at all? (YAGNI)]
-  └── [2. Already in this codebase? (Reuse existing utils/types)]
-        └── [3. Standard library or runtime does it?]
-              └── [4. Native platform or framework feature covers it?]
-                    └── [5. Existing installed dependency solves it?]
-                          └── [6. Concise one-liner or simple pure function?]
-                                └── [7. Only then: write minimum typed production code]
-\`\`\`
+## ⚡ Golden Patterns
 
-1. **YAGNI First**: Speculative needs, premature config, and imaginary abstractions are bloat. Skip them.
-2. **Reuse Existing Code**: Search the codebase before writing. Reusing existing helpers, components, and types stops duplicate slop.
-3. **Standard Library First**: Use built-in JavaScript/TypeScript/Python/Go features (\`URL\`, \`fetch\`, \`Intl\`, \`crypto.randomUUID()\`, \`structuredClone\`, \`Array.prototype.*\`) before hand-rolling or adding libraries.
-4. **Platform Native First**: Let the platform work: semantic HTML (\`<input type="date">\`, \`<dialog>\`), CSS over JS layout/animations, database \`CHECK\`/\`UNIQUE\` constraints over app validators.
-5. **Installed Dependencies**: Use what's in \`package.json\`/\`pyproject.toml\`. Never add a package when an existing one or 5 lines of code does the job.
-6. **Concise Functions**: Prefer straightforward expressions over heavy class hierarchies or speculative design patterns.
-7. **Only Then Author New Code**: Smallest clean, typed implementation that meets security, accessibility, and correctness standards.
+- Define the user-visible outcome and its failure/recovery path before implementation. UI work also needs task-specific hierarchy, content, visual direction, and functioning controls. Preserve an established design system.
+- Reuse native controls and existing typed components. Avoid interchangeable hero/card templates, invented claims, fake progress, no-op handlers, and success before persistence.
+- Keep authority on the server. Validate untrusted data, enforce access checks, parameterize queries, and redact secrets. Never infer that one matching string proves a route is protected.
+- Use framework idioms. Do not introduce classes, repositories, wrappers, flags, packages, or duplicate state without an actual requirement. Keep changes focused on the shared root cause.
+- Comments explain non-obvious constraints, not compliance with this skill. Product copy names the user's task rather than internal pipelines.
 
-### Root-Cause Bug Fixing
-- Fix the root cause, not just the symptom. Grep all callers of the function you're touching before editing. One fix at the shared source is smaller, cleaner, and prevents leaving sibling callers broken.
+## Tools
 
-### Pragmatic Shortcut Markers
-- Deliberate simplifications with known operational ceilings (e.g. in-memory cache, synchronous handler) must be marked with a tracked comment:
-  \`// devmind: <ceiling>, <upgrade-path>\`
-  *Example:* \`// devmind: in-memory cache per instance, migrate to Redis if horizontally scaled\`
+All paths below are relative to this installed skill. Pass the project directory explicitly when running from elsewhere. Inspect, verify, and contrast are read-only. Browser audit runs the supplied local interaction plan and writes evidence. Quality executes existing project scripts only with --run. The remaining tools write requested local artifacts. Tools do not install packages automatically.
 
-### Zero AI Theater & Silent Competence (Universal Baseline)
-- **Separate Plumbing from Product**: Never leak prompt directives, internal model mechanisms, or sci-fi buzzwords (*"Live Engine Pipeline"*, *"Deep Reasoning Matrix"*, *"Zero-Loss Guard"*, *"Agentic Flow"*) into user-facing copy or UI labels. Use calm, human-centric domain copy (e.g. Fintech: *"Payment verification"*; Healthcare: *"Clinical notes"*; DevTools: *"Cluster monitor"*; CRM: *"Deal insights"*).
-- **Zero Commentary Theater**: Source code comments explain non-obvious *why*, not rule compliance or prompt execution (e.g., ❌ \`// DevMind 2.1: Enforcing zero-loss validation pipeline\`).
-- **Semantic Domain Identifiers**: Name variables, functions, and endpoints after domain operations, never after prompt buzzwords.
+| Tool | Purpose |
+| --- | --- |
+| scripts/inspect.mjs <project> --json | Discover reuse candidates and existing quality tooling. |
+| scripts/verify.mjs <project> --json | Source heuristics, file/line findings, coverage, and review gaps. Add --strict to fail on warnings. |
+| scripts/contrast.mjs "#111827" "#ffffff" --json | Check solid color contrast. Large-text/non-text thresholds require --large/--non-text. |
+| scripts/browser-audit.mjs <project> <loopback-url> --plan <plan.json> | Capture mobile/desktop browser evidence and execute explicit outcome assertions using existing Playwright. |
+| scripts/quality.mjs <project> --run --json | Execute existing named project checks; omit --run for discovery only. |
+| scripts/review.mjs <project> --quality <report> --browser <report> --assessment <assessment> | Combine current evidence; missing checks and observations remain unverified. |
+| scripts/eval.mjs --list | Discover five seeded tasks for testing the skill's actual output. |
+| scripts/strata.mjs <project> | Generate the requested architecture map. |
+| scripts/init.mjs <project> | Initialize local task memory when needed. |
+| scripts/handover.mjs <project> | Refresh session continuity notes. |
 
-### Natural Communication (Zero Fillers)
-- Deliver code and concrete answers first.
-- Zero AI boilerplate ("Certainly!", "I'd be glad to help!", "Below is the implementation...").
-- Zero filler in artifacts: The zero-filler rule applies to generated code, UI copy, and comments just as strictly as chat prose.
-- Keep post-code commentary to at most 1–3 short lines:
-  \`[What was done] → skipped: [X], add when: [Y].\`
-- No unrequested essays or defensive lectures.
-
----
-
-## Continuous Feedback Loop
-
-$$\\text{Understand} \\longrightarrow \\text{Inspect} \\longrightarrow \\text{Evaluate} \\longrightarrow \\text{Implement} \\longrightarrow \\text{Verify} \\longrightarrow \\text{Review} \\longrightarrow \\text{Learn}$$
-
-> **Crucial Rule:** A check or test must never be reported as successful unless it was actually executed and its result was verified.
-
----
-
-## Domain Standards Catalog & Progressive Disclosure
-
-DevMind provides ${skills.length} specialized domain guides. When working in any of these areas, consult the referenced guide:
-
-| Skill | Domain | Standards & Baseline | Reference Guide |
-| :--- | :--- | :--- | :--- |
-${skills.map(s => `| **${s.name}** | ${s.description.split('.')[0]} | Governed by AGENTS.md | [${s.name}](./references/${s.name}.md) |`).join('\n')}
-
-For universal engineering baseline directives, consult [AGENTS.md](./references/AGENTS.md).
-
----
-
-## 7 - Strata: Behavioral Architecture Mapping & Code Visualization
-
-Strata provides a visual map of the application designed for vibe coders to understand what AI built without reading code, and for senior engineers to review blast radius and trust boundaries before shipping.
-
-### Activation Triggers & Agent Execution
-When the user asks to **"generate code map"**, **"visualize this app"**, **"show what I built"**, or **"strata"**:
-1. Do not ask the user to run an npm command (user projects do not have a strata script).
-2. The agent executes the analysis, evaluates the 10 checks, and writes \`.devmind/strata.html\` in the project root.
-3. Deliver the clickable file link: \`file://<project-root>/.devmind/strata.html\`.
-
-### The 3 Visual Overlays (One Map, Three Questions)
-1. **Structure Overlay ("What did I actually build?")**: Organizes components by behavior across 3 tiers (Browser, Server, Database & Services) with plain-language labels and connection wires.
-2. **Flow Overlay ("What happens when a user does X?")**: Interactive user journeys with animated glowing flows; dead ends highlight where light stops (unhandled buttons or swallowed errors).
-3. **Security Overlay ("What could go wrong?")**: Draws physical trust boundaries as glowing walls (Browser Wall, Database & Cloud Wall). Highlights leaked secrets, open database tables, and unauthenticated endpoints. Clicking any red spot reveals exact file:line evidence, confidence rating, blast radius, and a **"Copy Fix Prompt"** button for immediate AI remediation.
-
-### The 10 High-Value Reliable Checks
-- \`SEC-001\`: Secret Key Leaked to Browser Client
-- \`SEC-002\`: Public Database Table Without RLS / Access Rules
-- \`SEC-003\`: Unauthenticated Server Route / Action
-- \`SEC-004\`: Direct User Input in Database Query (Injection)
-- \`SEC-005\`: Unverified External Webhook Signature
-- \`FLOW-006\`: Dead Weight: Orphaned AI-Generated Code
-- \`FLOW-007\`: Silent Failure: Swallowed Error in Critical Flow
-- \`FLOW-008\`: Dead-End UI Action: Missing Event Handler
-- \`SEC-009\`: Missing Input Validation Boundary (Zero Zod)
-- \`SEC-010\`: Client-Side Price or Privilege Authority Tampering
-
-### The Change Ledger
-Summarizes recent AI edits by **consequences** rather than line diffs (e.g. "Added Stripe service, introduced STRIPE_SECRET_KEY, and connected orders table without RLS").
-
----
-
-## 8 - Token Optimization & The .devmind/ Memory Vault
-
-AI coding agents burn excessive tokens by repeatedly re-reading large files, dumping full terminal logs into chat, re-printing verbose checklists in every response, and suffering mid-session amnesia. 
-
-To slash token waste and preserve context across sessions, agents externalize active state into a lightweight \`.devmind/\` directory in the project root:
-- \`.devmind/task.md\`: Active task & progress checklist (live scratchpad, avoids repeating checklists in chat).
-- \`.devmind/memory.md\`: Persistent repository facts, stack choices & tracked shortcuts (\`// devmind:\`).
-- \`.devmind/rules.md\`: Project-specific user rules, conventions & constraints.
-- \`.devmind/handover.md\`: Session continuity summary for zero-loss resumption (fallback: root \`HANDOVER.md\`).
-- \`.devmind/strata.html\`: Interactive behavioral map & security boundary visualization.
-
-### The 4 Token Optimization Rules
-1. **Slice, Don't Dump**: Never read entire 1,000-line files when 30 lines are relevant. Use targeted grep and line ranges.
-2. **Externalize Progress**: Update \`.devmind/task.md\` instead of re-generating lengthy checklists in chat turns.
-3. **Fast-Boot from Memory**: At the start of a turn or session, read \`.devmind/task.md\`, \`.devmind/memory.md\`, and \`.devmind/rules.md\` (~300 tokens) to immediately rehydrate context and user constraints instead of re-analyzing configs and directories (~3,000+ tokens).
-4. **Zero Filler**: Lead directly with code or concrete answers. No conversational boilerplate.
-
-### Git Tracking Protocol (Sensible Defaults & User Choice)
-
-When creating \`.devmind/\` in a project for the first time:
-- **Default (Local First)**: Automatically check \`.gitignore\`. If \`.devmind/\` is not tracked, add \`.devmind/\` to \`.gitignore\` to keep scratchpad and memory local to the machine, outputting a 1-line notice: \`[DevMind: Initialized local .devmind/ (added to .gitignore). Ask if you wish to track in git.]\`
-- **Team / Shared Option**: If the user indicates they want to share task state, memory, or handover notes with their team and other agents in git, track \`.devmind/\` in Git alongside project code.
-
----
+Source checks reuse installed TypeScript AST tooling where supported and otherwise report lexical fallback. They cannot establish visual quality, full accessibility, authorization correctness, database access policies, or framework reachability. Review evidence before changing code. The verifier does not support --fix; do not apply heuristic source rewrites.
 
 ## 🔍 Anti-Amnesia Receipt
 
-Every coding agent applying DevMind MUST output a receipt badge at the top of its response:
-\`\`\`text
-🧠 [DevMind: <skill-name/tier> | Checked: <top 3 rules verified>]
-\`\`\`
+Print once in the initial implementation update, using checks actually inspected:
 
----
+🧠 [DevMind: <domain/tier> | Checked: <three concrete checks>]
 
 ## ✅ Post-Implementation Checklist
 
-- [ ] Climbed the Simplicity Ladder (YAGNI → reuse → stdlib → native → minimal code).
-- [ ] Fixed root cause at the shared source (grepped all callers).
-- [ ] Identified all touched domains via the Mandatory Skill Routing Matrix.
-- [ ] Read corresponding \`skills/<domain>/SKILL.md\` before authoring code (Tiered Precision Loading).
-- [ ] Ensured \`.devmind/\` is local (gitignored) by default unless user opted to commit.
-- [ ] Obeyed all project and user-defined constraints in \`.devmind/rules.md\`.
-- [ ] Updated \`.devmind/task.md\` and \`.devmind/handover.md\` to conserve context tokens.
-- [ ] Printed the Anti-Amnesia Receipt badge in response.
-- [ ] Delivered code first with natural, filler-free commentary.
-- [ ] Ran automated tests, linter, and type checks.
-- [ ] Marked any intentional simplification with \`// devmind: <ceiling>, <upgrade-path>\`.
-- [ ] Confirmed zero sensitive data leaks in logs, errors, or client payloads.
-`;
+Run the project's existing formatter, linter, type checker, and relevant tests. Add a small runnable behavior check for changed non-trivial logic. Inspect the diff for dead code, unnecessary dependencies, duplicated logic, and weakened boundaries.
 
+For UI changes, open the real page, inspect mobile and desktop screenshots, and exercise the main journey with keyboard and pointer. Check long content and applicable loading, empty, permission, failure, and success states. Fix concrete defects and repeat affected checks. If browser tooling is unavailable, report that visual and interaction review remain unverified.
+
+Update local task/handover notes. Finish with the concrete change, actual verification results, and material gaps. Do not claim checks that did not run or add unrelated features to make the result appear complete.
+`;
 }
 
-async function build() {
+async function copyHelperScripts(destDir) {
+  const destScripts = join(destDir, 'scripts');
+  await mkdir(destScripts, { recursive: true });
+  const scriptFiles = HELPER_FILES;
+  const srcScriptsDir = join(ROOT_DIR, 'scripts');
+  for (const s of scriptFiles) {
+    const src = join(srcScriptsDir, s);
+    if (existsSync(src)) {
+      await cp(src, join(destScripts, s), { recursive: true });
+    }
+  }
+  // Copy templates if present
+  const srcTemplates = join(ROOT_DIR, 'templates');
+  if (existsSync(srcTemplates)) {
+    const destTemplates = join(destDir, 'templates');
+    await mkdir(destTemplates, { recursive: true });
+    await cp(srcTemplates, destTemplates, { recursive: true });
+  }
+}
+
+async function copyReferences(skillName, destination) {
+  const source = join(SKILLS_DIR, skillName, 'references');
+  if (!existsSync(source)) return;
+  await mkdir(destination, { recursive: true });
+  await cp(source, destination, { recursive: true });
+}
+
+export async function build() {
   console.log('Building devmind skills for all coding agents and IDEs...\n');
 
   // Clean dist directory
@@ -305,7 +213,7 @@ async function build() {
   const skills = await loadSkills();
   console.log(`Loaded ${skills.length} skills: ${skills.map(s => s.name).join(', ')}\n`);
 
-  const masterSkillMd = generateMasterSkillMd(skills, agentsMd);
+  const masterSkillMd = generateMasterSkillMd(skills);
 
   // =========================================================================
   // 1. Antigravity / Gemini Suite (dist/antigravity/...)
@@ -327,14 +235,18 @@ async function build() {
   await writeFile(join(devmindSkillDir, 'README.md'), readmeMd, 'utf8');
   await writeFile(join(devmindSkillRefsDir, 'AGENTS.md'), agentsMd, 'utf8');
   for (const s of skills) {
-    await writeFile(join(devmindSkillRefsDir, `${s.name}.md`), s.content, 'utf8');
+    await writeFile(join(devmindSkillRefsDir, `${s.name}.md`), s.content.replaceAll('(./references/', `(./${s.name}/`), 'utf8');
+    await copyReferences(s.name, join(devmindSkillRefsDir, s.name));
   }
+  await copyHelperScripts(devmindSkillDir);
 
   // 1A.2 Individual Domain Skills (dist/antigravity/skills/<skill-name>/)
   for (const s of skills) {
     const targetDir = join(agSkillsDir, s.name);
     await mkdir(targetDir, { recursive: true });
     await writeFile(join(targetDir, 'SKILL.md'), s.content, 'utf8');
+    await copyHelperScripts(targetDir);
+    await copyReferences(s.name, join(targetDir, 'references'));
     if (s.readme) {
       await writeFile(join(targetDir, 'README.md'), s.readme, 'utf8');
     }
@@ -373,6 +285,7 @@ async function build() {
   await mkdir(join(agUniversalDir, 'rules'), { recursive: true });
   await writeFile(join(agUniversalDir, 'rules', 'AGENTS.md'), agentsMd, 'utf8');
   await writeFile(join(agUniversalDir, 'AGENTS.md'), agentsMd, 'utf8');
+  await copyHelperScripts(agUniversalDir);
 
   // 1D. Antigravity Rules Format (dist/antigravity/rules/)
   const agRulesDir = join(agBaseDir, 'rules');
@@ -437,6 +350,7 @@ alwaysApply: false
 ${s.body}
 `;
     await writeFile(join(cursorRulesDir, `${s.name}.mdc`), mdcContent, 'utf8');
+    await copyReferences(s.name, join(cursorRulesDir, 'references'));
   }
 
   // =========================================================================
@@ -451,13 +365,15 @@ ${s.body}
   windsurfRules += `You are an expert fullstack coding agent. You strictly adhere to the devmind engineering baseline:\n\n`;
   windsurfRules += agentsMd + '\n\n---\n\n# Domain Standards & Skills\n\n';
   for (const s of skills) {
-    windsurfRules += `## ${s.name}\n${s.body}\n\n---\n\n`;
+    windsurfRules += `## ${s.name}\n${s.body.replaceAll('(./references/', '(./.devmind/references/')}\n\n---\n\n`;
+    await copyReferences(s.name, join(windsurfDir, '.devmind', 'references'));
   }
   await writeFile(join(windsurfDir, '.windsurfrules'), windsurfRules, 'utf8');
 
   await writeFile(join(windsurfModularDir, '00-agents-baseline.md'), agentsMd, 'utf8');
   for (const s of skills) {
     await writeFile(join(windsurfModularDir, `${s.name}.md`), `# ${s.name}\n\n${s.body}`, 'utf8');
+    await copyReferences(s.name, join(windsurfModularDir, 'references'));
   }
 
   // =========================================================================
@@ -476,7 +392,8 @@ ${s.body}
     claudeMd += `**Description**: ${s.description}\n\n`;
     claudeMd += `### Core Directives\n\n`;
     const snippet = s.body.split(/\r?\n/).slice(0, 100).join('\n');
-    claudeMd += snippet + '\n\n...\n\n';
+    claudeMd += snippet.replaceAll('(./references/', '(./.devmind/references/') + '\n\n...\n\n';
+    await copyReferences(s.name, join(claudeDir, '.devmind', 'references'));
   }
   await writeFile(join(claudeDir, 'CLAUDE.md'), claudeMd, 'utf8');
 
@@ -485,7 +402,14 @@ ${s.body}
     const sDir = join(claudeSkillsDir, s.name);
     await mkdir(sDir, { recursive: true });
     await writeFile(join(sDir, 'SKILL.md'), s.content, 'utf8');
+    await copyHelperScripts(sDir);
+    await copyReferences(s.name, join(sDir, 'references'));
   }
+
+  // Master devmind skill for Claude Code (.claude/skills/devmind/)
+  const claudeDevmindDir = join(claudeSkillsDir, 'devmind');
+  await cp(devmindSkillDir, claudeDevmindDir, { recursive: true });
+  await copyHelperScripts(claudeDevmindDir);
 
   // =========================================================================
   // 5. GitHub Copilot Build (.github/copilot-instructions.md & scoped instructions)
@@ -514,6 +438,7 @@ applyTo: "${s.globs}"
 ${s.body}
 `;
     await writeFile(join(copilotInstructionsDir, `${s.name}.instructions.md`), scopedContent, 'utf8');
+    await copyReferences(s.name, join(copilotInstructionsDir, 'references'));
   }
 
   // =========================================================================
@@ -525,7 +450,8 @@ ${s.body}
   let clineRules = `# Cline / Roo Code System Rules\n\n`;
   clineRules += agentsMd + '\n\n---\n\n# Domain Standards\n\n';
   for (const s of skills) {
-    clineRules += `## ${s.name}\n${s.body}\n\n---\n\n`;
+    clineRules += `## ${s.name}\n${s.body.replaceAll('(./references/', '(./.devmind/references/')}\n\n---\n\n`;
+    await copyReferences(s.name, join(clineDir, '.devmind', 'references'));
   }
   await writeFile(join(clineDir, '.clinerules'), clineRules, 'utf8');
 
@@ -536,6 +462,12 @@ ${s.body}
   const agentsOutDir = join(DIST_DIR, 'agents');
   await mkdir(agentsOutDir, { recursive: true });
   await writeFile(join(agentsOutDir, 'AGENTS.md'), agentsMd, 'utf8');
+
+  // OpenSkills format (.agents/skills/devmind/)
+  const agentsOpenSkillsDir = join(agentsOutDir, '.agents', 'skills', 'devmind');
+  await mkdir(agentsOpenSkillsDir, { recursive: true });
+  await cp(agUniversalDir, agentsOpenSkillsDir, { recursive: true });
+  await copyHelperScripts(agentsOpenSkillsDir);
 
   // =========================================================================
   // 8. Multi-Agent Drop-In Root Hooks (dist/hooks)
@@ -554,6 +486,10 @@ ${s.body}
   await writeFile(join(hooksDir, '.clinerules'), clineRules, 'utf8');
   await writeFile(join(hooksGithubDir, 'copilot-instructions.md'), copilotMd, 'utf8');
   await cp(cursorRulesDir, hooksCursorRulesDir, { recursive: true });
+
+  const hooksDevmindDir = join(hooksDir, '.devmind');
+  await mkdir(hooksDevmindDir, { recursive: true });
+  await copyHelperScripts(hooksDevmindDir);
 
   const hooksReadme = `# DevMind Drop-In Multi-Agent Hooks
 
@@ -604,8 +540,15 @@ Copy these configuration files into any project's root directory to immediately 
   fullHandbook += agentsMd + '\n\n# Skills Compendium\n\n';
   for (const s of skills) {
     fullHandbook += `\n\n# Domain: ${s.name}\n\n${s.content}\n\n---`;
+    await copyReferences(s.name, join(bundlesDir, 'references'));
+    await copyReferences(s.name, join(hooksDir, '.devmind', 'references'));
+    await copyReferences(s.name, join(agRulesDir, 'references'));
   }
   await writeFile(join(bundlesDir, 'devmind-full.md'), fullHandbook, 'utf8');
+
+  for (const target of ['cursor', 'windsurf', 'claude-code', 'github-copilot', 'cline', 'hooks']) {
+    await copyHelperScripts(join(DIST_DIR, target));
+  }
 
   console.log('\n=============================================================');
   console.log('Successfully built devmind for all target AI agent standards:');
@@ -671,8 +614,10 @@ async function installToGemini(agUniversalDir, skills) {
   console.log('\nInstallation complete! DevMind is now installed cleanly under ~/.gemini/config/skills/devmind/\n');
 }
 
-build().catch(err => {
-  console.error('Build failed:', err);
-  process.exit(1);
-});
+if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'))) {
+  build().catch(err => {
+    console.error('Build failed:', err);
+    process.exit(1);
+  });
+}
 

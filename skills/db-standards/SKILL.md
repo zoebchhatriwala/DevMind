@@ -2,9 +2,6 @@
 name: db-standards
 description: >-
   MANDATORY TRIGGER: Invoke BEFORE creating or editing database schemas, migrations, ORM models (Prisma/Drizzle/TypeORM/SQL), indexes, transactions, or complex queries.
-  Keywords & Triggers: database, SQL, schema, tables, migrations, Drizzle ORM, Prisma, TypeORM, Kysely, PostgreSQL, Postgres, MySQL, SQLite, MongoDB, foreign keys, primary keys, UUIDv7, BigInt, database indexes, composite index, unique index, non-blocking index, CREATE INDEX CONCURRENTLY, N+1 query elimination, relational join, database transactions, ACID, keyset cursor pagination, expand-contract migrations, column rename, alter table, database seeding, soft delete, tenant isolation, connection pooling, PgBouncer.
-  File globs: **/{schema,migrations,models,entities}/**,**/*.sql,**/prisma/**,**/drizzle/**
-trigger: model_decision
 ---
 
 # db-standards: Database & Migration Engineering Protocol

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { HELPER_FILES } from './lib/helpers.mjs';
 import { resolve, join } from 'node:path';
 
 const ROOT_DIR = resolve('.');
@@ -38,7 +39,6 @@ async function validateSkillFile(skillName, skillFile) {
   const yaml = match[1];
   if (!yaml.includes('name:')) reportError(skillName, 'Frontmatter missing "name" field');
   if (!yaml.includes('description:')) reportError(skillName, 'Frontmatter missing "description" field');
-  if (!yaml.includes('trigger:')) reportError(skillName, 'Frontmatter missing "trigger" field');
 
   // 1. Mandatory Trigger Check
   const descMatch = yaml.match(/description:\s*(?:>-\s*)?["']?([^"'\r\n]+)/);
@@ -179,6 +179,22 @@ async function validateDist() {
     reportError('bundles', 'Missing bundle manifest or devmind-full.md');
   } else {
     console.log('  ✔ [bundles]: Distribution manifest and full handbook verified.');
+  }
+
+  // 11. Helper Scripts & Interactive CLI validation
+  const helperScripts = HELPER_FILES;
+  for (const s of helperScripts) {
+    if (!existsSync(join(ROOT_DIR, 'scripts', s))) {
+      reportError('scripts', `Missing canonical helper script: scripts/${s}`);
+    }
+    if (!existsSync(join(DIST_DIR, 'antigravity', 'devmind', 'scripts', s))) {
+      reportError('scripts', `Missing bundled helper script in dist/antigravity/devmind/scripts/${s}`);
+    }
+  }
+  if (!existsSync(join(ROOT_DIR, 'bin', 'devmind.mjs'))) {
+    reportError('bin', 'Missing bin/devmind.mjs executable entry point');
+  } else {
+    console.log('  ✔ [scripts & bin]: Helper scripts and interactive CLI entry verified.');
   }
 }
 

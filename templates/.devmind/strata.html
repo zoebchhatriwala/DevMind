@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strata: Behavioral Code & Trust Boundary Visualizer</title>
+  <style>
+    :root {
+      --bg: #07090E;
+      --surface: #0E131F;
+      --surface-elevated: #161D2F;
+      --border: #222C42;
+      --border-highlight: #3B82F6;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+      --cyan: #06B6D4;
+      --blue: #3B82F6;
+      --indigo: #6366F1;
+      --purple: #8B5CF6;
+      --red: #EF4444;
+      --red-glow: rgba(239, 68, 68, 0.4);
+      --amber: #F59E0B;
+      --emerald: #10B981;
+      --emerald-glow: rgba(16, 185, 129, 0.3);
+      --wall-browser: #3B82F6;
+      --wall-db: #8B5CF6;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: rgba(14, 19, 31, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--cyan), var(--indigo));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      color: #fff;
+      box-shadow: 0 0 16px rgba(6, 182, 212, 0.4);
+    }
+
+    .brand-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+
+    /* Overlays Selector */
+    .overlay-tabs {
+      display: flex;
+      background: var(--surface-elevated);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      gap: 4px;
+    }
+
+    .overlay-tab {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.15s ease;
+      border: none;
+      background: transparent;
+    }
+
+    .overlay-tab:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .overlay-tab.active {
+      color: #fff;
+      background: var(--blue);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+    }
+
+    .overlay-tab.active.security {
+      background: var(--red);
+      box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Right Controls */
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Audience Switcher */
+    .audience-toggle {
+      display: flex;
+      align-items: center;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 2px;
+    }
+
+    .audience-btn {
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .audience-btn.active {
+      background: var(--surface-elevated);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-action {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-action:hover {
+      background: var(--surface-elevated);
+      border-color: var(--border-highlight);
+    }
+
+    /* Subheader for Flow / Security Filters */
+    .subbar {
+      position: absolute;
+      top: 64px;
+      left: 0;
+      right: 0;
+      height: 48px;
+      background: rgba(14, 19, 31, 0.6);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 40;
+    }
+
+    .journey-selector {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .journey-chip {
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .journey-chip:hover {
+      color: var(--text);
+      border-color: var(--border-highlight);
+    }
+
+    .journey-chip.active {
+      background: rgba(59, 130, 246, 0.2);
+      border-color: var(--blue);
+      color: #93C5FD;
+    }
+
+    /* Canvas / Viewport */
+    #viewport {
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+      cursor: grab;
+      background: radial-gradient(circle at 50% 50%, #0F172A 0%, #07090E 100%);
+    }
+
+    #viewport.dragging {
+      cursor: grabbing;
+    }
+
+    #canvas-container {
+      position: absolute;
+      transform-origin: 0 0;
+      width: 2200px;
+      height: 1200px;
+    }
+
+    /* Grid background */
+    .grid-lines {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+    }
+
+    /* Swimlanes / Zones */
+    .zone-swimlane {
+      position: absolute;
+      top: 130px;
+      bottom: 60px;
+      border-radius: 16px;
+      background: rgba(14, 19, 31, 0.35);
+      border: 1px dashed rgba(255, 255, 255, 0.08);
+      pointer-events: none;
+    }
+
+    .zone-header {
+      position: absolute;
+      top: 140px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 6px 14px;
+      border-radius: 6px;
+      background: rgba(14, 19, 31, 0.8);
+      border: 1px solid var(--border);
+    }
+
+    /* Trust Boundary Walls */
+    .trust-wall {
+      position: absolute;
+      top: 130px;
+      bottom: 60px;
+      width: 6px;
+      border-radius: 9999px;
+      box-shadow: 0 0 20px currentColor;
+      pointer-events: none;
+      transition: all 0.3s;
+    }
+
+    .trust-wall-label {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%) rotate(-90deg);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      white-space: nowrap;
+      pointer-events: auto;
+      cursor: help;
+    }
+
+    .wall-browser {
+      left: 710px;
+      background: var(--blue);
+      color: var(--blue);
+    }
+    .wall-browser .trust-wall-label {
+      background: #1E3A8A;
+      color: #BFDBFE;
+      border: 1px solid #3B82F6;
+    }
+
+    .wall-db {
+      left: 1430px;
+      background: var(--purple);
+      color: var(--purple);
+    }
+    .wall-db .trust-wall-label {
+      background: #4C1D95;
+      color: #DDD6FE;
+      border: 1px solid #8B5CF6;
+    }
+
+    /* Red wall alert state in Security Overlay */
+    body.mode-security .trust-wall.breached {
+      background: var(--red);
+      box-shadow: 0 0 25px var(--red-glow);
+    }
+
+    /* SVG Canvas for Connectors */
+    #svg-connections {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .connection-line {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.15);
+      stroke-width: 2;
+      transition: all 0.25s ease;
+    }
+
+    .connection-line.highlight {
+      stroke: var(--cyan);
+      stroke-width: 3.5;
+      stroke-dasharray: 8 4;
+      animation: dashFlow 1.2s linear infinite;
+    }
+
+    .connection-line.security-breach {
+      stroke: var(--red);
+      stroke-width: 3.5;
+      stroke-dasharray: 6 3;
+      animation: dashFlow 0.8s linear infinite;
+    }
+
+    @keyframes dashFlow {
+      from { stroke-dashoffset: 24; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    /* Node Card Components */
+    .node-card {
+      position: absolute;
+      width: 250px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+      z-index: 20;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    }
+
+    .node-card:hover {
+      transform: translateY(-3px);
+      border-color: var(--border-highlight);
+      box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
+    }
+
+    .node-card.selected {
+      border-color: var(--cyan);
+      box-shadow: 0 0 0 2px var(--cyan), 0 8px 24px rgba(6, 182, 212, 0.3);
+    }
+
+    .node-card.dead-weight {
+      opacity: 0.45;
+      border-style: dashed;
+      background: rgba(14, 19, 31, 0.4);
+    }
+
+    .node-card.has-issue {
+      border-color: rgba(239, 68, 68, 0.6);
+    }
+
+    body.mode-security .node-card.has-issue {
+      border-color: var(--red);
+      box-shadow: 0 0 20px var(--red-glow);
+      animation: redPulse 2s infinite ease-in-out;
+    }
+
+    @keyframes redPulse {
+      0%, 100% { box-shadow: 0 0 15px rgba(239, 68, 68, 0.3); }
+      50% { box-shadow: 0 0 25px rgba(239, 68, 68, 0.6); }
+    }
+
+    .node-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .node-kind {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-dim);
+    }
+
+    .node-kind.screen { background: rgba(59, 130, 246, 0.2); color: #93C5FD; }
+    .node-kind.component { background: rgba(6, 182, 212, 0.2); color: #67E8F9; }
+    .node-kind.route { background: rgba(139, 92, 246, 0.2); color: #C4B5FD; }
+    .node-kind.table { background: rgba(16, 185, 129, 0.2); color: #6EE7B7; }
+    .node-kind.service { background: rgba(245, 158, 11, 0.2); color: #FCD34D; }
+
+    .node-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+
+    .node-sub {
+      font-size: 11px;
+      font-family: monospace;
+      color: var(--text-dim);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-bottom: 8px;
+    }
+
+    .node-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .issue-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 10px;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #FCA5A5;
+    }
+
+    /* Zoom & Canvas Controls Overlay */
+    .viewport-controls {
+      position: absolute;
+      bottom: 24px;
+      right: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 45;
+    }
+
+    .ctrl-btn {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      transition: all 0.15s;
+    }
+
+    .ctrl-btn:hover {
+      background: var(--surface);
+      border-color: var(--border-highlight);
+    }
+
+    /* Side Drawer / Inspector */
+    .drawer {
+      position: absolute;
+      top: 64px;
+      right: 0;
+      bottom: 0;
+      width: 420px;
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      box-shadow: -8px 0 32px rgba(0, 0, 0, 0.6);
+      transform: translateX(100%);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .drawer.open {
+      transform: translateX(0);
+    }
+
+    .drawer-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 10;
+    }
+
+    .drawer-title {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .drawer-close {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 20px;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .drawer-close:hover {
+      color: var(--text);
+    }
+
+    .drawer-body {
+      padding: 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .code-box {
+      background: #06080D;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.5;
+      color: #E2E8F0;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .btn-fix-prompt {
+      background: linear-gradient(135deg, var(--blue), var(--indigo));
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 14px rgba(59, 130, 246, 0.4);
+      transition: all 0.15s;
+    }
+
+    .btn-fix-prompt:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+    }
+
+    /* Change Ledger Drawer */
+    #ledger-drawer {
+      width: 480px;
+    }
+
+    .ledger-item {
+      background: var(--surface-elevated);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .ledger-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .ledger-hash {
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--cyan);
+      background: rgba(6, 182, 212, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+
+    .ledger-consequence {
+      font-size: 13px;
+      line-height: 1.4;
+      color: var(--text);
+      margin-bottom: 10px;
+    }
+
+    .ledger-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .badge-chip {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+
+    /* Toast Notification */
+    #toast {
+      position: absolute;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--emerald);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 700;
+      box-shadow: 0 4px 20px var(--emerald-glow);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 100;
+      pointer-events: none;
+    }
+
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body class="mode-structure audience-junior">
+
+  <!-- Top Navigation -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">S</div>
+      <div>
+        <div class="brand-title">
+          Strata
+          <span class="brand-badge">DevMind Visualizer</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 Overlays -->
+    <div class="overlay-tabs">
+      <button class="overlay-tab active" data-overlay="structure">
+        🗺️ 1. What did I build?
+      </button>
+      <button class="overlay-tab" data-overlay="flow">
+        ⚡ 2. User Journeys
+      </button>
+      <button class="overlay-tab security" data-overlay="security">
+        🛡️ 3. What could go wrong?
+      </button>
+    </div>
+
+    <!-- Right Controls -->
+    <div class="nav-actions">
+      <!-- Junior vs Senior Mode -->
+      <div class="audience-toggle">
+        <button class="audience-btn active" data-audience="junior">Junior Mode</button>
+        <button class="audience-btn" data-audience="senior">Senior Mode</button>
+      </div>
+
+      <button class="btn-action" id="btn-ledger">
+        📜 Change Ledger
+      </button>
+    </div>
+  </header>
+
+  <!-- Flow / Security Sub-bar -->
+  <div class="subbar" id="subbar" style="display: none;">
+    <div class="journey-selector" id="journey-chips">
+      <!-- Journey chips injected dynamically -->
+    </div>
+    <div id="subbar-info" style="font-size: 12px; color: var(--text-muted);"></div>
+  </div>
+
+  <!-- Interactive Canvas Viewport -->
+  <div id="viewport">
+    <div id="canvas-container">
+      <div class="grid-lines"></div>
+
+      <!-- Swimlanes for 3 Behavioral Zones -->
+      <div class="zone-swimlane" style="left: 40px; width: 640px;"></div>
+      <div class="zone-header" style="left: 60px;">1. Browser (Client Tier)</div>
+
+      <!-- Wall 1: The Browser Wall -->
+      <div class="trust-wall wall-browser" id="wall-1">
+        <div class="trust-wall-label" title="Boundary dividing user devices from server infrastructure">
+          🧱 Browser Wall (Client Gateway)
+        </div>
+      </div>
+
+      <div class="zone-swimlane" style="left: 750px; width: 640px;"></div>
+      <div class="zone-header" style="left: 770px;">2. Server (Backend Tier)</div>
+
+      <!-- Wall 2: Database / Cloud Wall -->
+      <div class="trust-wall wall-db" id="wall-2">
+        <div class="trust-wall-label" title="Boundary isolating backend execution from database persistence and payment services">
+          🧱 Database & Cloud Wall
+        </div>
+      </div>
+
+      <div class="zone-swimlane" style="left: 1470px; width: 680px;"></div>
+      <div class="zone-header" style="left: 1490px;">3. Database & Outside Services</div>
+
+      <!-- SVG Connections Line Layer -->
+      <svg id="svg-connections"></svg>
+
+      <!-- Node Cards injected dynamically -->
+      <div id="nodes-layer"></div>
+    </div>
+  </div>
+
+  <!-- Canvas Zoom / Pan Controls -->
+  <div class="viewport-controls">
+    <button class="ctrl-btn" id="btn-zoom-in" title="Zoom In">+</button>
+    <button class="ctrl-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+    <button class="ctrl-btn" id="btn-reset" title="Fit to Screen">⛶</button>
+  </div>
+
+  <!-- Issue / Node Inspector Drawer -->
+  <div class="drawer" id="node-drawer">
+    <div class="drawer-header">
+      <div>
+        <div class="node-kind" id="drawer-kind" style="margin-bottom: 6px;"></div>
+        <div class="drawer-title" id="drawer-title">Node Title</div>
+      </div>
+      <button class="drawer-close" id="drawer-close">✕</button>
+    </div>
+    <div class="drawer-body" id="drawer-content">
+      <!-- Injected dynamically -->
+    </div>
+  </div>
+
+  <!-- Change Ledger Drawer -->
+  <div class="drawer" id="ledger-drawer">
+    <div class="drawer-header">
+      <div>
+        <div class="drawer-title">📜 The Change Ledger</div>
+        <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+          Consequences of recent AI code edits
+        </div>
+      </div>
+      <button class="drawer-close" id="ledger-close">✕</button>
+    </div>
+    <div class="drawer-body" id="ledger-content">
+      <!-- Injected dynamically -->
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast">Copied AI Fix Prompt to Clipboard!</div>
+
+  <!-- Strata Client Engine -->
+  <script>
+    const STRATA_DATA = {"nodes":[{"id":"screen_checkout","zone":"browser","kind":"screen","name":"Checkout Screen","technicalName":"src/app/checkout/page.tsx","plainLanguage":"Where the user reviews order totals and submits payment","summary":"Main checkout page with order summary and payment submission.","trafficScore":85,"connections":["comp_checkout_btn","comp_payment_form"],"issues":[]},{"id":"screen_login","zone":"browser","kind":"screen","name":"Login Screen","technicalName":"src/app/login/page.tsx","plainLanguage":"Where users enter credentials to sign in or create an account","summary":"User authentication page with email/password and OAuth triggers.","trafficScore":90,"connections":["route_auth_login"],"issues":[]},{"id":"screen_dashboard","zone":"browser","kind":"screen","name":"User Dashboard","technicalName":"src/app/dashboard/page.tsx","plainLanguage":"Customer portal showing recent orders and subscription status","summary":"Protected customer view displaying user orders and profile settings.","trafficScore":70,"connections":["comp_support_btn","table_users"],"issues":[]},{"id":"comp_checkout_btn","zone":"browser","kind":"component","name":"Checkout Button","technicalName":"src/components/CheckoutButton.tsx","plainLanguage":"Interactive button that begins the payment process","summary":"Client component triggering order creation and Stripe checkout session.","trafficScore":80,"connections":["route_checkout"],"issues":[{"ruleId":"SEC-001","severity":"CRITICAL","confidence":98,"title":"Secret Key Leaked to Browser Client","file":"src/components/CheckoutButton.tsx","line":24,"snippet":"// 'use client' component leaking server secret\nconst stripeSecret = process.env.STRIPE_SECRET_KEY;\nconst stripe = new Stripe(stripeSecret);","evidence":"`STRIPE_SECRET_KEY` is referenced inside a client-side component (`\"use client\"`). This exposes full payment admin credentials in the browser bundle.","threatModel":"Any website visitor can inspect DevTools Network/Source bundles, extract STRIPE_SECRET_KEY, and make unauthorized refund or payout calls.","blastRadius":"Entire Stripe payment account, all customer payment tokens, financial balance.","fixPrompt":"Fix the critical security issue in `src/components/CheckoutButton.tsx` at line 24:\n\n1. Remove `process.env.STRIPE_SECRET_KEY` and client-side Stripe SDK initialization from this client component.\n2. Create a secure Server Action in `src/app/actions/checkout.ts` or Route Handler at `src/app/api/checkout/route.ts` to handle checkout session creation server-side.\n3. In `CheckoutButton.tsx`, call the server endpoint using fetch('/api/checkout') without passing any secrets.\n4. Ensure only `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is ever accessed in the browser."}]},{"id":"comp_payment_form","zone":"browser","kind":"component","name":"Payment Form","technicalName":"src/components/PaymentForm.tsx","plainLanguage":"Form collecting billing address and user input","summary":"Credit card and address input form communicating with checkout API.","trafficScore":75,"connections":["route_checkout"],"issues":[{"ruleId":"SEC-010","severity":"CRITICAL","confidence":96,"title":"Client-Side Price Authority Tampering","file":"src/components/PaymentForm.tsx","line":58,"snippet":"// Client passes authoritative price and user role\nawait fetch('/api/checkout', {\n  method: 'POST',\n  body: JSON.stringify({ amount: 9.99, role: 'premium' })\n});","evidence":"The client sends `amount: 9.99` and `role: \"premium\"` directly in the request body to the server.","threatModel":"An attacker can alter the client request payload to { amount: 0.01 } and buy products for 1 cent or elevate their role.","blastRadius":"All e-commerce product pricing, payment revenues, user authorization level.","fixPrompt":"Fix the price tampering vulnerability in `src/components/PaymentForm.tsx` and `src/app/api/checkout/route.ts`:\n\n1. Never send `amount` or `role` from the client form.\n2. Pass only verified item IDs (e.g. `productId`) from the client.\n3. In the server route handler, look up the authoritative price from the database or Stripe Catalog based on `productId`.\n4. Calculate totals strictly on the server before initializing the Stripe session."}]},{"id":"comp_support_btn","zone":"browser","kind":"component","name":"Support Help Button","technicalName":"src/components/SupportButton.tsx","plainLanguage":"Help button intended to open customer support chat","summary":"Interactive support button rendered on user dashboard.","trafficScore":40,"connections":[],"issues":[{"ruleId":"FLOW-008","severity":"MEDIUM","confidence":99,"title":"Dead-End UI Action: Missing Event Handler","file":"src/components/SupportButton.tsx","line":12,"snippet":"\u003cbutton className=\"btn-help\" onClick={() => { /* TODO: connect support */ }}>\n  Contact Support\n\u003c/button>","evidence":"The button has an empty onClick handler stub with a TODO comment. Clicking it performs no action and leaves the user hanging.","threatModel":"User frustration, perceived broken app, blocked customer support flow.","blastRadius":"Dashboard support access.","fixPrompt":"Fix the dead-end button in `src/components/SupportButton.tsx` at line 12:\n\n1. Replace the empty onClick stub with an event handler that either triggers the support modal state or initiates a support request.\n2. Add loading and feedback states so the user sees immediate confirmation when clicking."}]},{"id":"comp_dead_modal","zone":"browser","kind":"component","name":"Legacy Stripe Modal","technicalName":"src/components/LegacyStripeModal.tsx","plainLanguage":"Unused modal component generated during early development","summary":"Orphaned modal code never mounted in any page or layout.","trafficScore":0,"connections":[],"isDeadWeight":true,"issues":[{"ruleId":"FLOW-006","severity":"MEDIUM","confidence":97,"title":"Dead Weight: Orphaned AI-Generated Code","file":"src/components/LegacyStripeModal.tsx","line":1,"snippet":"export function LegacyStripeModal() {\n  // 140 lines of AI-generated checkout modal never imported\n}","evidence":"`LegacyStripeModal` is exported but has 0 inbound imports or references anywhere in the repository.","threatModel":"Bloats bundle size, causes maintenance confusion, potential security debt if unpatched dependencies are imported.","blastRadius":"Client bundle bloat (+38KB unused JS).","fixPrompt":"Delete the orphaned file `src/components/LegacyStripeModal.tsx`:\n\n1. Verify no active code depends on it.\n2. Safely remove the file to trim dead weight from the codebase and improve bundle load speed."}]},{"id":"route_checkout","zone":"server","kind":"route","name":"POST /api/checkout","technicalName":"src/app/api/checkout/route.ts","plainLanguage":"Backend endpoint that verifies orders and requests Stripe payment session","summary":"Route handler processing order requests and communicating with Stripe.","trafficScore":85,"connections":["table_orders","service_stripe"],"issues":[{"ruleId":"SEC-009","severity":"HIGH","confidence":94,"title":"Missing Input Validation Boundary (Zero Zod)","file":"src/app/api/checkout/route.ts","line":15,"snippet":"export async function POST(req: Request) {\n  const body = await req.json(); // Raw unvalidated object\n  const order = await db.orders.create({ data: body });\n}","evidence":"`req.json()` is parsed into an unvalidated `any` payload and written straight into database parameters without Zod schema validation.","threatModel":"Malicious payloads with unexpected fields, type mismatches, or prototype pollution can corrupt database records or crash the route.","blastRadius":"Orders table schema integrity, server route stability.","fixPrompt":"Add strict Zod input validation to `src/app/api/checkout/route.ts`:\n\n1. Define a strict schema:\n   const CheckoutSchema = z.object({\n     productId: z.string().uuid(),\n     quantity: z.number().int().positive().max(99),\n   });\n2. Validate incoming payload: const parsed = CheckoutSchema.safeParse(await req.json());\n3. If (!parsed.success) return Response.json({ error: 'Invalid input', details: parsed.error.issues }, { status: 400 });\n4. Use only parsed.data for all subsequent operations."}]},{"id":"route_webhook_stripe","zone":"server","kind":"route","name":"POST /api/webhooks/stripe","technicalName":"src/app/api/webhooks/stripe/route.ts","plainLanguage":"Secure receiver that listens for payment success notices from Stripe","summary":"Webhook receiver updating order status upon payment completion.","trafficScore":75,"connections":["table_orders","service_email"],"issues":[{"ruleId":"SEC-005","severity":"HIGH","confidence":99,"title":"Unverified External Webhook Signature","file":"src/app/api/webhooks/stripe/route.ts","line":22,"snippet":"export async function POST(req: Request) {\n  const event = await req.json(); // Trusts incoming JSON blindly!\n  if (event.type === 'checkout.session.completed') {\n    await markOrderAsPaid(event.data.object.id);\n  }\n}","evidence":"The route accepts incoming POST requests without verifying the `stripe-signature` header against `process.env.STRIPE_WEBHOOK_SECRET`.","threatModel":"Anyone can send a forged POST request to /api/webhooks/stripe mimicking a completed payment, granting themselves free goods or paid subscriptions.","blastRadius":"All order fulfillment, subscription provisioning, financial verification.","fixPrompt":"Implement cryptographic webhook verification in `src/app/api/webhooks/stripe/route.ts`:\n\n1. Read raw body as text: const rawBody = await req.text();\n2. Extract signature header: const sig = req.headers.get('stripe-signature');\n3. Verify event using Stripe SDK:\n   let event;\n   try {\n     event = stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET!);\n   } catch (err) {\n     return new Response('Webhook signature verification failed', { status: 400 });\n   }\n4. Process only verified event objects."}]},{"id":"route_admin_users","zone":"server","kind":"route","name":"GET /api/admin/users","technicalName":"src/app/api/admin/users/route.ts","plainLanguage":"Admin API returning list of registered users and emails","summary":"Administrative endpoint exposing all user records.","trafficScore":30,"connections":["table_users"],"issues":[{"ruleId":"SEC-003","severity":"HIGH","confidence":98,"title":"Unauthenticated Server Route / Action","file":"src/app/api/admin/users/route.ts","line":8,"snippet":"export async function GET() {\n  // Missing auth check!\n  const allUsers = await supabase.from('users').select('*');\n  return Response.json(allUsers);\n}","evidence":"The endpoint retrieves all customer records from `users` table without checking caller session, JWT token, or user permissions.","threatModel":"Public unauthenticated data leak. Anyone navigating to /api/admin/users can dump entire customer database including emails and metadata.","blastRadius":"Complete customer PII database, compliance violation (GDPR/CCPA).","fixPrompt":"Add authentication and role verification to `src/app/api/admin/users/route.ts`:\n\n1. Call session verifier: const session = await auth();\n2. Check authentication: if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 });\n3. Verify admin role: if (session.user.role !== 'admin') return Response.json({ error: 'Forbidden' }, { status: 403 });\n4. Only then proceed to query customer records."}]},{"id":"route_auth_reset","zone":"server","kind":"route","name":"POST /api/auth/reset-password","technicalName":"src/app/api/auth/reset-password/route.ts","plainLanguage":"Sends password reset link to user email address","summary":"Authentication route generating reset tokens and queuing emails.","trafficScore":50,"connections":["service_supabase_auth","service_email"],"issues":[{"ruleId":"FLOW-007","severity":"HIGH","confidence":95,"title":"Silent Failure: Swallowed Error in Critical Flow","file":"src/app/api/auth/reset-password/route.ts","line":34,"snippet":"try {\n  await sendResetEmail(email, token);\n} catch (e) {\n  // Silent swallow! User never receives email, UI reports success\n}","evidence":"Empty catch block suppresses all email sending errors. The endpoint returns HTTP 200 \"Email sent\", but the user never receives the email.","threatModel":"Account lockout. Users unable to regain access, support ticket flood, silent infrastructure failure.","blastRadius":"User account recovery flow.","fixPrompt":"Fix swallowed error in `src/app/api/auth/reset-password/route.ts`:\n\n1. In the catch block, log the failure using a structured logger: logger.error({ err: e, email }, 'Failed to deliver password reset email');\n2. Return an explicit error code: return Response.json({ error: 'Failed to deliver reset email. Please try again later.' }, { status: 500 });\n3. Ensure client UI displays the delivery failure rather than false success."}]},{"id":"route_auth_login","zone":"server","kind":"route","name":"POST /api/auth/login","technicalName":"src/app/api/auth/login/route.ts","plainLanguage":"Verifies user email & password and sets authentication session cookie","summary":"Login endpoint communicating with Supabase Auth service.","trafficScore":90,"connections":["service_supabase_auth","table_users"],"issues":[]},{"id":"table_users","zone":"database","kind":"table","name":"Users Table","technicalName":"supabase.from(\"users\")","plainLanguage":"Database table storing customer profiles, names, and emails","summary":"PostgreSQL table managed in Supabase holding user account data.","trafficScore":95,"connections":[],"issues":[{"ruleId":"SEC-002","severity":"CRITICAL","confidence":98,"title":"Public Database Table Without RLS / Access Rules","file":"supabase/migrations/20261014_users.sql","line":5,"snippet":"CREATE TABLE users (\n  id UUID PRIMARY KEY,\n  email TEXT NOT NULL,\n  role TEXT DEFAULT 'user'\n);\n-- RLS is NOT enabled! Table is publicly writable via anon key","evidence":"Table `users` was created without `ALTER TABLE users ENABLE ROW LEVEL SECURITY;`. Any client with the Supabase anon key can query or overwrite all rows.","threatModel":"Direct database takeover. Attackers can read all user records, overwrite admin privileges, or delete all customer accounts via client API.","blastRadius":"All user credentials, customer data confidentiality, privilege escalation.","fixPrompt":"Enable Row Level Security (RLS) on the `users` table in Supabase migration:\n\n1. Add SQL migration:\n   ALTER TABLE users ENABLE ROW LEVEL SECURITY;\n   CREATE POLICY \"Users can only read own record\" ON users\n     FOR SELECT USING (auth.uid() = id);\n   CREATE POLICY \"Users can only update own profile\" ON users\n     FOR UPDATE USING (auth.uid() = id);\n2. Run migration to secure table from unauthorized client queries."}]},{"id":"table_orders","zone":"database","kind":"table","name":"Orders Table","technicalName":"supabase.from(\"orders\")","plainLanguage":"Database table storing order details, items purchased, and amounts","summary":"PostgreSQL table recording completed transactions and shipping addresses.","trafficScore":80,"connections":[],"issues":[]},{"id":"table_audit_logs","zone":"database","kind":"table","name":"Audit Logs Table","technicalName":"supabase.from(\"audit_logs\")","plainLanguage":"Security audit trail recording sensitive account events","summary":"Log store tracking admin actions and payment reconciliations.","trafficScore":45,"connections":[],"issues":[{"ruleId":"SEC-004","severity":"CRITICAL","confidence":97,"title":"Direct User Input in Database Query (Injection)","file":"src/lib/audit.ts","line":19,"snippet":"// Raw string template literal interpolation\nconst sql = `SELECT * FROM audit_logs WHERE user_id = '${userId}'`;\nconst result = await db.$queryRawUnsafe(sql);","evidence":"`userId` query parameter is interpolated directly into raw SQL string without sanitization or parameterized bindings.","threatModel":"SQL Injection. An attacker supplying a malicious payload (e.g. `' OR '1'='1`) can bypass query boundaries or execute arbitrary SQL.","blastRadius":"Audit database disclosure, potential remote SQL command execution.","fixPrompt":"Fix the SQL injection vulnerability in `src/lib/audit.ts` at line 19:\n\n1. Use parameterized query bindings instead of template literal concatenation:\n   const result = await db.$queryRaw`SELECT * FROM audit_logs WHERE user_id = ${userId}`;\n2. Or use ORM query builder:\n   const result = await db.audit_logs.findMany({ where: { userId } });"}]},{"id":"service_stripe","zone":"database","kind":"service","name":"Stripe Payments","technicalName":"api.stripe.com","plainLanguage":"External service that safely charges credit cards and handles payouts","summary":"Third-party payment gateway managing card charges, subscriptions, and webhooks.","trafficScore":85,"connections":[],"issues":[]},{"id":"service_supabase_auth","zone":"database","kind":"service","name":"Supabase Auth","technicalName":"supabase.co/auth/v1","plainLanguage":"External authentication service managing passwords and secure tokens","summary":"Identity provider handling user password hashing, JWTs, and OAuth providers.","trafficScore":90,"connections":[],"issues":[]},{"id":"service_email","zone":"database","kind":"service","name":"Resend Email Service","technicalName":"api.resend.com","plainLanguage":"External email service that sends receipts and password reset links","summary":"Transactional email delivery API for order confirmations and notifications.","trafficScore":70,"connections":[],"issues":[]}],"journeys":[{"id":"journey_checkout","name":"💳 Checkout & Stripe Payment","description":"Checkout button → Order Creation → Stripe Charge → Payment Webhook → Email Receipt","path":["screen_checkout","comp_checkout_btn","route_checkout","table_orders","service_stripe","route_webhook_stripe","service_email"],"status":"RISK_DETECTED","statusMessage":"Flow completes, but leaks Stripe secret in button and misses webhook verification."},{"id":"journey_auth","name":"👤 User Login & Onboarding","description":"Login Screen → Auth Route → Supabase Auth → Verify User Record","path":["screen_login","route_auth_login","service_supabase_auth","table_users"],"status":"RISK_DETECTED","statusMessage":"Users table lacks Row-Level Security, allowing unauthorized reads."},{"id":"journey_reset_password","name":"🔐 Password Reset Flow","description":"Reset Request → Auth Route → Supabase Token → Deliver Email","path":["route_auth_reset","service_supabase_auth","service_email"],"status":"SILENT_FAILURE","statusMessage":"Swallowed error in reset route causes silent failure if email service fails."},{"id":"journey_dead_end","name":"🛑 Dead-End: Broken Support Button","description":"User Dashboard → Support Help Button → [Halt: Light Stops Here!]","path":["screen_dashboard","comp_support_btn"],"status":"DEAD_END","statusMessage":"Support button has no handler attached. Flow stops dead with no action."}],"gitLedger":[{"id":"993846d","author":"Zoeb Chhatriwala","date":"2026-10-27","subject":"feat: enforce silent competence and zero AI theater across all domains","consequence":"Code update impacting AGENTS.md                    | 6 ++++++,  scripts/build.mjs            | 6 ++++++,  skills/ai-standards/SKILL.md | 8 +++++++-.","badges":["⚡ Code Update"],"isLatest":true,"blastRadius":"3 client components, 1 server route, 1 database table"},{"id":"d8a45d1","author":"Zoeb Chhatriwala","date":"2026-10-26","subject":"feat(fe-standards): add responsive design, zero em dashes rule, and value-driven copy standards","consequence":"Code update impacting AGENTS.md                     |   5 +-,  skills/fe-standards/README.md |  15 +--,  skills/fe-standards/SKILL.md  | 256 +++++++++++++++++++++++++++++++++++++-----.","badges":["⚡ Code Update"],"isLatest":false,"blastRadius":"Localized patch"},{"id":"edd44ce","author":"Zoeb Chhatriwala","date":"2026-10-25","subject":"feat: introduce tiered precision loading, framework idioms, and context optimization","consequence":"Code update impacting AGENTS.md                    | 32 ++++++++++++-----------,  scripts/build.mjs            | 28 ++++++++++++---------,  skills/be-standards/SKILL.md |  1 +.","badges":["⚡ Code Update"],"isLatest":false,"blastRadius":"Localized patch"},{"id":"27b3e18","author":"Zoeb Chhatriwala","date":"2026-10-25","subject":"feat: enforce intent-driven SaaS UI and ban generic AI design slop","consequence":"Code update impacting AGENTS.md                    |   1 +,  README.md                    |   2 +-,  skills/fe-standards/SKILL.md | 111 +++++++++++++++++++++++++++++++++++++++++++.","badges":["⚡ Code Update"],"isLatest":false,"blastRadius":"Localized patch"}],"isDemo":true,"scannedFilesCount":4,"projectName":"skill.Devmind"};
+
+    let currentOverlay = 'structure';
+    let currentAudience = 'junior';
+    let activeJourneyId = null;
+    let selectedNodeId = null;
+
+    // Viewport transform state
+    let scale = 0.85;
+    let panX = 40;
+    let panY = 20;
+    let isDragging = false;
+    let startX = 0, startY = 0;
+
+    const viewport = document.getElementById('viewport');
+    const container = document.getElementById('canvas-container');
+    const nodesLayer = document.getElementById('nodes-layer');
+    const svgConnections = document.getElementById('svg-connections');
+    const subbar = document.getElementById('subbar');
+    const journeyChips = document.getElementById('journey-chips');
+    const subbarInfo = document.getElementById('subbar-info');
+
+    const nodeDrawer = document.getElementById('node-drawer');
+    const ledgerDrawer = document.getElementById('ledger-drawer');
+    const toast = document.getElementById('toast');
+
+    // Layout configuration coordinates per zone
+    const ZONE_POSITIONS = {
+      browser: [
+        { x: 80, y: 220 },
+        { x: 80, y: 440 },
+        { x: 80, y: 660 },
+        { x: 380, y: 220 },
+        { x: 380, y: 440 },
+        { x: 380, y: 660 },
+        { x: 380, y: 880 }
+      ],
+      server: [
+        { x: 800, y: 220 },
+        { x: 800, y: 440 },
+        { x: 800, y: 660 },
+        { x: 1100, y: 330 },
+        { x: 1100, y: 560 }
+      ],
+      database: [
+        { x: 1520, y: 220 },
+        { x: 1520, y: 440 },
+        { x: 1520, y: 660 },
+        { x: 1840, y: 260 },
+        { x: 1840, y: 500 },
+        { x: 1840, y: 740 }
+      ]
+    };
+
+    function init() {
+      setupViewportPanZoom();
+      setupTabs();
+      setupAudienceToggle();
+      setupLedger();
+      assignNodePositions();
+      renderNodes();
+      renderConnections();
+      renderJourneyChips();
+      updateTransform();
+    }
+
+    function setupViewportPanZoom() {
+      viewport.addEventListener('mousedown', (e) => {
+        if (e.target.closest('.node-card') || e.target.closest('.drawer') || e.target.closest('header')) return;
+        isDragging = true;
+        startX = e.clientX - panX;
+        startY = e.clientY - panY;
+        viewport.classList.add('dragging');
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        panX = e.clientX - startX;
+        panY = e.clientY - startY;
+        updateTransform();
+      });
+
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+        viewport.classList.remove('dragging');
+      });
+
+      viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+        const newScale = Math.min(Math.max(scale * zoomFactor, 0.4), 1.8);
+        scale = newScale;
+        updateTransform();
+      }, { passive: false });
+
+      document.getElementById('btn-zoom-in').onclick = () => { scale = Math.min(scale * 1.2, 1.8); updateTransform(); };
+      document.getElementById('btn-zoom-out').onclick = () => { scale = Math.max(scale / 1.2, 0.4); updateTransform(); };
+      document.getElementById('btn-reset').onclick = () => {
+        scale = 0.85;
+        panX = 40;
+        panY = 20;
+        updateTransform();
+      };
+    }
+
+    function updateTransform() {
+      container.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+    }
+
+    function assignNodePositions() {
+      const counters = { browser: 0, server: 0, database: 0 };
+      STRATA_DATA.nodes.forEach(node => {
+        const zone = node.zone || 'browser';
+        const coords = ZONE_POSITIONS[zone][counters[zone] % ZONE_POSITIONS[zone].length];
+        node.x = coords.x;
+        node.y = coords.y;
+        counters[zone]++;
+      });
+    }
+
+    function renderNodes() {
+      nodesLayer.innerHTML = '';
+      STRATA_DATA.nodes.forEach(node => {
+        const card = document.createElement('div');
+        card.className = 'node-card';
+        card.id = `node-${node.id}`;
+        card.style.left = `${node.x}px`;
+        card.style.top = `${node.y}px`;
+
+        if (node.isDeadWeight) card.classList.add('dead-weight');
+        if (node.issues && node.issues.length > 0) card.classList.add('has-issue');
+
+        const titleText = currentAudience === 'junior' ? node.name : (node.technicalName ? node.technicalName.split('/').pop() : node.name);
+        const descText = currentAudience === 'junior' ? node.plainLanguage : node.summary;
+
+        let issuesHtml = '';
+        if (node.issues && node.issues.length > 0) {
+          const firstIssue = node.issues[0];
+          issuesHtml = `<div class="issue-badge">⚠️ ${firstIssue.ruleId} (${firstIssue.severity})</div>`;
+        } else if (node.isDeadWeight) {
+          issuesHtml = `<div class="issue-badge" style="background: rgba(100,116,139,0.2); color: #94A3B8; border-color: #64748B;">💤 Dead Weight (0 refs)</div>`;
+        }
+
+        card.innerHTML = `
+          <div class="node-header">
+            <span class="node-kind ${node.kind}">${node.kind}</span>
+          </div>
+          <div class="node-title">${titleText}</div>
+          <div class="node-sub">${node.technicalName || ''}</div>
+          <div class="node-desc">${descText}</div>
+          ${issuesHtml}
+        `;
+
+        card.onclick = () => openNodeDrawer(node);
+        nodesLayer.appendChild(card);
+      });
+    }
+
+    function renderConnections() {
+      svgConnections.innerHTML = '';
+      const svgNS = 'http://www.w3.org/2000/svg';
+
+      STRATA_DATA.nodes.forEach(source => {
+        if (!source.connections) return;
+        source.connections.forEach(targetId => {
+          const target = STRATA_DATA.nodes.find(n => n.id === targetId);
+          if (!target) return;
+
+          const startX = source.x + 250;
+          const startY = source.y + 60;
+          const endX = target.x;
+          const endY = target.y + 60;
+
+          const dx = (endX - startX) * 0.5;
+          const pathD = `M ${startX} ${startY} C ${startX + dx} ${startY}, ${endX - dx} ${endY}, ${endX} ${endY}`;
+
+          const path = document.createElementNS(svgNS, 'path');
+          path.setAttribute('d', pathD);
+          path.setAttribute('class', 'connection-line');
+          path.setAttribute('id', `conn-${source.id}-${target.id}`);
+
+          // Highlight if cross-boundary security violation
+          if (currentOverlay === 'security' && source.issues && source.issues.length > 0) {
+            path.classList.add('security-breach');
+          }
+
+          svgConnections.appendChild(path);
+        });
+      });
+    }
+
+    function setupTabs() {
+      document.querySelectorAll('.overlay-tab').forEach(tab => {
+        tab.onclick = () => {
+          document.querySelectorAll('.overlay-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          currentOverlay = tab.dataset.overlay;
+
+          document.body.className = `mode-${currentOverlay} audience-${currentAudience}`;
+
+          if (currentOverlay === 'flow') {
+            subbar.style.display = 'flex';
+            if (!activeJourneyId && STRATA_DATA.journeys.length > 0) {
+              selectJourney(STRATA_DATA.journeys[0].id);
+            }
+          } else {
+            subbar.style.display = 'none';
+            clearHighlights();
+          }
+
+          // Update wall alert state
+          const wall1 = document.getElementById('wall-1');
+          const wall2 = document.getElementById('wall-2');
+          if (currentOverlay === 'security') {
+            wall1.classList.add('breached');
+            wall2.classList.add('breached');
+          } else {
+            wall1.classList.remove('breached');
+            wall2.classList.remove('breached');
+          }
+
+          renderConnections();
+        };
+      });
+    }
+
+    function setupAudienceToggle() {
+      document.querySelectorAll('.audience-btn').forEach(btn => {
+        btn.onclick = () => {
+          document.querySelectorAll('.audience-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentAudience = btn.dataset.audience;
+          document.body.className = `mode-${currentOverlay} audience-${currentAudience}`;
+          renderNodes();
+        };
+      });
+    }
+
+    function renderJourneyChips() {
+      journeyChips.innerHTML = '';
+      STRATA_DATA.journeys.forEach(journey => {
+        const chip = document.createElement('div');
+        chip.className = 'journey-chip';
+        chip.id = `chip-${journey.id}`;
+        chip.textContent = journey.name;
+        chip.onclick = () => selectJourney(journey.id);
+        journeyChips.appendChild(chip);
+      });
+    }
+
+    function selectJourney(journeyId) {
+      activeJourneyId = journeyId;
+      document.querySelectorAll('.journey-chip').forEach(c => c.classList.remove('active'));
+      const activeChip = document.getElementById(`chip-${journeyId}`);
+      if (activeChip) activeChip.classList.add('active');
+
+      const journey = STRATA_DATA.journeys.find(j => j.id === journeyId);
+      if (!journey) return;
+
+      subbarInfo.textContent = journey.description;
+      clearHighlights();
+
+      // Highlight nodes in journey path
+      journey.path.forEach(nodeId => {
+        const nodeEl = document.getElementById(`node-${nodeId}`);
+        if (nodeEl) nodeEl.classList.add('selected');
+      });
+
+      // Highlight connections along path
+      for (let i = 0; i < journey.path.length - 1; i++) {
+        const conn = document.getElementById(`conn-${journey.path[i]}-${journey.path[i+1]}`);
+        if (conn) conn.classList.add('highlight');
+      }
+    }
+
+    function clearHighlights() {
+      document.querySelectorAll('.node-card').forEach(n => n.classList.remove('selected'));
+      document.querySelectorAll('.connection-line').forEach(l => l.classList.remove('highlight'));
+    }
+
+    function openNodeDrawer(node) {
+      selectedNodeId = node.id;
+      document.getElementById('drawer-kind').textContent = node.kind;
+      document.getElementById('drawer-title').textContent = currentAudience === 'junior' ? node.name : node.technicalName;
+
+      let html = '';
+
+      if (node.issues && node.issues.length > 0) {
+        const issue = node.issues[0];
+        html += `
+          <div style="background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); border-radius: 8px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-weight: 800; font-size: 13px; color: #EF4444;">${issue.ruleId}: ${issue.title}</span>
+              <span style="font-size: 11px; font-weight: 700; color: #FCA5A5;">${typeof issue.confidence === 'number' ? issue.confidence + '% Confidence' : escapeHtml(issue.confidence)}</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); line-height: 1.4; margin-bottom: 10px;">
+              ${issue.evidence}
+            </div>
+            <div class="section-title">Exact Evidence (${issue.file}:${issue.line})</div>
+            <div class="code-box">${escapeHtml(issue.snippet)}</div>
+            <div style="margin-top: 12px;">
+              <button class="btn-fix-prompt" onclick="copyFixPrompt('${escapeQuotes(issue.fixPrompt)}')">
+                📋 Copy Ready-Made AI Fix Prompt
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      html += `
+        <div>
+          <div class="section-title">Plain Language Summary</div>
+          <div style="font-size: 13px; line-height: 1.5; color: var(--text);">${node.plainLanguage}</div>
+        </div>
+        <div>
+          <div class="section-title">Technical Description</div>
+          <div style="font-size: 13px; line-height: 1.5; color: var(--text-muted);">${node.summary}</div>
+        </div>
+      `;
+
+      if (currentAudience === 'senior') {
+        html += `
+          <div>
+            <div class="section-title">Senior Blast Radius & Hot Path Metrics</div>
+            <div style="font-size: 12px; line-height: 1.5; color: var(--text-muted);">
+              • Runtime Traffic Weight: <strong>${node.trafficScore == null ? 'Not measured' : node.trafficScore + '/100'}</strong><br>
+              • Inbound Callers: <strong>${getInboundCount(node.id)}</strong><br>
+              • Direct Outbound Calls: <strong>${(node.connections || []).length}</strong>
+            </div>
+          </div>
+        `;
+      }
+
+      document.getElementById('drawer-content').innerHTML = html;
+      nodeDrawer.classList.add('open');
+      ledgerDrawer.classList.remove('open');
+    }
+
+    function getInboundCount(nodeId) {
+      let count = 0;
+      STRATA_DATA.nodes.forEach(n => {
+        if (n.connections && n.connections.includes(nodeId)) count++;
+      });
+      return count;
+    }
+
+    function setupLedger() {
+      document.getElementById('btn-ledger').onclick = () => {
+        renderLedger();
+        ledgerDrawer.classList.add('open');
+        nodeDrawer.classList.remove('open');
+      };
+
+      document.getElementById('drawer-close').onclick = () => nodeDrawer.classList.remove('open');
+      document.getElementById('ledger-close').onclick = () => ledgerDrawer.classList.remove('open');
+    }
+
+    function renderLedger() {
+      const container = document.getElementById('ledger-content');
+      let html = '';
+      (STRATA_DATA.gitLedger || []).forEach(entry => {
+        html += `
+          <div class="ledger-item">
+            <div class="ledger-header">
+              <span class="ledger-hash">${entry.id}</span>
+              <span style="font-size: 11px; color: var(--text-dim);">${entry.date} by ${entry.author}</span>
+            </div>
+            <div style="font-weight: 700; font-size: 13px; margin-bottom: 6px;">${entry.subject}</div>
+            <div class="ledger-consequence">${entry.consequence}</div>
+            <div style="font-size: 11px; color: var(--text-dim); margin-bottom: 8px;">
+              <strong>Blast Radius:</strong> ${entry.blastRadius}
+            </div>
+            <div class="ledger-badges">
+              ${(entry.badges || []).map(b => `<span class="badge-chip">${b}</span>`).join('')}
+            </div>
+          </div>
+        `;
+      });
+      container.innerHTML = html;
+    }
+
+    window.copyFixPrompt = function(promptText) {
+      navigator.clipboard.writeText(promptText).then(() => {
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2500);
+      });
+    };
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function escapeQuotes(str) {
+      return (str || '').replace(/'/g, "\\'");
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

@@ -2,9 +2,6 @@
 name: deployment
 description: >-
   MANDATORY TRIGGER: Invoke BEFORE creating or editing Dockerfiles, docker-compose, CI/CD workflows (.github/workflows), Kubernetes/Terraform, env configs, or healthcheck endpoints.
-  Keywords & Triggers: deploy, deployment, Docker, Dockerfile, docker-compose, container, containerize, multi-stage build, non-root user, dumb-init, CI/CD pipeline, GitHub Actions, workflow, automated test workflow, automated deploy, release, Kubernetes, k8s, pods, deployment yaml, service yaml, Helm, Terraform, infra as code, cloud deploy, AWS, GCP, Azure, Vercel, Fly.io, healthcheck, liveness probe, readiness probe, graceful shutdown, SIGTERM, OIDC cloud auth, environment variables, production build.
-  File globs: **/{.github,deploy,infra}/**,**/Dockerfile*,**/docker-compose*,**/*.tf
-trigger: model_decision
 ---
 
 # deployment: CI/CD, Containerization & Infrastructure Protocol

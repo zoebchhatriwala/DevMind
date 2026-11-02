@@ -117,7 +117,7 @@ Once the pre-coding review is complete:
 5. **Anchor to affirmative templates**: Consult the concrete code patterns in the active skill (e.g., RFC 7807 problem details, Pino structured logging, WCAG states) rather than statistical default implementations.
 6. **Mitigate context drift**: Re-verify active changes against the skill's execution checklist before concluding.
 7. **Intent-Driven UI, Responsive Layout & Value-Driven Copy**: When authoring frontend interfaces, ground design and messaging in the user's specific domain:
-   - **Architecture & Wayfinding**: Mandate clear SaaS wayfinding (App Shell navigation, hierarchical breadcrumbs, structured page headers, realistic domain seed data). Strictly ban generic AI design slop (arbitrary dark purple/cyan gradients, glowing blobs, unreadable glassmorphism, fake vanity metrics).
+   - **Architecture & Wayfinding**: Match composition and navigation to the user's task. Use App Shells and breadcrumbs when the product's hierarchy needs them. Reject interchangeable hero/card templates, decorative effects without purpose, dead controls, and fabricated claims. Existing brand direction takes precedence over aesthetic defaults.
    - **Mobile-First Responsive Design**: Enforce responsive layouts from 320px to 4K with zero horizontal page scroll using fluid grids and collapsible AppShell navigation.
    - **Human-Centric & Value-Driven Copy**: Interface typography and messaging must be engaging, natural, and easy to understand. Focus on communicating user value and reassurance rather than technical jargon or operational plumbing (e.g., instead of "Data encrypted using AES-256", write "Your data is protected with advanced encryption"). Strictly prohibit em dashes (`—`) in all UI copy, preferring concise sentences, colons, or spaced hyphens.
 8. **Zero AI Theater & Silent Competence (Universal Across All Domains)**:
@@ -125,6 +125,16 @@ Once the pre-coding review is complete:
    - **Domain-Aligned Naming**: Name features, buttons, and headers by their human value in that domain (e.g., Fintech: *"Payment verification"*; Healthcare: *"Clinical summary"*; DevTools: *"Cluster monitor"*; CRM: *"Deal insights"*).
    - **Zero Commentary Theater**: Source code comments explain non-obvious *why*, not standard compliance or prompt execution. Strictly ban performative comments citing rule numbers or prompt compliance (e.g., ❌ `// DevMind 2.1: Enforcing zero-loss validation pipeline`).
    - **Semantic Identifiers**: Name variables, functions, and endpoints after domain operations (`verifyPayment()`, `summarizeNotes()`), never after prompt buzzwords (`executeDeepThinkingPipeline()`).
+
+### Quality Contract: Evidence Before Completion
+
+- **Before building**: Inspect callers, framework conventions, dependencies, and existing helpers. Use the installed skill's `scripts/inspect.mjs [project] --json` for discovery. Reuse the current formatter, linter, schemas, components, and design tokens; do not install competing tools.
+- **Before substantial UI work**: Record audience, primary task, content hierarchy, visual direction, and each action's visible outcome in task notes. Use real supplied content or clearly identified demo data. A plan interchangeable across unrelated products needs refinement.
+- **While coding**: Prefer framework primitives and minimum domain code. Do not add passthrough wrappers, speculative flags, duplicate state, no-op event handlers, arbitrary delays, fake progress, or success messages before actual success. Cover meaningful failure and recovery paths. Comments explain constraints, not compliance.
+- **Before finishing**: Run source checks plus existing project quality gates and at least one behavior check for changed non-trivial logic. Trace authorization and validation through real call paths. Review UI in a browser at mobile and desktop widths, using keyboard and pointer and checking pending/error/empty states. Fix observed defects and rerun affected checks.
+- **Tool limits**: `verify.mjs` uses an installed TypeScript parser for supported AST checks and labels its lexical fallback. It does not prove security, accessibility, visual quality, or dead-code reachability. Its JSON lists active and manual checks. `contrast.mjs` checks opaque color pairs only. Never hide findings, bypass types, alter tests to accept broken behavior, or auto-edit source to satisfy a heuristic.
+- **Completion evidence**: Report checks actually executed and material gaps. If browser tooling is unavailable, explicitly leave visual/interaction verification unverified. Do not claim "no AI slop", "secure", or "accessible" solely from a clean scanner result.
+- **Proportionate verification**: A small copy/layout patch needs the affected checks and viewport. Shared behavior needs caller and recovery checks. New pages/journeys need current browser artifacts, project checks, and concrete reviewer observations. Load frontend design examples and verification references only when relevant. Use seeded evaluations when changing the skill itself.
 
 ---
 
@@ -354,4 +364,27 @@ When creating `.devmind/` in a project for the first time:
 - **MUST NOT** report unverified checks or passing tests without executing them.
 - **MUST** communicate in natural, filler-free language.
 
+---
 
+## 10. Executable Helper Scripts & Interactive Installer
+
+DevMind provides zero-dependency executable Node.js scripts that AI coding agents can execute to automate checks and avoid wasting context tokens on manual AST parsing or handcrafting HTML:
+
+| Script | Automation Capabilities | Agent Invocation |
+| :--- | :--- | :--- |
+| **`scripts/inspect.mjs`** | Read-only discovery of packages, quality scripts, components, helpers, and tokens. Reports names and paths without running project commands. | `node <skill>/scripts/inspect.mjs [project] --json` or `npx devmind inspect` |
+| **`scripts/verify.mjs`** | Read-only source heuristics with file/line evidence, explicit coverage, and manual review gaps. `--strict` fails on warnings. Does not automatically fix source. | `node <skill>/scripts/verify.mjs [project] --json --strict` or `npx devmind verify` |
+| **`scripts/contrast.mjs`** | Calculate WCAG contrast for opaque hex colors. Default exit threshold is 4.5:1; `--large` or `--non-text` uses 3:1. | `node <skill>/scripts/contrast.mjs "#111827" "#ffffff" --json` or `npx devmind contrast "#111827" "#ffffff"` |
+| **`scripts/browser-audit.mjs`** | Reuse installed Playwright for isolated local browser captures, explicit pointer/keyboard assertions, DOM hints, and runtime error counts. Missing tooling remains not-run. | `node <skill>/scripts/browser-audit.mjs <project> <loopback-url> --plan <plan.json> --json` |
+| **`scripts/quality.mjs`** | Discover existing formatting/lint/type/test scripts. `--run` explicitly executes those project scripts; no new toolchain is installed. | `node <skill>/scripts/quality.mjs <project> --run --json` |
+| **`scripts/review.mjs`** | Combine source, project checks, browser artifacts, and observed reviewer criteria. Reject stale source fingerprints and missing evidence. | `node <skill>/scripts/review.mjs <project> --quality <report> --browser <report> --assessment <assessment> --json` |
+| **`scripts/eval.mjs`** | Prepare five isolated skill tasks and evaluate actual candidate behavior. Compare identical cases and environments; retain unresolved visual/code review. | `node <skill>/scripts/eval.mjs --list` |
+| **`scripts/strata.mjs`** | Automatically scans codebase into 3 zones, maps trust boundaries, and generates self-contained `.devmind/strata.html`. | `node <skill>/scripts/strata.mjs` or `npx devmind strata` |
+| **`scripts/init.mjs`** | Bootstraps `.devmind/` vault (`task.md`, `memory.md`, `rules.md`) with detected stack facts and adds `.devmind/` to `.gitignore`. | `node <skill>/scripts/init.mjs` or `npx devmind init` |
+| **`scripts/handover.mjs`** | Summarizes git diffs, changed files, and `// devmind:` shortcuts into `.devmind/handover.md`. | `node <skill>/scripts/handover.mjs` or `npx devmind handover` |
+
+### Interactive Installer & Agent Skills Setup
+- **Interactive Terminal Wizard**: Run `npx devmind` or `npm run devmind` to configure local or global environments.
+- **Local Project Setup**: `npx devmind install --local --target all`
+- **Global User Setup**: `npx devmind install --global --target all`
+- **OpenSkills Compatible**: `npx skills add zoebchhatriwala/DevMind`

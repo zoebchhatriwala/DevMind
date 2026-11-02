@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "invoice-form",
+      "prompt": "Complete this existing vanilla HTML invoice form. Preserve the supplied field IDs and use POST /api/invoices with client and amount. Show Saved invoice only after a successful response. On a failed response, show Could not save invoice, keep both fields, and allow retry. Prevent duplicate submission while pending. Give this accounting screen clear hierarchy and a compact, readable layout at 390px and 1440px. Use no dependencies, external services, fabricated metrics, or unrelated navigation. All product and stack decisions needed for this patch are supplied.",
+      "files": {
+        "index.html": "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>New invoice</title><main><h1>New invoice</h1><form id=\"invoice\"><label for=\"client\">Client</label><input id=\"client\" name=\"client\" required><label for=\"amount\">Amount</label><input id=\"amount\" name=\"amount\" type=\"number\" min=\"1\" required><button type=\"submit\">Save invoice</button></form><p role=\"status\" id=\"result\"></p><p role=\"alert\" id=\"error\" hidden></p></main></html>"
+      },
+      "scenarios": [
+        {
+          "id": "save",
+          "plan": { "responses": [{ "path": "/api/invoices", "status": 201, "body": { "id": "INV-1042" } }], "steps": [{ "action": "fill", "label": "Client", "value": "Riverton Studio" }, { "action": "fill", "label": "Amount", "value": "4250" }, { "action": "click", "role": "button", "name": "Save invoice" }, { "action": "expectText", "role": "status", "value": "Saved invoice" }] }
+        },
+        {
+          "id": "recover",
+          "plan": { "responses": [{ "path": "/api/invoices", "status": 503, "body": { "error": "unavailable" } }], "steps": [{ "action": "fill", "label": "Client", "value": "Riverton Studio" }, { "action": "fill", "label": "Amount", "value": "4250" }, { "action": "click", "role": "button", "name": "Save invoice" }, { "action": "expectText", "role": "alert", "value": "Could not save invoice" }, { "action": "expectValue", "label": "Client", "value": "Riverton Studio" }, { "action": "expectValue", "label": "Amount", "value": "4250" }] }
+        }
+      ],
+      "review": ["Primary action and monetary fields have clear priority.", "Failure preserves entered values and permits retry.", "No fake success, dashboard statistics, or extra application shell."]
+    },
+    {
+      "id": "table-search",
+      "prompt": "Complete the supplied invoice table's client search and clear control. Match case-insensitively, display only matching table rows, show No matching invoices when there are none, and restore all rows when Clear search is clicked. Preserve the supplied records, table semantics, labels, and button names. Create an information-dense billing view that works at 390px without page overflow and at 1440px without giant empty cards. Use the existing vanilla HTML and no dependencies. All architecture choices for this patch are supplied.",
+      "files": {
+        "index.html": "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Invoices</title><main><h1>Invoices</h1><label for=\"search\">Search clients</label><input id=\"search\" type=\"search\"><button type=\"button\" id=\"clear\">Clear search</button><table><thead><tr><th>Client</th><th>Amount</th></tr></thead><tbody><tr><td>Riverton Studio</td><td>$4,250</td></tr><tr><td>Elm &amp; Co</td><td>$840</td></tr><tr><td>Kite Workshop</td><td>$1,280</td></tr></tbody></table><p role=\"status\" hidden>No matching invoices</p></main></html>"
+      },
+      "scenarios": [
+        {
+          "id": "filter-and-clear",
+          "plan": { "steps": [{ "action": "fill", "label": "Search clients", "value": "RIVERTON" }, { "action": "expectCount", "selector": "tbody tr:visible", "count": 1 }, { "action": "fill", "label": "Search clients", "value": "zzzz" }, { "action": "expectText", "role": "status", "value": "No matching invoices" }, { "action": "click", "role": "button", "name": "Clear search" }, { "action": "expectCount", "selector": "tbody tr:visible", "count": 3 }] }
+        }
+      ],
+      "review": ["Amounts align for scanning and narrow-screen scrolling is contained.", "Search, no-results, and reset outcomes are obvious.", "Existing records remain truthful and usable."]
+    },
+    {
+      "id": "landing-page",
+      "prompt": "Improve this existing storefront page for Fieldnote Press, an independent print studio. Supplied edition: Low Tide, a two-color coastal screenprint, 30 by 40 cm, $45. Make the artwork and edition details lead the composition. Browse editions must navigate to the editions section, and Subscribe must POST the entered email to /api/subscribe and show Subscription confirmed only after success. Keep these action names and visible field label. Use vanilla HTML/CSS/JS and no dependencies, stock customer logos, invented testimonials, performance claims, or default SaaS feature-card grid. Use a clearly identified abstract artwork study if drawing an image in CSS. All copy and stack constraints are supplied.",
+      "files": {
+        "index.html": "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Fieldnote Press</title><header>Fieldnote Press <a href=\"#editions\">Browse editions</a></header><main><h1>Prints from the coast</h1><section id=\"editions\"><h2>Low Tide</h2><p>Two-color coastal screenprint. 30 by 40 cm. $45.</p></section><form id=\"subscribe\"><label for=\"email\">Email address</label><input id=\"email\" type=\"email\" required><button type=\"submit\">Subscribe</button></form><p role=\"status\"></p></main></html>"
+      },
+      "scenarios": [
+        {
+          "id": "subscribe",
+          "plan": { "responses": [{ "path": "/api/subscribe", "status": 201, "body": { "subscribed": true } }], "steps": [{ "action": "click", "role": "link", "name": "Browse editions" }, { "action": "expectVisible", "selector": "#editions" }, { "action": "fill", "label": "Email address", "value": "reader@example.invalid" }, { "action": "click", "role": "button", "name": "Subscribe" }, { "action": "expectText", "role": "status", "value": "Subscription confirmed" }] }
+        }
+      ],
+      "review": ["Edition imagery and typography establish a print-studio identity.", "Composition follows supplied product content rather than a generic platform template.", "Artwork studies and commercial claims are labeled honestly."]
+    },
+    {
+      "id": "accessibility-fix",
+      "prompt": "Fix this existing notes editor for keyboard and screen-reader use. Supply the visible label Notes for the textarea, use a native Save notes button, preserve a clear focus indicator, and announce Saved after activation. Notes must receive the first Tab focus, then Save notes; Enter must save. Preserve the small editor's scope and keep the layout usable at 390px and 1440px. Use no dependencies or unrelated redesign. The current behavior is client-only and requires no persistence or server.",
+      "files": {
+        "index.html": "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Notes</title><style>*:focus{outline:none}</style><main><h1>Notes</h1><textarea id=\"notes\"></textarea><div onclick=\"document.querySelector('#result').textContent='Saved'\">Save notes</div><p id=\"result\"></p></main></html>"
+      },
+      "scenarios": [
+        {
+          "id": "keyboard-save",
+          "plan": { "steps": [{ "action": "press", "key": "Tab" }, { "action": "expectFocused", "label": "Notes" }, { "action": "fill", "label": "Notes", "value": "Call Riverton Studio" }, { "action": "press", "key": "Tab" }, { "action": "expectFocused", "role": "button", "name": "Save notes" }, { "action": "press", "key": "Enter" }, { "action": "expectText", "role": "status", "value": "Saved" }] }
+        }
+      ],
+      "review": ["Keyboard order, focus visibility, and status announcement are observed.", "The fix preserves the editor's purpose and avoids unnecessary app structure.", "Form labels and control names remain visible at enlarged text sizes."]
+    },
+    {
+      "id": "component-extension",
+      "prompt": "Extend the existing createButton helper to support a disabled state and use it for saving an invoice. Keep the existing two-argument API working for Refresh preview. Saving must POST /api/invoices, disable the Save invoice button until the request settles, then show Saved invoice after success and restore the enabled state. Refresh preview must still show Preview refreshed. Reuse the existing helper rather than creating a second button component, wrapper framework, or dependency. Preserve button names and a compact vanilla HTML billing view. All project decisions for this incremental change are supplied.",
+      "files": {
+        "index.html": "<!doctype html><html lang=\"en\"><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"><title>Invoice preview</title><main><h1>Invoice preview</h1><div id=\"actions\"></div><p role=\"status\"></p></main><script type=\"module\" src=\"app.js\"></script></html>",
+        "button.js": "export function createButton(label, onClick) { const button = document.createElement('button'); button.type = 'button'; button.textContent = label; button.addEventListener('click', onClick); return button; }",
+        "app.js": "import { createButton } from './button.js';\nconst status = document.querySelector('[role=status]');\nconst refresh = createButton('Refresh preview', () => { status.textContent = 'Preview refreshed'; });\nconst save = createButton('Save invoice', () => {});\ndocument.querySelector('#actions').append(save, refresh);"
+      },
+      "scenarios": [
+        {
+          "id": "save-and-sibling",
+          "plan": { "responses": [{ "path": "/api/invoices", "status": 201, "body": { "id": "INV-1042" } }], "steps": [{ "action": "click", "role": "button", "name": "Save invoice" }, { "action": "expectText", "role": "status", "value": "Saved invoice" }, { "action": "click", "role": "button", "name": "Refresh preview" }, { "action": "expectText", "role": "status", "value": "Preview refreshed" }] }
+        }
+      ],
+      "review": ["The shared button helper is reused and both callers still work.", "Pending state prevents repeat submissions and success reflects the response.", "No speculative props, secondary token system, or new state library appears."]
+    }
+  ]
+}

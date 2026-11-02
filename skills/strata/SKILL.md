@@ -2,7 +2,6 @@
 name: strata
 description: >-
   MANDATORY TRIGGER: Activates when the user asks to "generate code map", "code map", "visualize code", "visualize app", "map architecture", "show what I built", "what did I build", "strata", or asks to inspect application structure, journeys, and trust boundaries without reading code.
-trigger: model_decision
 ---
 
 # strata: Code Visualization for Vibe Coders & Seniors
@@ -10,6 +9,10 @@ trigger: model_decision
 You are operating under the **Strata** standard. Strata is a visual map of an application designed for people who didn't write the code (vibe coders) to understand what was built, and for senior engineers to review blast radius and trust boundaries before merging.
 
 When the user asks to **"generate code map"**, **"visualize this app"**, **"show what I built"**, or **"run strata"**, you **MUST NOT** tell the user to run an npm command. The user's project does not have a `strata` npm script. You as the AI coding agent must inspect the repository, run the 10 checks, generate `.devmind/strata.html`, and provide the user with the direct clickable file link.
+
+> **AI Automation Shortcut**: You can execute `node <skill-path>/scripts/strata.mjs` (or `npx devmind strata`) via your terminal tool to automatically scan the project and generate `.devmind/strata.html` without manually hand-authoring 1,000+ lines of HTML!
+
+The helper inventories observed files and installed dependency names. It leaves runtime connections and journeys empty, traffic unmeasured, and confidence labeled as heuristic. Trace the real source before adding relationships or declaring any of the ten checks verified. Its `checkCoverage` lists checks that still need manual review; a clean verifier does not prove a safe journey. Never invent nodes or metrics to fill an empty map.
 
 ---
 
