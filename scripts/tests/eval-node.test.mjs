@@ -45,6 +45,7 @@ test('server evaluation contracts reject broken seeds and pass real corrected be
       assert.equal(revised.behaviorStatus, 'passed', entry.id);
       assert.equal(revised.status, 'incomplete', 'Functional checks do not imply a reviewed model-quality result.');
       assert.match(compareEvaluations(baseline, revised).modelControl, /Unverified/);
+      assert.throws(() => compareEvaluations({ ...baseline, version: 1 }, revised), /version/);
       const without = { ...baseline, modelRun: { model: 'test-model', settings: { temperature: 0 }, condition: 'without-skill' } };
       const withSkill = { ...revised, modelRun: { model: 'test-model', settings: { temperature: 0 }, condition: 'with-skill', skillRevision: 'test-revision' } };
       assert.match(compareEvaluations(without, withSkill).modelControl, /Declared/);
@@ -52,6 +53,34 @@ test('server evaluation contracts reject broken seeds and pass real corrected be
       assert.throws(() => compareEvaluations(without, { ...withSkill, modelRun: { ...withSkill.modelRun, settings: { temperature: 1 } } }), /settings/);
       assert.throws(() => compareEvaluations(without, revised), /Model run/);
     }
+  });
+});
+
+test('Node evaluation rejects early success exits, swallowed assertion failures, and fake output', async () => {
+  for (const candidate of [
+    'process.exit(0);',
+    'console.log("Bundled assertions completed."); process.exit(0);',
+    'import {writeSync} from "node:fs"; writeSync(3, "completed"); process.exit(0);',
+    'import {writeSync} from "node:fs"; const marker = process.execArgv.join(" ").match(/[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}/); writeSync(3, marker?.[0] ?? "not-found"); process.exit(0);',
+    'process.on("uncaughtException", () => process.exit(0)); export function canEditDocument() { return true; }',
+  ]) {
+    await fixture({ 'operation.mjs': candidate }, async directory => {
+      const report = await evaluateCase('tenant-authorization', directory);
+      const check = report.checks.find(check => check.id === 'node-contract');
+      assert.equal(check.exitCode, 0);
+      assert.equal(check.assertionsCompleted, false);
+      assert.equal(check.status, 'failed');
+      assert.equal(report.behaviorStatus, 'failed');
+      assert.equal(report.status, 'failed');
+    });
+  }
+});
+
+test('candidate mutation of the public assert module cannot disable captured contract assertions', async () => {
+  await fixture({ 'operation.mjs': 'import assert from "node:assert/strict"; assert.equal = () => {}; export function canEditDocument() { return true; }' }, async directory => {
+    const report = await evaluateCase('tenant-authorization', directory);
+    assert.equal(report.behaviorStatus, 'failed');
+    assert.equal(report.checks.find(check => check.id === 'node-contract').assertionsCompleted, false);
   });
 });
 

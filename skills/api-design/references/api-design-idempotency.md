@@ -1,99 +1,78 @@
 # API contracts: idempotency
 
-Read only for this topic. These are adaptation examples, not a required stack or file structure. Follow the entrypoint's scope and the project's existing framework, tools, and authorization. Do not copy placeholders, add packages, or replace working architecture solely to match an example.
+Read for retryable side effects. Adapt to the existing datastore and operation; an HTTP response interceptor or expiring cache lock cannot make a payment atomic.
 
-## 4 - Idempotency & Safe Retries (`Idempotency-Key`)
+## Request identity and replay
 
-Clients on mobile or unreliable networks frequently retry `POST` requests when a network timeout occurs, risking duplicate charges or double orders.
+Authenticate, authorize the operation and validate its input before claiming a key. On every retry, enforce current access before returning a stored response. For operations requiring a key, reject missing/malformed keys rather than silently executing without protection. Bound key length using the established API contract; keys must not contain secrets or personal data.
 
-### 4.1 IETF Idempotency-Key Standard Workflow
+Scope a unique receipt to **tenant, authenticated actor, named operation/version, and client key**. Bind it to all validated inputs that affect the result. Do not scope unrelated anonymous callers together. Public operations need their own authenticated capability or other explicit isolation design.
 
-```
-Client                                      API Server / Redis
-  |                                                  |
-  |-- 1. POST /api/v1/payments --------------------->|
-  |      (Idempotency-Key: d4a3-48b1)                |-- 2. Atomic check in Redis:
-  |                                                  |      SET lock:d4a3-48b1 "PROCESSING" NX EX 120
-  |                                                  |-- 3. Lock acquired: Execute payment logic
-  |                                                  |-- 4. Store final status & body in Redis (24h)
-  |<-- 5. 201 Created (Payment DTO) -----------------|
-  |                                                  |
-  |-- 6. Network drops! Client retries: ------------>|
-  |      POST /api/v1/payments                       |-- 7. Key exists with cached response!
-  |      (Idempotency-Key: d4a3-48b1)                |-- 8. Bypass business logic completely
-  |<-- 9. 201 Created (Cached response replayed) ---|
-```
+This payment-specific example takes an already validated, normalized DTO. The fixed tuple avoids property-order differences; add every new result-affecting field when changing the command. It is not a general JSON canonicalizer.
 
-### 4.2 Production Idempotency Middleware Implementation
+```js
+// example: payment-request-identity
+import { createHash } from 'node:crypto';
 
-```typescript
-// src/presentation/http/middleware/idempotency.ts
-import { Request, Response, NextFunction } from 'express';
-import { redisClient } from '../../../infrastructure/cache/redis';
-
-export function idempotencyMiddleware(ttlSeconds = 86400) {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    // Only apply to mutating requests with an Idempotency-Key header
-    const key = req.headers['idempotency-key'] as string;
-    if (!key || req.method !== 'POST') {
-      return next();
-    }
-
-    const redisKey = `idempotency:${req.user?.id || 'anon'}:${key}`;
-
-    // 1. Check if cached response exists
-    const cached = await redisClient.get(redisKey);
-    if (cached) {
-      if (cached === 'PROCESSING') {
-        // Request currently executing in another concurrent thread
-        return res.status(409).json({
-          title: 'Conflict',
-          detail: 'A request with this idempotency key is actively being processed. Please retry in a few seconds.',
-          retry_after: 2,
-        });
-      }
-
-      // Replay cached response
-      const { statusCode, headers, body } = JSON.parse(cached);
-      res.set(headers);
-      res.set('X-Cache-Lookup', 'HIT-IDEMPOTENT');
-      return res.status(statusCode).send(body);
-    }
-
-    // 2. Acquire lock (NX = only set if not exists, EX = auto-expire in 2 minutes if crash occurs)
-    const acquired = await redisClient.set(redisKey, 'PROCESSING', 'EX', 120, 'NX');
-    if (!acquired) {
-      return res.status(409).json({
-        title: 'Conflict',
-        detail: 'Concurrent request detected for this idempotency key.',
-      });
-    }
-
-    // 3. Intercept response to cache on completion
-    const originalSend = res.send.bind(res);
-    res.send = (body: any) => {
-      // Restore original send
-      const result = originalSend(body);
-
-      // Only cache successful or client validation outcomes (2xx, 4xx)
-      if (res.statusCode < 500) {
-        const payloadToCache = {
-          statusCode: res.statusCode,
-          headers: { 'content-type': res.get('content-type') },
-          body: body.toString(),
-        };
-        redisClient.set(redisKey, JSON.stringify(payloadToCache), 'EX', ttlSeconds).catch(console.error);
-      } else {
-        // Server crashed: delete key so client can retry cleanly
-        redisClient.del(redisKey).catch(console.error);
-      }
-
-      return result;
-    };
-
-    next();
+/**
+ * @param {string} tenantId
+ * @param {string} actorId
+ * @param {string} key
+ * @param {{ amountCents: number, currency: string, destinationId: string }} command
+ */
+export function paymentRequestIdentity(tenantId, actorId, key, command) {
+  const operation = 'payments.create:v1';
+  return {
+    scope: [tenantId, actorId, operation, key],
+    fingerprint: createHash('sha256')
+      .update(JSON.stringify([operation, command.amountCents, command.currency, command.destinationId]))
+      .digest('hex'),
   };
+}
+
+/**
+ * @param {{ fingerprint: string, state: 'pending' | 'complete' | 'unknown', status: number | null, body: string | null }} receipt
+ * @param {string} fingerprint
+ * @returns {{ action: 'mismatch' | 'retry-later' | 'reconcile' } | { action: 'replay', status: number, body: string }}
+ */
+export function receiptDecision(receipt, fingerprint) {
+  if (receipt.fingerprint !== fingerprint) return { action: 'mismatch' };
+  if (receipt.state === 'unknown') return { action: 'reconcile' };
+  if (receipt.state === 'pending') return { action: 'retry-later' };
+  if (receipt.status === null || !Number.isInteger(receipt.status) || receipt.status < 200 || receipt.status > 499 || typeof receipt.body !== 'string') {
+    throw new Error('Incomplete idempotency receipt');
+  }
+  return { action: 'replay', status: receipt.status, body: receipt.body };
 }
 ```
 
----
+Map a mismatched request to the established client error contract (for example, 409). A pending attempt returns a documented conflict/retry response; an uncertain external outcome requires reconciliation, not blind execution. Store the exact allowlisted response body/status; never replay cookies, authorization headers, or arbitrary response headers. Error caching is operation-specific: a 5xx is not evidence that a side effect failed. This example stores only completed 2xx/4xx outcomes; adapt the receipt schema if the existing contract also persists terminal server errors.
+
+## Database-only effects: one transaction
+
+Reuse the database and transaction helper already present. For a PostgreSQL implementation, the receipt needs a unique constraint on `(tenant_id, actor_id, operation, key)`, a request fingerprint, and completed status/body. Use bound parameters throughout.
+
+1. Begin a transaction. Atomically `INSERT ... ON CONFLICT DO NOTHING RETURNING ...` for the receipt; a separate cache GET followed by SET is a race.
+2. If the receipt exists, lock/read it inside the transaction, compare the fingerprint, and replay only its committed complete result. With PostgreSQL READ COMMITTED, a follow-up SELECT sees the winning committed row; higher isolation may instead require a bounded retry of a serialization failure. A lock timeout is a retryable conflict, not permission to execute.
+3. If this transaction owns the new receipt, perform the authorized domain mutation using **the same transaction**. Save the final allowlisted response in the receipt before commit.
+4. Await commit, then send the response. A failure before commit rolls back both the mutation and receipt. A disconnect after commit is recovered by replaying that receipt.
+
+No `res.send` monkey patch, fire-and-forget receipt write, or independent Redis TTL can close the database commit/response crash window. For this pattern, an uncommitted receipt disappears on rollback; it is not a durable orphaned `PROCESSING` flag. Verify the unique constraint and transaction isolation against the actual database.
+
+## External effects and expired ownership
+
+A database transaction cannot roll back a charge at another provider. Use the provider's idempotency support with a stable operation key and persist the operation identity before dispatch. A transactional outbox is appropriate when the local write must reliably schedule external work; it still allows duplicate delivery and needs an idempotent consumer. Apply the backend skill's logging-and-resilience reference when implementing workers.
+
+If a worker dies after dispatch but before recording the result, mark/reconcile the outcome using the provider operation ID or the same provider key. Do not delete the receipt and issue a fresh charge. A lease expiring means ownership may be recovered, not that the effect did not happen. Prevent a previous worker from completing after reassignment using the existing datastore's ownership/fencing mechanism where supported; otherwise reconcile before repeating irreversible work.
+
+Document retention relative to client retries and provider deduplication windows. Pruning a completed receipt can allow the same key to execute again; preserve business uniqueness constraints or reject stale operation IDs where repeating the effect is unacceptable. Do not present a universal 24-hour TTL as a correctness guarantee.
+
+## Behavior checks
+
+- Same scope/key and identical normalized request: one effect, same response. Different amount, currency, or destination: mismatch, no new effect.
+- Concurrent attempts: the unique claim permits one owner; the other replays the committed result or receives a bounded retry response.
+- Crash before commit: no domain write or completed receipt. Crash after commit/before response: replay without another write.
+- External success followed by a lost response: reconcile/reuse the same provider key. Expired lease, slow original worker, and expiry of the provider window must not silently authorize a new effect.
+- Revoked access, cross-tenant keys, stale receipts and persistence failures follow the documented denial/recovery contract.
+
+Provider semantics vary; [Stripe's idempotency documentation](https://docs.stripe.com/api/idempotent_requests) is an example, not a universal status-code or retention standard.

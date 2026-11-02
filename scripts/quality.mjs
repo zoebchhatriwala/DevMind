@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { realpath } from 'node:fs/promises';
 import { isMain } from './lib/project.mjs';
-import { fingerprint, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
+import { evidencePath, fingerprint, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
 
 const GROUPS = {
   format: ['format:check', 'check:format'],
@@ -23,6 +23,7 @@ export function npmInvocation() {
 
 export async function runQuality(targetDir = '.', options = {}) {
   const root = await realpath(resolve(targetDir));
+  const sourceDigest = await fingerprint(root);
   const pkg = existsSync(join(root, 'package.json')) ? await readJson(join(root, 'package.json')) : {};
   const npm = npmInvocation();
   const checks = [];
@@ -47,9 +48,12 @@ export async function runQuality(targetDir = '.', options = {}) {
     }
     checks.push(check);
   }
+  if (options.run && await fingerprint(root) !== sourceDigest) {
+    checks.push({ id: 'stable-source', status: 'failed', reason: 'Project files changed during quality checks. Rerun all checks against the final project state.' });
+  }
   return {
     version: 1, kind: 'quality', root, createdAt: new Date().toISOString(),
-    sourceDigest: await fingerprint(root), status: reportStatus(checks), checks,
+    sourceDigest, status: reportStatus(checks), checks,
     limitations: ['Executes only existing named npm scripts when --run is supplied. No dependencies are installed.', 'Script names do not prove semantic coverage; inspect the project configuration and results. Missing checks remain not-run.'],
   };
 }
@@ -60,6 +64,7 @@ export async function main(args = process.argv.slice(2)) {
     console.log('Usage: quality.mjs [project] [--run] [--out .devmind/quality.json] [--json]\n--run executes existing project scripts. Without it, only discover checks.'); return;
   }
   if (positional.length > 1) throw new Error('Expected at most one project directory.');
+  if (values['--out']) await evidencePath(positional[0] ?? '.', values['--out']);
   const result = await runQuality(positional[0], { run: flags.has('--run') });
   const artifact = await writeReport(result.root, values['--out'] ?? '.devmind/quality.json', result);
   console.log(flags.has('--json') ? JSON.stringify(result, null, 2) : `${result.status}: ${artifact}`);

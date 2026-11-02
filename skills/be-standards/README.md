@@ -42,7 +42,7 @@ Read `SKILL.md` for the concise gates and links. Detailed sections below are pre
 | 13  | Testing (Vitest + Supertest + real DB) |
 | 14  | OpenAPI documentation |
 | 15  | Code documentation |
-| 16  | Resilience patterns |
+| 16  | Resilience patterns and durable job/event delivery |
 | 17  | Clean code standards |
 | 18  | Security (references security-standards) |
 

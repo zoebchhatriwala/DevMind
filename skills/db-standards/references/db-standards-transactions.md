@@ -2,40 +2,97 @@
 
 Read only for this topic. These are adaptation examples, not a required stack or file structure. Follow the entrypoint's scope and the project's existing framework, tools, and authorization. Do not copy placeholders, add packages, or replace working architecture solely to match an example.
 
-## 6 - Connection Pooling, Scalability & Serverless
+## 5 - Transactions, Concurrency & Locking
 
-### 6.1 Connection Pool Mathematics & Sizing
+### 5.1 Isolation Levels: Practical Application
 
-> [!CAUTION]
-> Setting database connection pool size to 100 on each application container will exhaust PostgreSQL memory, degrade CPU cache efficiency, and cause connection queue thundering herds.
+| Isolation Level | Dirty Read | Non-Repeatable Read | Phantom Read | Serialization Anomaly | Default In | Best For |
+|-----------------|------------|---------------------|--------------|-----------------------|------------|----------|
+| **Read Committed** | Prevented | Allowed | Allowed | Allowed | PostgreSQL, Oracle, SQL Server | 95% of standard web OLTP queries |
+| **Repeatable Read** | Prevented | Prevented | Prevented (in PG snapshot) | Allowed | MySQL InnoDB | Accurate multi-query reporting snapshots |
+| **Serializable** | Prevented | Prevented | Prevented | Prevented | None (must opt-in) | Critical financial ledger debits / credit balances |
 
-PostgreSQL uses a process-per-connection model. Each connection consumes ~10MB RAM plus work buffers. Optimal pool formula from PostgreSQL core team:
-$$\text{Max Connections} = (\text{CPU Cores} \times 2) + \text{Disk Spindle Count}$$
+> [!IMPORTANT]
+> If using `SERIALIZABLE` isolation in PostgreSQL, the application tier **must** catch 40001 serialization failure errors and automatically retry the transaction with jittered exponential backoff.
 
-For a 4-core database server with SSD storage:
-$$\text{Optimal Active Connections} = (4 \times 2) + 1 = 9 \text{ to } 15 \text{ concurrent connections}$$
+### 5.2 Optimistic Locking vs Pessimistic Locking
 
-### 6.2 PgBouncer Configuration Modes
+#### Pattern A: Optimistic Locking (High concurrency, low conflict rate)
+Use an incrementing `version` integer column. No locks are held during user thinking time.
 
-When running containerized or serverless microservices, place PgBouncer or AWS RDS Proxy in front of PostgreSQL.
+```sql
+-- Table schema has version integer
+ALTER TABLE products ADD COLUMN version INT NOT NULL DEFAULT 1;
 
-| Mode | Behavior | Prepared Statements | Session Variables (`SET LOCAL`) | Best For |
-|------|----------|---------------------|-----------------------------------|----------|
-| **Transaction Mode** (Default standard) | Connection returned to pool after each `COMMIT`/`ROLLBACK` | Requires named prepared statements disabled or PgBouncer 1.21+ | Supported only inside explicit transactions | 99% of web applications & serverless functions |
-| **Session Mode** | Connection tied to client for entire lifecycle of TCP socket | Full support | Full support | Long-lived stateful monoliths with low client counts |
-| **Statement Mode** | Connection returned after every single SQL statement | No | No | Read-only analytics (Never use with multi-statement transactions) |
+-- Update only succeeds if version matches what client read:
+UPDATE products
+SET stock_count = stock_count - 1,
+    version = version + 1
+WHERE id = 'prod_123'
+  AND version = 4;
 
-### 6.3 Serverless / Edge Database Patterns
+-- If rows affected == 0, another user modified the record!
+-- Application throws ConcurrencyConflictException (HTTP 409).
+```
 
-When running on Vercel, AWS Lambda, or Cloudflare Workers:
-1. **Never establish direct TCP connections** without a connection pooler. 1,000 concurrent serverless invocations will crash the database with `FATAL: remaining connection slots are reserved for non-replication superuser connections`.
-2. Use HTTP / WebSocket database adapters designed for serverless environments (e.g., `@neondatabase/serverless`, `@planetscale/database`, Supabase Transaction Pooler on port 6543).
-3. If using standard TCP drivers, configure `max: 1` or `max: 2` per serverless container and set aggressive idle timeouts (`idleTimeoutMillis: 5000`).
+#### Pattern B: Pessimistic Locking (`SELECT FOR UPDATE`)
+Use when conflict rate is high and immediate reservation is mandatory (e.g., ticket booking, seat reservation).
 
-### 6.4 Read Replicas & Replication Lag
+```sql
+BEGIN;
 
-When splitting traffic between Primary (Read/Write) and Replicas (Read-Only):
-- **The Read-Your-Own-Writes Problem**: If a user updates their profile and the subsequent redirect reads from a replica that is 50ms behind, the user sees their old profile data and thinks the edit failed.
-- **Enforce Session Stickiness**: Route reads to Primary for 2–5 seconds after any write operation initiated by that user session, or track PostgreSQL Log Sequence Numbers (LSN).
+-- Acquires exclusive row lock on this specific customer wallet
+SELECT balance_cents
+FROM customer_wallets
+WHERE customer_id = 'cust_789'
+FOR UPDATE;
+
+-- Update balance with certainty that no concurrent thread read the old balance
+UPDATE customer_wallets
+SET balance_cents = balance_cents - 5000
+WHERE customer_id = 'cust_789';
+
+COMMIT;
+```
+
+#### Pattern C: High-Throughput Queue Processing (`FOR UPDATE SKIP LOCKED`)
+Prevents worker thread contention when multiple workers pull jobs from a database queue table:
+
+```sql
+-- Atomically claim 1 pending job without blocking other workers:
+WITH next_job AS (
+    SELECT id
+    FROM job_queue
+    WHERE status = 'PENDING'
+      AND run_at <= CURRENT_TIMESTAMP
+    ORDER BY run_at ASC
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
+)
+UPDATE job_queue jq
+SET status = 'PROCESSING',
+    locked_at = CURRENT_TIMESTAMP,
+    locked_by = 'worker-node-42'
+FROM next_job
+WHERE jq.id = next_job.id
+RETURNING jq.id, jq.payload;
+```
+
+This query claims pending work only. Durable workers also need expired-claim recovery, a unique claim token checked on renewal and completion, idempotent effects, and bounded failed-job handling. The `locked_at` and `locked_by` fields alone do not implement that recovery protocol.
+
+### 5.3 Deadlock Prevention Rules
+
+1. **Lock in Consistent Alphabetical / Primary Key Order**:
+   If Process A updates Account 1 then Account 2, Process B must **never** update Account 2 then Account 1. Always sort ID arrays before executing batch updates (`ids.sort()`).
+2. **Never Execute Network Calls Inside a DB Transaction**:
+   Never invoke Stripe API, send an email, or call an external HTTP microservice while holding an open database transaction. If the external network call stalls for 15 seconds, database connection pools exhaust and row locks cascade across the entire cluster.
+3. **Set Aggressive Lock Timeouts**:
+   Never let a transaction wait forever on a lock.
+
+```sql
+-- Set local lock timeout in Postgres before running critical operations
+SET LOCAL lock_timeout = '2s';
+SET LOCAL statement_timeout = '10s';
+```
 
 ---

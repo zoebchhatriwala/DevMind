@@ -18,7 +18,7 @@ Inspect first: callers, existing helpers, dependencies, project instructions, an
 - For browser sessions, use Secure, HttpOnly cookies with an appropriate SameSite policy and CSRF protection. Keep long-lived credentials out of browser storage and logs. Rotate session identifiers after login and privilege changes.
 - Enforce authorization and object ownership at the server operation, including tenant scope. Hiding a control in the browser does not restrict access. Deny by default and test access as another user.
 - Make refresh rotation/reuse detection atomic. Recovery tokens must be random, scoped, expiring, stored safely, and consumed once. Avoid account enumeration in login and recovery responses.
-- Use the existing supported password hashing library and work factor, rate-limit abuse-prone operations, and preserve recovery and revocation paths. Do not add MFA or a new identity provider unless required.
+- Use the existing supported password hashing library and work factor, rate-limit abuse-prone operations, and preserve recovery and revocation paths. Sensitive account changes need appropriate recent proof; suspension or membership removal must propagate to protected work. Do not add MFA or a new identity provider unless required.
 
 ## Topic references
 

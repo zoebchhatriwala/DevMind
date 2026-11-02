@@ -122,4 +122,15 @@ Data classification table:
 | Confidential | PII, API keys, financial data | Encrypted + access log | Masked |
 | Restricted | Passwords, payment cards, health records | Encrypted + column-level + audit | Never |
 
+### Data Lifecycle Across Copies
+
+When adding sensitive data or changing retention, trace where it is copied: primary records, object versions, caches, search indexes/embeddings, exports, logs, model-provider storage, replicas, and backups. Apply the chosen retention/access policy to each copy; deleting a primary row or hiding it with a soft-delete flag is not proof of erasure.
+
+- Collect and send only fields needed for the operation. Before introducing a model or other processor, verify its current storage, training-use, region, and deletion settings against the project's requirements; log redaction alone does not control provider retention.
+- Make deletion retryable and observable without logging deleted content. Block new work for an offboarded account/tenant before cleanup, and prevent queued imports or old index jobs from recreating deleted data. Record partial failures for retry.
+- Distinguish removal from active access, deferred expiration of backups, and any required retention holds. Keep retained copies access-restricted, and reapply current deletion and membership rules before a restore becomes live. Do not promise immediate deletion from immutable backups when the actual policy is expiry.
+- Test deletion or permission removal against at least one derived copy and a delayed worker, plus restoration when supported. The previous user must not regain access from a cache, embedding, export link, or restored membership.
+
+Use the existing storage/worker mechanisms; this does not require a new data platform. See [OWASP tenant offboarding and restore guidance](https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html#7-tenant-onboarding-offboarding-security).
+
 ---

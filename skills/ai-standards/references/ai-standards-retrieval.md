@@ -53,4 +53,12 @@ User Query
   `WHERE tenant_id = :tenantId AND :userRole = ANY(allowed_roles)`
 - **NEVER** retrieve unauthorized chunks and ask the LLM to *"filter out what the user cannot see"*.
 
+### 1.4 Permission Freshness and Source Deletion
+
+- Derive tenant and permission context from current application authority, not user-supplied filters or the model. Apply the same scope to sparse/vector search, reranking, parent-document expansion, citation fetches, and cached answers. A filtered child chunk does not authorize an unfiltered parent fetch.
+- Keep source IDs and versions with derived chunks. Propagate edits, ACL changes, and deletions to indexes and caches. While an index update is pending, check current source authorization/deletion state before including material in model context; reject inaccessible or unverifiable sources rather than trust stale `allowedRoles` metadata.
+- Scope cached answers to the authorization context that produced them and invalidate or reauthorize them after membership/ACL changes. A cache hit must not bypass the permission boundary.
+- Make index/update jobs tolerate retries and reject stale versions or tombstoned sources so delayed ingestion cannot resurrect deleted content. Apply the project's retention policy to stored prompts, embeddings, traces, and provider copies; deleting only the source row leaves those copies behind.
+- Verify with two tenants and a permission-change/deletion case: warm the cache/index, remove access, then search again and expand a parent. No unauthorized text may reach the model or response. Replay an old ingestion job and confirm the deleted source stays unavailable.
+
 ---

@@ -58,4 +58,13 @@ describe('Authentication & Authorization Matrix', () => {
 });
 ```
 
+For the changed path, add the relevant cases below to the existing integration suite. Exercise the real guard/handler rather than only constructing a token or calling a mock permission helper.
+
+| Boundary | Cases and expected result |
+|---|---|
+| Cookie API CSRF | Trusted Origin plus required header succeeds; missing header fails. Reject suffix/sibling origins, wrong scheme or port, `Origin: null`, and missing both Origin and Referer. Accept a trusted Referer fallback only when Origin is absent and the required header is present. A trusted Referer must not override a hostile Origin. |
+| Sensitive account change | An old session cannot change email/MFA/recovery methods without required recent proof. Reject expired/reused proof and a new target substituted after verification. A failed change must leave the prior recovery channel usable. |
+| Federated linking | Same email with a different issuer/subject cannot silently acquire the existing account. Reject callbacks without the authenticated linking transaction. |
+| Revocation and offboarding | A formerly allowed user loses tenant access after removal, including cached reads and delayed jobs. Reject a disabled account's old session/refresh credential. Confirm other authorized memberships still work. |
+
 ---

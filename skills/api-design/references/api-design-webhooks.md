@@ -1,70 +1,54 @@
 # API contracts: webhooks
 
-Read only for this topic. These are adaptation examples, not a required stack or file structure. Follow the entrypoint's scope and the project's existing framework, tools, and authorization. Do not copy placeholders, add packages, or replace working architecture solely to match an example.
+Read for incoming or outgoing events. Reuse the provider SDK and existing event infrastructure. Signature verification authenticates bytes; schema validation, account/tenant authorization and duplicate prevention are separate controls.
 
-## 7 - Webhooks & Event Notification Standards
+## Receive raw bytes first
 
-When emitting webhooks to external customers or receiving incoming webhooks:
+Use the provider's verification API with the exact raw request body, signature header and endpoint secret. Configure raw-body handling before JSON middleware, bound body/header sizes, keep secrets out of logs and support the provider's rotation procedure. Catch expected verification failures as a client-safe rejection; do not turn malformed headers into uncaught server errors. Follow the provider's timestamp policy rather than inventing a compatible-looking parser. See [Stripe's verification guidance](https://docs.stripe.com/events/manage-webhook-endpoints#signature-errors).
 
-### 7.1 Webhook Payload Standard
-```json
-{
-  "id": "evt_01927e1b-85d7-7000-8000-000000000001",
-  "event": "invoice.payment_succeeded",
-  "created_at": "2026-10-14T11:00:00.000Z",
-  "data": {
-    "invoice_id": "inv_9841",
-    "amount_cents": 4900,
-    "currency": "USD",
-    "customer_id": "cust_123"
-  }
+For a webhook protocol **you own**, the following narrow example defines exactly one timestamp and one SHA-256 signature as `t=<seconds>,v1=<64 hex digits>`. It is not a Stripe SDK replacement and intentionally rejects alternate header shapes. The transport must provide a bounded Buffer, never parsed-and-reserialized JSON.
+
+```js
+// example: owned-webhook-signature
+import { createHmac, timingSafeEqual } from 'node:crypto';
+
+/**
+ * @param {Buffer} rawBody
+ * @param {unknown} header
+ * @param {string} secret
+ * @param {number} nowSeconds
+ */
+export function verifyWebhookSignature(rawBody, header, secret, nowSeconds = Math.floor(Date.now() / 1000)) {
+  if (!Buffer.isBuffer(rawBody) || typeof header !== 'string' || header.length > 100 ||
+      typeof secret !== 'string' || secret.length === 0 || !Number.isSafeInteger(nowSeconds) || nowSeconds < 0) return false;
+  const match = /^t=([0-9]{1,16}),v1=([a-fA-F0-9]{64})$/.exec(header);
+  if (!match) return false;
+  const timestamp = Number(match[1]);
+  if (!Number.isSafeInteger(timestamp) || Math.abs(nowSeconds - timestamp) > 300) return false;
+
+  const expected = createHmac('sha256', secret).update(`${match[1]}.`).update(rawBody).digest();
+  const supplied = Buffer.from(match[2], 'hex');
+  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
 ```
 
-### 7.2 Cryptographic HMAC-SHA256 Signatures
+The length/hex checks reject malformed input before [Node's equal-length constant-time comparison](https://nodejs.org/api/crypto.html#cryptotimingsafeequala-b). A timestamp limits replay age; the same signed event can still be delivered repeatedly within that window.
 
-Sign webhooks using a timestamped HMAC-SHA256 signature to protect against tampering and replay attacks (Stripe standard):
+## Durable acceptance and duplicate delivery
 
-```typescript
-// src/infrastructure/webhooks/webhook-signer.ts
-import crypto from 'node:crypto';
+After verification, validate the event schema and enforce allowed event types, provider account and tenant mapping from trusted server configuration. Never treat an event's arbitrary tenant/role/price field as authority. Scope the durable event ID to its provider and receiving account/endpoint; validate any object ownership before changing local state.
 
-export class WebhookSigner {
-  static signPayload(payloadJson: string, secret: string): string {
-    const timestamp = Math.floor(Date.now() / 1000);
-    const signaturePayload = `${timestamp}.${payloadJson}`;
-    const hmac = crypto
-      .createHmac('sha256', secret)
-      .update(signaturePayload)
-      .digest('hex');
+- Reuse an existing inbox/queue. A unique event receipt plus a domain update must commit atomically, or the receipt plus an outbox record must commit atomically for later processing. Do not mark an event complete before its effect commits.
+- Return 2xx after durable acceptance (or after the short transaction completes). A detached promise is not durable acceptance. If enqueue/commit fails, use the provider's retry contract rather than reporting success.
+- Concurrent duplicate deliveries must converge through a unique constraint. An already committed duplicate can receive 2xx without repeating its effect. Recover abandoned work using leases/reconciliation, not permanent in-memory flags.
+- Events may arrive late or out of order. Use supported resource versions or retrieve the provider's authoritative state; do not overwrite newer state solely because an older webhook arrived last.
 
-    return `t=${timestamp},v1=${hmac}`;
-  }
+For crash windows, retries, dead letters and safe replay, apply the backend skill's logging-and-resilience reference when building workers. For downstream side effects, read [idempotency](./api-design-idempotency.md).
 
-  static verifySignature(payloadJson: string, header: string, secret: string, toleranceSeconds = 300): boolean {
-    const parts = header.split(',');
-    const timestampPart = parts.find((p) => p.startsWith('t='))?.split('=')[1];
-    const signaturePart = parts.find((p) => p.startsWith('v1='))?.split('=')[1];
+## Sending events
 
-    if (!timestampPart || !signaturePart) return false;
+Give each event a stable ID, type/schema version, timestamp and allowlisted payload. Sign the exact bytes sent with the documented timestamp/header scheme; use HTTPS and keep signing keys scoped to the destination. Persist delivery intent with the local mutation when losing an event is unacceptable. Bound attempts/timeouts, back off with jitter, record delivery outcomes without sensitive payloads and provide controlled replay/dead-letter recovery.
 
-    // 1. Replay attack verification (5-minute tolerance window)
-    const timestamp = parseInt(timestampPart, 10);
-    const currentTime = Math.floor(Date.now() / 1000);
-    if (Math.abs(currentTime - timestamp) > toleranceSeconds) {
-      return false;
-    }
+## Behavior checks
 
-    // 2. Compute expected HMAC
-    const expected = crypto
-      .createHmac('sha256', secret)
-      .update(`${timestamp}.${payloadJson}`)
-      .digest('hex');
-
-    // 3. Constant-time comparison
-    return crypto.timingSafeEqual(Buffer.from(signaturePart), Buffer.from(expected));
-  }
-}
-```
-
----
+Exercise a valid signature, altered bytes, wrong secret, missing/malformed/short/long/non-hex signature, duplicate fields, invalid timestamp, stale/future delivery and a rotated key under the provider's documented policy. Invalid signatures must reject without throwing from comparison. Test concurrent duplicates, crash after effect/before acknowledgment, failed durable acceptance, unknown event/account and out-of-order delivery against the actual persistence path.

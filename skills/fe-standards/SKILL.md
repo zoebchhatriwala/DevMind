@@ -1,7 +1,7 @@
 ---
 name: fe-standards
 description: >-
-  Build, improve, or review frontend pages, components, forms, styles, and client state. Apply task-specific visual direction, complete interactions, accessibility, responsive layout, and browser verification. Preserve an established design system.
+  Build, improve, or review frontend pages, components, forms, styles, client state, performance, and locale-sensitive interfaces. Apply task-specific visual direction, complete interactions, accessibility, responsive layout, and browser verification. Preserve an established design system.
 ---
 
 # Frontend quality contract
@@ -24,6 +24,9 @@ Before a substantial UI change, write a short working design brief in the task n
 Reject an implementation plan that could apply unchanged to three unrelated products. Use actual supplied content; label invented sample data as demo data and keep it separate from persisted records.
 
 For a new page or a substantial redesign, read the nearest [annotated design example](./references/fe-design-examples.md). Use its decision criteria without copying its composition into unrelated products. For a behavior change, page/journey review, or skill evaluation, read [verification and evaluation](./references/fe-verification.md). Small patches need only the affected checks and states.
+
+- For slow loading, delayed interactions, layout shifts, or a substantial change to assets/client code, read [frontend performance](./references/fe-performance.md).
+- For multiple languages, locale-sensitive dates/numbers/currencies, or right-to-left content, read [internationalization](./references/fe-internationalization.md). Ordinary copy edits do not require a translation system.
 
 ## ⚡ Golden Patterns
 

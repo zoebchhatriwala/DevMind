@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile, symlink } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, symlink, rename, unlink } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
@@ -82,6 +82,47 @@ test('quality executes existing checks and retains nonzero exits without leaking
   });
 });
 
+test('quality fails when a passing project script changes checked source and a stable rerun recovers', async () => {
+  const command = 'node check.mjs';
+  await fixture({
+    'value.mjs': 'export const value = 1;\n',
+    'check.mjs': `import assert from 'node:assert/strict'; import {value} from './value.mjs'; assert.equal(value, 1);`,
+    'mutate.mjs': `await import('./check.mjs'); const {writeFileSync} = await import('node:fs'); writeFileSync('value.mjs', 'export const value = 0;');`,
+    'package.json': JSON.stringify({ scripts: { 'format:check': command, lint: command, typecheck: command, test: 'node mutate.mjs' } }),
+  }, async dir => {
+    const originalDigest = await fingerprint(dir);
+    const report = await runQuality(dir, { run: true });
+    assert.ok(report.checks.filter(check => check.script).every(check => check.exitCode === 0));
+    assert.equal(report.sourceDigest, originalDigest);
+    assert.notEqual(await fingerprint(dir), originalDigest);
+    assert.equal(report.checks.find(check => check.id === 'stable-source').status, 'failed');
+    assert.equal(report.status, 'failed');
+    await writeReport(dir, '.devmind/quality.json', report);
+    await assert.rejects(reviewProject(dir, { quality: '.devmind/quality.json', scope: 'code' }), /Stale/);
+    await writeFile(join(dir, 'value.mjs'), 'export const value = 1;\n');
+    await writeFile(join(dir, 'mutate.mjs'), `await import('./check.mjs');`);
+    const stable = await runQuality(dir, { run: true });
+    assert.equal(stable.status, 'passed');
+    assert.equal(stable.sourceDigest, await fingerprint(dir));
+    await writeReport(dir, '.devmind/quality.json', stable);
+    assert.equal((await reviewProject(dir, { quality: '.devmind/quality.json', scope: 'code' })).status, 'passed');
+  });
+});
+
+test('quality allows generated vault files while detecting configuration changes', async () => {
+  const command = `node -e "require('node:fs').mkdirSync('.devmind',{recursive:true});require('node:fs').writeFileSync('.devmind/run.txt','generated')"`;
+  await fixture({
+    'tsconfig.json': '{"compilerOptions":{"strict":true}}',
+    'package.json': JSON.stringify({ scripts: Object.fromEntries(['format:check', 'lint', 'typecheck', 'test'].map(name => [name, command])) }),
+  }, async dir => {
+    assert.equal((await runQuality(dir, { run: true })).status, 'passed');
+    await writeFile(join(dir, 'package.json'), JSON.stringify({ scripts: { test: `node -e "require('node:fs').writeFileSync('tsconfig.json','{}')"` } }));
+    const changed = await runQuality(dir, { run: true });
+    assert.equal(changed.status, 'failed');
+    assert.equal(changed.checks.find(check => check.id === 'stable-source').status, 'failed');
+  });
+});
+
 test('browser plans reject remote URLs, unknown steps, and malformed assertions', () => {
   for (const url of ['https://example.com', 'file:///tmp/index.html', 'http://user:password@localhost:3000']) assert.throws(() => localUrl(url));
   assert.equal(localUrl('http://127.0.0.1:3000').hostname, '127.0.0.1');
@@ -152,6 +193,77 @@ test('review requires evidence, rejects stale reports, and accepts observed crit
     await assert.rejects(reviewProject(dir, options), /notes and evidence/);
     await writeFile(join(dir, 'index.html'), '<main><h1>Changed</h1></main>');
     await assert.rejects(reviewProject(dir, options), /Stale/);
+  });
+});
+
+test('review rejects old passing checks after a SQL change makes current checks fail', async () => {
+  const command = 'node check-schema.mjs';
+  await fixture({
+    'schema.sql': 'CREATE TABLE accounts (id INTEGER PRIMARY KEY);\n',
+    'check-schema.mjs': `import assert from 'node:assert/strict'; import {readFileSync} from 'node:fs'; assert.match(readFileSync('schema.sql','utf8'), /PRIMARY KEY/);`,
+    'package.json': JSON.stringify({ scripts: { 'format:check': command, lint: command, typecheck: command, test: command } }),
+  }, async dir => {
+    const passing = await runQuality(dir, { run: true });
+    assert.equal(passing.status, 'passed');
+    await writeReport(dir, '.devmind/quality.json', passing);
+    assert.equal((await reviewProject(dir, { quality: '.devmind/quality.json', scope: 'code' })).status, 'passed');
+    await writeFile(join(dir, 'schema.sql'), 'CREATE TABLE accounts (id INTEGER);\n');
+    assert.equal((await runQuality(dir, { run: true })).status, 'failed');
+    await assert.rejects(reviewProject(dir, { quality: '.devmind/quality.json', scope: 'code' }), /Stale/);
+  });
+});
+
+test('evidence fingerprints bind configuration, non-JS code, assets, additions, deletions, and names', async () => {
+  const versions = {
+    'tsconfig.json': ['{"compilerOptions":{"strict":true}}', '{"compilerOptions":{"strict":false}}'],
+    'app.py': ['value = 1', 'value = 2'],
+    'app.go': ['package app\nconst Value = 1', 'package app\nconst Value = 2'],
+    'app.rs': ['const VALUE: i32 = 1;', 'const VALUE: i32 = 2;'],
+    'deploy.yaml': ['replicas: 1', 'replicas: 2'],
+    'settings.toml': ['name = "first"', 'name = "second"'],
+    'assets/logo.svg': ['<svg/>', '<svg><title>Changed</title></svg>'],
+    'assets/payload.bin': [Buffer.from([0, 1, 2]), Buffer.from([0, 1, 3])],
+  };
+  await fixture(Object.fromEntries(Object.entries(versions).map(([path, pair]) => [path, pair[0]])), async dir => {
+    const digest = await fingerprint(dir);
+    await writeReport(dir, '.devmind/quality.json', { version: 1, kind: 'quality', root: dir, sourceDigest: digest, status: 'passed', checks: [{ id: 'fixture', status: 'passed' }] });
+    assert.equal(await fingerprint(dir), digest, 'Generated evidence must not invalidate itself.');
+    for (const [path, [before, after]] of Object.entries(versions)) {
+      await writeFile(join(dir, path), after);
+      assert.notEqual(await fingerprint(dir), digest, path);
+      await assert.rejects(reviewProject(dir, { quality: '.devmind/quality.json', scope: 'code' }), /Stale/, path);
+      await writeFile(join(dir, path), before);
+      assert.equal(await fingerprint(dir), digest, path);
+    }
+    await writeFile(join(dir, 'new.sql'), 'SELECT 1;');
+    assert.notEqual(await fingerprint(dir), digest);
+    await unlink(join(dir, 'new.sql'));
+    assert.equal(await fingerprint(dir), digest);
+    await rename(join(dir, 'app.py'), join(dir, 'renamed.py'));
+    assert.notEqual(await fingerprint(dir), digest);
+    await rename(join(dir, 'renamed.py'), join(dir, 'app.py'));
+    assert.equal(await fingerprint(dir), digest);
+  });
+});
+
+test('evidence output locations are rejected before running project checks or candidate code', async () => {
+  await fixture({
+    'package.json': JSON.stringify({ scripts: { test: `node -e "require('node:fs').writeFileSync('ran.txt','ran')"` } }),
+    'operation.mjs': `import {writeFileSync} from 'node:fs'; writeFileSync('ran.txt', 'ran'); process.exit(0);`,
+  }, async dir => {
+    await assert.rejects(writeReport(dir, 'quality.json', {}), /under \.devmind/);
+    await assert.rejects(auditBrowser(dir, 'http://127.0.0.1:12345', { output: 'captures' }), /under \.devmind/);
+    for (const args of [
+      ['scripts/quality.mjs', dir, '--run', '--out', 'quality.json'],
+      ['scripts/eval.mjs', dir, '--case', 'tenant-authorization', '--out', 'evaluation.json'],
+    ]) {
+      const result = spawnSync(process.execPath, [join(root, args[0]), ...args.slice(1)], { cwd: dir, encoding: 'utf8', shell: false });
+      assert.equal(result.status, 2, result.stderr);
+      assert.match(result.stderr, /under \.devmind/);
+    }
+    assert.equal(existsSync(join(dir, 'ran.txt')), false);
+    assert.equal(existsSync(join(dir, 'quality.json')), false);
+    assert.equal(existsSync(join(dir, 'captures')), false);
   });
 });
 

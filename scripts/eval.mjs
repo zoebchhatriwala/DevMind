@@ -4,9 +4,9 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { auditBrowser } from './browser-audit.mjs';
 import { isMain } from './lib/project.mjs';
-import { artifactPath, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
+import { artifactPath, evidencePath, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
 import { runVerify } from './verify.mjs';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { isDeepStrictEqual } from 'node:util';
 import { nodeCases } from './evals/node-cases.mjs';
@@ -52,10 +52,14 @@ export async function evaluateCase(id, project, url, options = {}) {
   const checks = [{ id: 'source', status: source.passed ? 'passed' : 'failed', evidence: `${source.counts.total} source findings.` }];
   const scenarios = [];
   if (entry.runner === 'node') {
-    const assertions = `import assert from 'node:assert/strict'; import {resolve} from 'node:path'; import {pathToFileURL} from 'node:url'; const operation = await import(pathToFileURL(resolve('operation.mjs')).href);\n${entry.assertions}`;
-    const result = spawnSync(process.execPath, ['--input-type=module', '-e', assertions], { cwd: resolve(project), encoding: 'utf8', shell: false, timeout: 15000, maxBuffer: 1024 * 1024 });
-    const status = result.status === 0 && !result.error ? 'passed' : 'failed';
-    checks.push({ id: 'node-contract', status, exitCode: result.status, reason: result.error?.code === 'ETIMEDOUT' ? 'Candidate exceeded the 15-second limit.' : 'Bundled assertions executed against the candidate module. Output omitted to avoid leaking candidate data.' });
+    const completion = randomUUID();
+    // A separate pipe distinguishes assertion completion from candidate output or an early exit.
+    const assertions = `import strict from 'node:assert/strict'; import {readFileSync,writeSync} from 'node:fs'; import {resolve} from 'node:path'; import {pathToFileURL} from 'node:url'; const assert = Object.freeze({...strict}); const finish = writeSync; const completion = readFileSync(0,'utf8'); const operation = await import(pathToFileURL(resolve('operation.mjs')).href);\n${entry.assertions}\nfinish(3, completion);`;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', assertions], { cwd: resolve(project), encoding: 'utf8', shell: false, stdio: ['pipe', 'pipe', 'pipe', 'pipe'], input: completion, timeout: 15000, maxBuffer: 1024 * 1024 });
+    const assertionsCompleted = result.output?.[3]?.toString() === completion;
+    const status = result.status === 0 && !result.error && assertionsCompleted ? 'passed' : 'failed';
+    const reason = result.error?.code === 'ETIMEDOUT' ? 'Candidate exceeded the 15-second limit.' : status === 'passed' ? 'Bundled assertions completed.' : result.status === 0 && !assertionsCompleted ? 'Candidate exited before bundled assertions completed.' : 'Candidate or bundled assertions failed. Output omitted to avoid leaking candidate data.';
+    checks.push({ id: 'node-contract', status, exitCode: result.status, assertionsCompleted, reason });
     scenarios.push({ id: 'node-contract', report: { status, engine: { node: process.version } } });
   }
   for (const scenario of entry.scenarios) {
@@ -71,7 +75,7 @@ export async function evaluateCase(id, project, url, options = {}) {
     const review = await importEvidence(source.root, options.review, 'review', await fingerprint(project));
     checks.push({ id: 'reviewer-assessment', status: review.status === 'incomplete' ? 'not-run' : review.status, evidence: options.review });
   } else checks.push({ id: 'reviewer-assessment', status: 'not-run', reason: 'Use the task rubric and review.mjs to record observed visual, code-reuse, and interaction findings.' });
-  return { version: 1, kind: 'evaluation', caseId: id, caseDigest: createHash('sha256').update(JSON.stringify(entry)).digest('hex'), root: resolve(project), createdAt: new Date().toISOString(), modelRun, checks, scenarios, source, behaviorStatus, status: reportStatus(checks), rubric: entry.review, limitations: ['Compare identical tasks, seed files, model/settings, viewport plans, and review criteria.', 'Model-run provenance and metrics are supplied by the runner; they are not independently verified by this tool.', 'This tool evaluates the candidate artifacts. It does not invoke an agent or establish a statistical improvement from one run.'] };
+  return { version: 2, kind: 'evaluation', caseId: id, caseDigest: createHash('sha256').update(JSON.stringify(entry)).digest('hex'), root: resolve(project), createdAt: new Date().toISOString(), modelRun, checks, scenarios, source, behaviorStatus, status: reportStatus(checks), rubric: entry.review, limitations: ['Compare identical tasks, seed files, model/settings, viewport plans, and review criteria.', 'Model-run provenance and metrics are supplied by the runner; they are not independently verified by this tool.', 'This tool evaluates the candidate artifacts. It does not invoke an agent or establish a statistical improvement from one run.'] };
 }
 
 export function compareEvaluations(baseline, candidate) {
@@ -98,6 +102,7 @@ export async function main(args = process.argv.slice(2)) {
   }
   const entry = (await loadCases()).find(entry => entry.id === values['--case']);
   if (positional.length !== 1 || (entry?.runner !== 'node' && !values['--url'])) throw new Error('Expected project directory; browser cases also require --url.');
+  if (values['--out']) await evidencePath(positional[0], values['--out']);
   const result = await evaluateCase(values['--case'], positional[0], values['--url'], { channel: values['--channel'], toolingRoot: values['--tooling'], review: values['--review'], modelRun: values['--model-run'] ? await readJson(values['--model-run']) : null });
   if (values['--baseline']) result.comparison = compareEvaluations(await readJson(values['--baseline']), result);
   const file = await writeReport(result.root, values['--out'] ?? `.devmind/evals/${result.caseId}/report.json`, result);

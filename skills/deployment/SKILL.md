@@ -30,7 +30,7 @@ The gates above are sufficient for small changes. Read a reference only when the
 - [rollouts and shutdown](./references/deployment-rollouts-and-shutdown.md)
 - [proxy routing](./references/deployment-proxy-routing.md)
 - [secrets](./references/deployment-secrets.md)
-- [observability](./references/deployment-observability.md)
+- [observability and recovery](./references/deployment-observability.md): read for production signals, alerts, reliability objectives, or state recovery; a small configuration patch does not require a monitoring stack.
 
 ## 🔍 Anti-Amnesia Receipt
 

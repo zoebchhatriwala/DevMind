@@ -2,203 +2,110 @@
 
 Read only for this topic. These are adaptation examples, not a required stack or file structure. Follow the entrypoint's scope and the project's existing framework, tools, and authorization. Do not copy placeholders, add packages, or replace working architecture solely to match an example.
 
-## 4 - Pagination & High-Performance Data Fetching
+## 3 - Indexing Strategy & Query Optimization
 
-### 4.1 Keyset / Cursor Pagination vs Offset Pagination
+Indexes accelerate read queries at the expense of write throughput (`INSERT`, `UPDATE`, `DELETE`) and disk storage. Every index must be justified by production query patterns.
 
-> [!WARNING]
-> `OFFSET 50000 LIMIT 20` forces the database to read 50,020 rows off disk, sort them in memory, discard the first 50,000, and return 20. It creates an $O(N)$ performance degradation and displays duplicate/skipped rows when new records are inserted during browsing.
+### 3.1 Index Types & Selection Guide
 
-**Enforce Keyset / Cursor Pagination on all lists with more than 500 items.**
+| Index Type | Engine Support | Best For | Example Use Case |
+|------------|----------------|----------|------------------|
+| **B-Tree** (Default) | All (PG, MySQL, SQLite) | Equality (`=`), Range (`<`, `<=`, `>`, `>=`), Sorting (`ORDER BY`) | Primary keys, foreign keys, timestamps, emails |
+| **GIN** (Generalized Inverted) | PostgreSQL | Arrays, Full-text search, JSONB containment (`@>`) | `tags text[]`, `payload jsonb`, `to_tsvector` |
+| **BRIN** (Block Range Index) | PostgreSQL | Append-only massive tables sorted naturally by physical disk order | Millions of time-series event logs (`created_at`) |
+| **Hash** | PostgreSQL, MySQL | Exact equality matches only (`=`) | Rare: B-Tree is usually preferable due to range support |
+| **Partial Index** | PostgreSQL, SQLite | Filtering on a common query subset | `WHERE deleted_at IS NULL`, `WHERE status = 'FAILED'` |
+| **Covering Index** (`INCLUDE`) | PostgreSQL | Index-Only Scans avoiding table heap lookups | Fetching `status`, `name` without touching table data |
 
-| Metric | Offset Pagination (`OFFSET :n LIMIT :k`) | Keyset / Cursor Pagination (`WHERE id > :cursor LIMIT :k`) |
-|--------|------------------------------------------|------------------------------------------------------------|
-| Query complexity | Simple | Requires deterministic ordering tuple |
-| Page jump (e.g., Jump to Page 42) | Supported | Not supported (Next / Previous only) |
-| Deep pagination speed | Degradation to timeouts | Instant ($O(\log N)$ via index seek) |
-| Stability under concurrent writes | Skips / duplicates rows | 100% deterministic & stable |
+### 3.2 The Golden Rules of Index Design
 
-#### Production Keyset Pagination Implementation (SQL + Drizzle ORM)
-
-```sql
--- Keyset pagination query ordered by created_at DESC, id DESC
-SELECT id, title, created_at
-FROM articles
-WHERE (created_at, id) < ('2026-10-14T08:00:00Z', '01927e1b-85d7-7000-8000-000000000000')
-ORDER BY created_at DESC, id DESC
-LIMIT 21; -- Fetch limit + 1 to detect hasNextPage without running COUNT(*)
-```
-
-```typescript
-// src/infrastructure/repositories/article.repository.ts
-import { db } from '../db';
-import { articles } from '../db/schema';
-import { and, desc, lt, or } from 'drizzle-orm';
-
-export interface PaginatedResult<T> {
-  items: T[];
-  nextCursor: string | null;
-  hasNextPage: boolean;
-}
-
-export async function getArticlesKeyset(cursor?: { createdAt: Date; id: string }, limit = 20): Promise<PaginatedResult<typeof articles.$inferSelect>> {
-  const fetchLimit = limit + 1;
-
-  const records = await db
-    .select()
-    .from(articles)
-    .where(
-      cursor
-        ? or(
-            lt(articles.createdAt, cursor.createdAt),
-            and(
-              articles.createdAt === cursor.createdAt, // Handles exact millisecond collision
-              lt(articles.id, cursor.id)
-            )
-          )
-        : undefined
-    )
-    .orderBy(desc(articles.createdAt), desc(articles.id))
-    .limit(fetchLimit);
-
-  const hasNextPage = records.length > limit;
-  const items = hasNextPage ? records.slice(0, limit) : records;
-
-  let nextCursor: string | null = null;
-  if (hasNextPage && items.length > 0) {
-    const lastItem = items[items.length - 1];
-    nextCursor = Buffer.from(
-      JSON.stringify({ createdAt: lastItem.createdAt.toISOString(), id: lastItem.id })
-    ).toString('base64url');
-  }
-
-  return { items, nextCursor, hasNextPage };
-}
-```
-
-### 4.2 Eliminating the N+1 Query Problem
-
-An N+1 problem occurs when fetching 1 parent record makes 1 query, and fetching associated child records executes N subsequent queries inside a loop.
-
-**Detection & Elimination**:
-1. **Never** execute database queries inside a `for` loop, `map()`, or `.forEach()`.
-2. Use SQL joins with aggregation, ORM relational loaders, or batch with DataLoader.
-
-```typescript
-// ANTI-PATTERN: N+1 query disaster
-const users = await db.select().from(usersTable).limit(50);
-for (const user of users) {
-  // Makes 50 additional database roundtrips!
-  user.posts = await db.select().from(postsTable).where(eq(postsTable.userId, user.id));
-}
-
-// CORRECT PATTERN 1: Batch with IN clause (or DataLoader)
-const users = await db.select().from(usersTable).limit(50);
-const userIds = users.map(u => u.id);
-
-const posts = await db
-  .select()
-  .from(postsTable)
-  .where(inArray(postsTable.userId, userIds));
-
-// Group in memory:
-const postsByUser = Map.groupBy(posts, p => p.userId);
-for (const user of users) {
-  user.posts = postsByUser.get(user.id) ?? [];
-}
-```
-
----
-
-## 5 - Transactions, Concurrency & Locking
-
-### 5.1 Isolation Levels: Practical Application
-
-| Isolation Level | Dirty Read | Non-Repeatable Read | Phantom Read | Serialization Anomaly | Default In | Best For |
-|-----------------|------------|---------------------|--------------|-----------------------|------------|----------|
-| **Read Committed** | Prevented | Allowed | Allowed | Allowed | PostgreSQL, Oracle, SQL Server | 95% of standard web OLTP queries |
-| **Repeatable Read** | Prevented | Prevented | Prevented (in PG snapshot) | Allowed | MySQL InnoDB | Accurate multi-query reporting snapshots |
-| **Serializable** | Prevented | Prevented | Prevented | Prevented | None (must opt-in) | Critical financial ledger debits / credit balances |
-
-> [!IMPORTANT]
-> If using `SERIALIZABLE` isolation in PostgreSQL, the application tier **must** catch 40001 serialization failure errors and automatically retry the transaction with jittered exponential backoff.
-
-### 5.2 Optimistic Locking vs Pessimistic Locking
-
-#### Pattern A: Optimistic Locking (High concurrency, low conflict rate)
-Use an incrementing `version` integer column. No locks are held during user thinking time.
+#### Rule 1: The Equality-First Compound Index Rule (ESR)
+When creating a multi-column compound index for a query with equality filters, sorting, and range filters, order the index columns as:
+1. **Equality columns** first (`status = 'PENDING'`)
+2. **Sort columns** second (`ORDER BY created_at DESC`)
+3. **Range columns** last (`price BETWEEN 10 AND 50`)
 
 ```sql
--- Table schema has version integer
-ALTER TABLE products ADD COLUMN version INT NOT NULL DEFAULT 1;
+-- Query:
+SELECT id, total_amount FROM orders
+WHERE store_id = '123'
+  AND created_at >= '2026-01-01'
+ORDER BY created_at DESC;
 
--- Update only succeeds if version matches what client read:
-UPDATE products
-SET stock_count = stock_count - 1,
-    version = version + 1
-WHERE id = 'prod_123'
-  AND version = 4;
+-- OPTIMAL COMPOUND INDEX: (equality column first, then sort/range column)
+CREATE INDEX idx_orders_store_created
+ON orders (store_id, created_at DESC);
 
--- If rows affected == 0, another user modified the record!
--- Application throws ConcurrencyConflictException (HTTP 409).
+-- INEFFICIENT (Range column first prevents index from being used for equality filter on store_id):
+-- CREATE INDEX idx_orders_created_store ON orders (created_at DESC, store_id);
 ```
 
-#### Pattern B: Pessimistic Locking (`SELECT FOR UPDATE`)
-Use when conflict rate is high and immediate reservation is mandatory (e.g., ticket booking, seat reservation).
+#### Rule 2: Use Covering Indexes with `INCLUDE` to Achieve Index-Only Scans
+If a query runs millions of times per hour, avoid hitting the table heap entirely by including the fetched columns inside the index leaf nodes:
 
 ```sql
-BEGIN;
+-- Query fetches id, user_id, and total_cents filtered by status
+SELECT id, user_id, total_cents
+FROM transactions
+WHERE status = 'SETTLED' AND processed_at >= '2026-10-01';
 
--- Acquires exclusive row lock on this specific customer wallet
-SELECT balance_cents
-FROM customer_wallets
-WHERE customer_id = 'cust_789'
-FOR UPDATE;
-
--- Update balance with certainty that no concurrent thread read the old balance
-UPDATE customer_wallets
-SET balance_cents = balance_cents - 5000
-WHERE customer_id = 'cust_789';
-
-COMMIT;
+-- COVERING INDEX:
+-- Key columns (status, processed_at) are ordered in B-tree;
+-- Payload columns (user_id, total_cents) are stored in leaves without increasing B-tree depth
+CREATE INDEX idx_tx_status_processed_covering
+ON transactions (status, processed_at)
+INCLUDE (user_id, total_cents);
 ```
 
-#### Pattern C: High-Throughput Queue Processing (`FOR UPDATE SKIP LOCKED`)
-Prevents worker thread contention when multiple workers pull jobs from a database queue table:
+#### Rule 3: Use Partial Indexes for Skewed Distributions
+Never index millions of rows if only 1% are queried:
 
 ```sql
--- Atomically claim 1 pending job without blocking other workers:
-WITH next_job AS (
-    SELECT id
-    FROM job_queue
-    WHERE status = 'PENDING'
-      AND run_at <= CURRENT_TIMESTAMP
-    ORDER BY run_at ASC
-    LIMIT 1
-    FOR UPDATE SKIP LOCKED
-)
-UPDATE job_queue jq
-SET status = 'PROCESSING',
-    locked_at = CURRENT_TIMESTAMP,
-    locked_by = 'worker-node-42'
-FROM next_job
-WHERE jq.id = next_job.id
-RETURNING jq.id, jq.payload;
+-- If 99% of jobs are 'COMPLETED' and only 1% are 'PENDING' or 'FAILED':
+CREATE INDEX idx_jobs_pending_or_failed
+ON background_jobs (scheduled_at)
+WHERE status IN ('PENDING', 'RETRYING');
+-- Index size is 99% smaller, inserts on completed jobs do not update the index!
 ```
 
-### 5.3 Deadlock Prevention Rules
+### 3.3 Query Anti-Patterns & Diagnosing with `EXPLAIN (ANALYZE, BUFFERS)`
 
-1. **Lock in Consistent Alphabetical / Primary Key Order**:
-   If Process A updates Account 1 then Account 2, Process B must **never** update Account 2 then Account 1. Always sort ID arrays before executing batch updates (`ids.sort()`).
-2. **Never Execute Network Calls Inside a DB Transaction**:
-   Never invoke Stripe API, send an email, or call an external HTTP microservice while holding an open database transaction. If the external network call stalls for 15 seconds, database connection pools exhaust and row locks cascade across the entire cluster.
-3. **Set Aggressive Lock Timeouts**:
-   Never let a transaction wait forever on a lock.
+Always run `EXPLAIN (ANALYZE, BUFFERS)` on slow queries before guessing.
 
 ```sql
--- Set local lock timeout in Postgres before running critical operations
-SET LOCAL lock_timeout = '2s';
-SET LOCAL statement_timeout = '10s';
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM users WHERE LOWER(email) = 'alex@example.com';
+```
+
+**What to look for in the execution plan**:
+- ? **Seq Scan (Sequential Scan)** on large tables: Indicates a missing index or an un-indexable predicate.
+- ? **High Shared Hit / Read Buffers**: Database is reading thousands of 8KB disk pages from memory or storage.
+- ? **Filter removed rows (e.g., Rows Removed by Filter: 994820)**: Scanned an entire table or index only to discard almost everything.
+- ? **Index Only Scan**: Fetched data purely from RAM index pages; zero heap reads.
+- ? **Bitmap Index Scan + Bitmap Heap Scan**: Efficiently combined multiple indexes or ranged lookups.
+
+#### Common Anti-Patterns and Fixes:
+```sql
+-- ANTI-PATTERN 1: Function call wrapping the indexed column
+-- Breaks standard B-Tree index on 'email'
+SELECT id FROM users WHERE LOWER(email) = 'user@company.com';
+
+-- FIX: Create an expression index
+CREATE INDEX idx_users_lower_email ON users (LOWER(email));
+
+
+-- ANTI-PATTERN 2: Leading wildcard in text search (Forces full table scan)
+SELECT id FROM products WHERE sku LIKE '%9481';
+
+-- FIX: Use reverse text index, full-text search (tsvector), or trigram index (pg_trgm)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_products_sku_trgm ON products USING GIN (sku gin_trgm_ops);
+
+
+-- ANTI-PATTERN 3: Implicit Type Coercion
+-- If user_id is a VARCHAR/TEXT, passing an integer forces database to cast every row
+SELECT * FROM accounts WHERE account_number = 100482; -- Slow seq scan
+SELECT * FROM accounts WHERE account_number = '100482'; -- Fast index scan
 ```
 
 ---

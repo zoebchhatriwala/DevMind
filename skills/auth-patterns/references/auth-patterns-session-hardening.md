@@ -21,33 +21,35 @@ export const AUTH_COOKIE_OPTIONS = {
 
 ### 5.2 Cross-Site Request Forgery (CSRF) Defense
 
-Even with `SameSite=Lax`, top-level GET navigations and certain cross-origin forms can send cookies.
-1. **Rule of Idempotent GET**: GET, HEAD, and OPTIONS requests **must never** modify state or execute business logic.
-2. **Double-Submit Cookie / Header Verification**:
-   Require a non-simple custom HTTP header (e.g., `X-Requested-With: XMLHttpRequest` or `X-CSRF-Token`) on all state-modifying requests (`POST`, `PUT`, `PATCH`, `DELETE`). Browsers prevent cross-origin HTML forms from attaching custom headers without explicit CORS preflight clearance.
+Use the framework's maintained CSRF protection first. Keep GET, HEAD, and OPTIONS free of state changes. `SameSite` is defense in depth; sibling origins can be same-site and still untrusted.
 
-```typescript
-// src/presentation/http/middleware/csrf-check.ts
-import { Request, Response, NextFunction } from 'express';
-import { ForbiddenError } from '../../../domain/errors/app-errors';
+For ordinary HTML forms, use the framework's synchronizer token or signed, session-bound double-submit implementation. A static custom header is a different pattern, suitable for an AJAX API that rejects simple form requests and allows credentialed CORS only from explicitly trusted origins.
 
-export function verifyCsrfHeader(req: Request, res: Response, next: NextFunction) {
-  const safeMethods = ['GET', 'HEAD', 'OPTIONS'];
-  if (safeMethods.includes(req.method)) {
-    return next();
+The following policy is for that cookie-authenticated AJAX API. Invoke it before every unsafe handler, read `csrfHeader` from `X-CSRF-Guard`, and return 403 on `false`. Enforce the API's JSON content type separately. Configure `trustedOrigin` as the deployment's exact origin (scheme, host, port), never from an untrusted Host or forwarded header. Reject duplicate/malformed headers in the HTTP adapter.
+
+```js
+// example: cookie-api-csrf
+/**
+ * @param {{ method: string, origin?: string, referer?: string, csrfHeader?: string }} request
+ * @param {string} trustedOrigin Exact configured origin, e.g. https://app.example.com
+ * @returns {boolean}
+ */
+export function allowsCookieApiRequest(request, trustedOrigin) {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return true;
+  if (request.csrfHeader !== '1') return false;
+
+  // A present Origin must match; null and suffix lookalikes cannot use the fallback.
+  if (request.origin !== undefined) return request.origin === trustedOrigin;
+  if (request.referer === undefined) return false;
+  try {
+    return new URL(request.referer).origin === trustedOrigin;
+  } catch {
+    return false;
   }
-
-  // Modern browsers: check origin or referer matches server origin
-  const origin = req.headers['origin'];
-  const host = req.headers['host'];
-
-  if (origin && !origin.includes(host!)) {
-    throw new ForbiddenError('Cross-origin request blocked');
-  }
-
-  next();
 }
 ```
+
+The custom header makes a browser request require preflight; it is not a secret token. Do not allow untrusted origins through credentialed CORS, accept the marker in a form field, or bypass this check when Origin and Referer are missing. Cookie-less bearer clients may use a separately authenticated transport; their existence does not exempt cookie-authenticated handlers. See [OWASP CSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#using-standard-headers-to-verify-origin).
 
 ### 5.3 Global Session Revocation ("Log Out All Devices")
 
@@ -71,5 +73,12 @@ export class SessionService {
   }
 }
 ```
+
+### 5.4 Access Changes and Offboarding
+
+- Check current account status and tenant membership where protected operations execute. Define how quickly role removal, suspension, or compromise revokes access; a self-contained JWT retains old claims until expiry unless a current-state/version check rejects it sooner.
+- On account or tenant offboarding, reject new work first, revoke affected sessions and API credentials, then cancel or reauthorize queued work before it runs. A removed tenant membership must stop that tenant's access without disabling the user's unrelated memberships.
+- Invalidate permission-sensitive caches and derived retrieval access when authority changes. A still-valid cookie or cached role is not proof of current permission. Recheck authorization before delayed/high-impact execution.
+- Keep recovery and administrator remediation available through their own authorized paths. Verify expiry and revocation across every ingress path; use the existing revocation mechanism rather than adding a second session system.
 
 ---

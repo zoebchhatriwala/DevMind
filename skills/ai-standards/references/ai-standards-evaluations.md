@@ -24,6 +24,8 @@ Model-run records use this shape. Replace the example model and revision with ac
 
 The baseline uses `"condition": "without-skill"`. Optional `metrics` fields are `durationMs`, `inputTokens`, `outputTokens`, and `costUsd`. No model API calls or packages are installed by the evaluator. Passing helper tests validates the harness, not a claim that the skill improves a model.
 
+Keep generated reports and browser captures under `.devmind/`. Evidence fingerprints include all discovered source/configuration/assets and file names; generated/dependency directories and symbolic links remain excluded. Regenerate older evidence after the fingerprint change. Node evaluations require a clean exit plus a completion signal from the end of the assertion program, and version 2 reports cannot be paired with version 1 baselines. This completion check does not turn local candidate execution into a security sandbox.
+
 Read only for this topic. These are adaptation examples, not a required stack or file structure. Follow the entrypoint's scope and the project's existing framework, tools, and authorization. Do not copy placeholders, add packages, or replace working architecture solely to match an example.
 
 ## 5 - Automated AI Evaluation (Evals) & Quality Gates

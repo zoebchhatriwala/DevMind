@@ -3,7 +3,7 @@ import { mkdir, realpath, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join, relative, resolve } from 'node:path';
 import { isMain } from './lib/project.mjs';
-import { artifactPath, assertKeys, fingerprint, optionalPackage, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
+import { artifactPath, assertKeys, evidencePath, fingerprint, optionalPackage, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
 
 const ACTIONS = new Set(['click', 'fill', 'press', 'select', 'check', 'expectVisible', 'expectHidden', 'expectText', 'expectValue', 'expectCount', 'expectFocused']);
 export function validatePlan(plan = {}) {
@@ -91,6 +91,8 @@ export async function auditBrowser(targetDir, value, options = {}) {
   const root = await realpath(resolve(targetDir));
   const url = localUrl(value);
   const plan = validatePlan(options.plan);
+  const output = options.output ?? '.devmind/browser';
+  const directory = await evidencePath(root, output);
   const sourceDigest = await fingerprint(root);
   const checks = [];
   const artifacts = [];
@@ -100,8 +102,6 @@ export async function auditBrowser(targetDir, value, options = {}) {
     checks.push({ id: 'browser', status: 'not-run', reason: 'No installed Playwright package. Reuse project tooling or supply --tooling; no package is installed automatically.' });
     return result;
   }
-  const output = options.output ?? '.devmind/browser';
-  const directory = await artifactPath(root, output);
   await mkdir(directory, { recursive: true });
   let browser;
   try {

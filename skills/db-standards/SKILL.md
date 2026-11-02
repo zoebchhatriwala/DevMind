@@ -24,10 +24,10 @@ Inspect first: callers, existing helpers, dependencies, project instructions, an
 
 The gates above are sufficient for small changes. Read a reference only when the task needs its examples; search headings and read the relevant slice. Existing framework conventions and these gates take precedence over example scaffolding.
 
-- [schema and modeling](./references/db-standards-schema-and-modeling.md)
-- [migrations](./references/db-standards-migrations.md)
+- [schema, ORM models, and constraints](./references/db-standards-schema-and-modeling.md)
+- [safe migrations and backfills](./references/db-standards-migrations.md)
 - [queries and indexes](./references/db-standards-queries-and-indexes.md)
-- [transactions](./references/db-standards-transactions.md)
+- [transactions and concurrency](./references/db-standards-transactions.md)
 - [connections and pagination](./references/db-standards-connections-and-pagination.md)
 - [testing](./references/db-standards-testing.md)
 - [security and operations](./references/db-standards-security-and-operations.md)

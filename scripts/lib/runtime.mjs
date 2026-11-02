@@ -1,8 +1,9 @@
 import { createRequire } from 'node:module';
+import { createReadStream } from 'node:fs';
 import { mkdir, lstat, realpath, writeFile, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
-import { scanProject, SOURCE_EXTENSIONS } from './project.mjs';
+import { scanProject } from './project.mjs';
 
 export function optionalPackage(root, names) {
   const require = createRequire(join(resolve(root), 'package.json'));
@@ -53,10 +54,11 @@ export function assertKeys(value, allowed, label) {
 
 export async function fingerprint(root) {
   const project = await scanProject(root);
-  const hash = createHash('sha256');
+  const hash = createHash('sha256').update('devmind:inventory:v2\0');
   for (const file of project.files) {
-    if (!SOURCE_EXTENSIONS.has(file.ext) && !/(?:package\.json|lock\.(?:json|yaml)|lock\.yaml)$/.test(file.relPath)) continue;
-    hash.update(file.relPath).update('\0').update(await readFile(file.fullPath)).update('\0');
+    const contentHash = createHash('sha256');
+    for await (const chunk of createReadStream(file.fullPath)) contentHash.update(chunk);
+    hash.update(file.relPath).update('\0').update(contentHash.digest('hex')).update('\0');
   }
   return hash.digest('hex');
 }
@@ -80,9 +82,16 @@ export async function artifactPath(root, path) {
 }
 
 export async function writeReport(root, path, report) {
-  const target = await artifactPath(root, path);
+  const target = await evidencePath(root, path);
   await mkdir(dirname(target), { recursive: true });
   await writeFile(target, JSON.stringify(report, null, 2) + '\n', 'utf8');
+  return target;
+}
+
+export async function evidencePath(root, path) {
+  const target = await artifactPath(root, path);
+  const rel = relative(await realpath(resolve(root)), target).replaceAll('\\', '/');
+  if (rel !== '.devmind' && !rel.startsWith('.devmind/')) throw new Error('Store generated evidence under .devmind/ so it cannot invalidate its own source fingerprint.');
   return target;
 }
 

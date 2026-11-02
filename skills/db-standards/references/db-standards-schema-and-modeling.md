@@ -169,142 +169,108 @@ CREATE POLICY tenant_isolation_policy ON documents
 
 ---
 
-## 2 - Safe Schema Evolution & Zero-Downtime Migrations
+## 7 - ORM & Query Builder Standards
 
-### 2.0 Cardinal Rule: NEVER Hand-Type Migrations When an Auto-Generating Framework Exists
+### 7.1 Drizzle ORM Production Patterns (Preferred)
 
-> [!CAUTION]
-> **DO NOT manually write, type, or author migration files from scratch if the application uses an ORM or migration framework that supports automatic migration generation (e.g., Drizzle Kit, Prisma Migrate, TypeORM, Alembic, Django, Rails, EF Core).**
->
-> Hand-typing migrations causes schema drift, breaks ORM metadata synchronization, risks missing constraints/enums, and diverges from the schema definitions.
+Drizzle provides zero-overhead SQL mapping with complete TypeScript inference.
 
-**The Mandatory Migration Workflow**:
-1. **Edit Schema Definition Only**: Modify the project's schema source of truth (e.g. `src/infrastructure/db/schema/*.ts`, `prisma/schema.prisma`, TypeORM entity classes).
-2. **Execute Framework Generator**: Run the framework's official migration CLI:
-   - **Drizzle**: `npx drizzle-kit generate`
-   - **Prisma**: `npx prisma migrate dev --name <migration_name> --create-only` (or `npx prisma migrate dev --name <name>`)
-   - **TypeORM**: `npx typeorm migration:generate -d <dataSourcePath> src/migrations/<MigrationName>`
-   - **Alembic**: `alembic revision --autogenerate -m "<migration_name>"`
-3. **Inspect the Generated Migration File**: Read the generated file immediately after generation. Verify that:
-   - No unintended `DROP TABLE` or `DROP COLUMN` commands were generated due to column renames.
-   - Any new indexes on large tables use `CONCURRENTLY` (edit the generated file to add `CONCURRENTLY` / `statement-breakpoint` if omitted by generator).
-   - Any new `NOT NULL` columns on existing populated tables follow the expand-contract pattern.
-4. **Modify Only for Zero-Downtime Safety**: If safety adjustments are required, edit the auto-generated migration file. **Never bypass the framework to author migration files from a blank template.**
-
-Never lock tables in production during schema migrations. Every schema alteration on a table with more than 10,000 rows must follow the **Expand and Contract (Parallel Run)** pattern.
+#### Schema Organization
+Organize schemas by domain feature, never in a single 3,000-line monolith file.
 
 ```
-PHASE 1: EXPAND
-Add new column / table as nullable. Old and new code both function.
-
-PHASE 2: DUAL WRITE
-Deploy application code that writes to BOTH old and new columns. Read from old.
-
-PHASE 3: BACKFILL
-Asynchronously backfill historical data from old column to new column in batches.
-
-PHASE 4: DUAL READ / SWITCH
-Switch application code to read from new column. Continue dual writing.
-
-PHASE 5: CONTRACT
-Remove dual writes from application code. Drop old column / deprecated objects.
+src/infrastructure/db/
++-- index.ts               # Connection instance & export
++-- schema/
+|   +-- index.ts           # Barrel export of all tables & relations
+|   +-- users.ts           # Users & accounts tables
+|   +-- orders.ts          # Orders & order_items tables
+|   +-- audit.ts           # Audit log table
 ```
 
-### 2.1 The Migration Safety Rules
+#### Drizzle Schema Definition Example
+```typescript
+// src/infrastructure/db/schema/users.ts
+import { pgTable, uuid, varchar, timestamp, boolean, index, uniqueIndex } from 'drizzle-orm/pg-core';
+import { relations } from 'drizzle-orm';
+import { orders } from './orders';
 
-| Dangerous Operation | Catastrophic Risk | Safe Alternative |
-|---------------------|-------------------|------------------|
-| `ALTER TABLE ... ADD COLUMN ... NOT NULL` | Acquires exclusive table lock (`AccessExclusiveLock`), freezes traffic | Add column as `NULLABLE`, backfill in batches, then `ADD CONSTRAINT ... NOT NULL` |
-| `ALTER TABLE ... ADD COLUMN ... DEFAULT 'foo'` (pre-PG 11) | Rewrites entire table on disk, holding locks | Safe in PG 11+ for constant defaults, otherwise add column nullable, then set default |
-| `CREATE INDEX idx_name ON table(col)` | Blocks all writes (`INSERT`, `UPDATE`, `DELETE`) until index build finishes | `CREATE INDEX CONCURRENTLY idx_name ON table(col)` |
-| `ALTER TABLE ... DROP COLUMN old_col` | Crashes running code running old queries (`SELECT *`) | Remove all references in code first; wait one deployment cycle before dropping |
-| `ALTER TABLE ... RENAME COLUMN old TO new` | Instantly breaks all currently running queries | Add new column, dual write, backfill, switch reads, drop old |
-| `ALTER TABLE ... ADD CONSTRAINT fk ... REFERENCES ...` | Scans entire table under exclusive lock to validate existing rows | Add constraint as `NOT VALID`, then validate asynchronously |
+export const users = pgTable('users', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: varchar('email', { length: 255 }).notNull(),
+  fullName: varchar('full_name', { length: 255 }).notNull(),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+}, (table) => [
+  uniqueIndex('uniq_users_active_email').on(table.email).where(table.deletedAt.isNull()),
+  index('idx_users_created_at').on(table.createdAt),
+]);
 
-### 2.2 Concrete Safe Migration Recipes (PostgreSQL)
-
-#### Recipe 1: Safe Concurrent Index Creation
-```sql
--- Drizzle Kit / Raw SQL:
--- Disables transaction wrapping because CONCURRENTLY cannot run inside a transaction block
--- statement-breakpoint
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_invoices_customer_status
-ON invoices (customer_id, status);
+export const usersRelations = relations(users, ({ many }) => ({
+  orders: many(orders),
+}));
 ```
 
-#### Recipe 2: Safe Foreign Key Addition (Zero Lockout)
-```sql
--- Step 1: Add constraint NOT VALID (takes brief metadata lock, does NOT scan table)
-ALTER TABLE order_items
-ADD CONSTRAINT fk_order_items_orders
-FOREIGN KEY (order_id) REFERENCES orders(id)
-NOT VALID;
+### 7.2 Prisma ORM Production Patterns
 
--- Step 2: Validate existing rows in background (takes ShareUpdateExclusiveLock, writes proceed normally)
-ALTER TABLE order_items
-VALIDATE CONSTRAINT fk_order_items_orders;
-```
-
-#### Recipe 3: Safe NOT NULL Constraint Addition
-```sql
--- Step 1: Add a check constraint marked NOT VALID
-ALTER TABLE users
-ADD CONSTRAINT chk_users_phone_not_null
-CHECK (phone_number IS NOT NULL)
-NOT VALID;
-
--- Step 2: Validate asynchronously after backfill is confirmed complete
-ALTER TABLE users
-VALIDATE CONSTRAINT chk_users_phone_not_null;
-
--- (Optional in PG 12+) Once validated, convert to native NOT NULL without table scan:
--- ALTER TABLE users ALTER COLUMN phone_number SET NOT NULL;
-```
-
-#### Recipe 4: Safe Column Backfill Script (Batching)
-Never run `UPDATE large_table SET new_col = old_col;` in a single query. It bloats WAL, exhausts memory, and locks rows.
+If the project uses Prisma:
+1. **Never use deep cascade `include` trees**:
+   `include: { author: { include: { profile: { include: { badges: true } } } } }` generates catastrophic outer joins. Use explicit `select` to retrieve only required fields.
+2. Enable client extensions (`$extends`) for automated tenant filtering and auditing rather than scattering logic in services.
+3. Configure connection pool limits in `DATABASE_URL`: `postgresql://...?connection_limit=10&pool_timeout=20`.
 
 ```typescript
-// scripts/backfill-user-uuid.ts
-import { db } from '../src/infrastructure/db';
-import { sql } from 'drizzle-orm';
+// Safe field selection avoiding bloated queries
+const user = await prisma.user.findUnique({
+  where: { id: userId },
+  select: {
+    id: true,
+    email: true,
+    fullName: true,
+    orders: {
+      take: 10,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        totalCents: true,
+        status: true,
+      },
+    },
+  },
+});
+```
 
-async function backfillInBatches(batchSize = 2000) {
-  let updatedCount = 0;
-  let hasMore = true;
+---
 
-  console.log('Starting safe backfill...');
+## 8 - Data Integrity, Foreign Keys & Constraints
 
-  while (hasMore) {
-    // Process single batch by indexed primary key
-    const result = await db.execute(sql`
-      WITH batch AS (
-        SELECT id FROM users
-        WHERE status_code IS NULL
-        ORDER BY id ASC
-        LIMIT ${batchSize}
-      )
-      UPDATE users u
-      SET status_code = 'ACTIVE'
-      FROM batch
-      WHERE u.id = batch.id
-      RETURNING u.id;
-    `);
+Database constraints are the final line of defense against data corruption. Application code validation (e.g., Zod) is necessary for user experience, but database constraints guarantee mathematical truth.
 
-    const count = (result.rows as any[]).length;
-    updatedCount += count;
-    console.log(`Updated batch of ${count} rows. Total: ${updatedCount}`);
+### 8.1 Foreign Key Cascade Strategies
 
-    if (count < batchSize) {
-      hasMore = false;
-    } else {
-      // 100ms pause between batches to yield CPU and let autovacuum / replicas breathe
-      await new Promise((resolve) => setTimeout(resolve, 100));
-    }
-  }
+| ON DELETE Action | Behavior | Use When |
+|------------------|----------|----------|
+| **`RESTRICT` / `NO ACTION`** (Default) | Aborts delete if child records exist | Root entities (e.g., cannot delete `organization` if `invoices` exist) |
+| **`CASCADE`** | Automatically deletes all child records | Tightly-coupled child entities that have zero meaning without parent (`order_items` owned by `order`) |
+| **`SET NULL`** | Nullifies child foreign key | Optional parent reference (`assigned_agent_id` when support agent leaves) |
 
-  console.log('Backfill successfully finished.');
-}
+### 8.2 Defensive Check Constraints
+
+Validate domain invariants directly in PostgreSQL:
+
+```sql
+CREATE TABLE billing_invoices (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    subtotal_cents INT NOT NULL CHECK (subtotal_cents >= 0),
+    tax_cents INT NOT NULL CHECK (tax_cents >= 0),
+    total_cents INT NOT NULL,
+    currency VARCHAR(3) NOT NULL CHECK (currency IN ('USD', 'EUR', 'GBP', 'CAD')),
+    status VARCHAR(20) NOT NULL CHECK (status IN ('DRAFT', 'ISSUED', 'PAID', 'VOID')),
+    -- Math consistency check enforced at kernel level:
+    CONSTRAINT chk_invoices_math_match CHECK (total_cents = subtotal_cents + tax_cents)
+);
 ```
 
 ---

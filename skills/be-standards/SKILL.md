@@ -17,6 +17,7 @@ Inspect first: callers, existing helpers, dependencies, project instructions, an
 - Keep HTTP concerns at the transport boundary and business rules testable. In Next.js actions, Remix, Hono, or tRPC, prefer the existing colocated handler. In layered servers, follow their current controller/service boundaries. Add a repository only when it removes real duplication or isolates an existing data boundary.
 - Validate external input before use with the existing runtime schema tools. Keep strict types, bound dynamic lists and work queues, and parameterize queries. Do not hide unsafe data behind assertions.
 - Use the existing structured logger with correlation IDs and secret redaction. Return client-safe errors; handle rejected work and preserve retry/cancellation behavior. Bound timeouts, retries, concurrency, and shutdown work.
+- For durable jobs and events, define commit/acknowledgment, duplicate delivery, abandoned-work recovery, and terminal failure behavior using the existing queue or database. Add an outbox only when database writes and event publication must survive a partial failure together.
 - Reuse runtime and framework primitives before packages. Do not require classes, DTO wrappers, a named constant for every literal, or extra interfaces for a single implementation.
 
 ## Topic references
@@ -28,7 +29,7 @@ The gates above are sufficient for small changes. Read a reference only when the
 - [http and errors](./references/be-standards-http-and-errors.md)
 - [auth and security](./references/be-standards-auth-and-security.md)
 - [data and pagination](./references/be-standards-data-and-pagination.md)
-- [logging and resilience](./references/be-standards-logging-and-resilience.md)
+- [logging, retries, and durable jobs/events](./references/be-standards-logging-and-resilience.md)
 - [tests and documentation](./references/be-standards-tests-and-documentation.md)
 
 ## 🔍 Anti-Amnesia Receipt

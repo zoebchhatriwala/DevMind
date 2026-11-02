@@ -85,7 +85,16 @@ CREATE TABLE password_reset_tokens (
 CREATE INDEX idx_reset_token_hash ON password_reset_tokens(token_hash);
 ```
 
-### 2.4 User Enumeration Defense
+### 2.4 Sensitive Account Changes
+
+- Before changing a password, registered email, MFA factor, or recovery method, require recent authentication appropriate to the existing identity provider and risk. An old session alone must not let an attacker replace the account's recovery channels. Reuse the provider's step-up flow; do not invent a new factor for a routine patch.
+- Bind verification to the account, intended new value, and operation; expire it and consume it once. Keep an email change pending until the new address is verified, and notify the existing verified channel. Changing the target after verification requires verification of the new target.
+- Apply the change and invalidate relevant recovery tokens atomically. Revoke or rotate sessions according to the account's security policy, especially after suspected compromise. MFA removal/recovery needs its own strong proof, not merely knowledge of the account email.
+- For federated account linking, require an authenticated linking flow that proves control of both identities. Identify an OIDC identity by validated issuer and subject; matching email addresses alone are not sufficient proof for automatic linking.
+
+See [OWASP authentication guidance](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#require-re-authentication-for-sensitive-features) and the existing provider's recovery/linking documentation.
+
+### 2.5 User Enumeration Defense
 
 Never leak whether an email address exists in the database during login, registration, or password reset.
 

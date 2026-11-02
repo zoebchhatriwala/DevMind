@@ -196,6 +196,12 @@ The eight evaluation cases include five browser tasks and three Node contracts: 
 
 The handover helper preserves manual notes and refreshes only its marked repository snapshot. It reports quality as unverified: generating a summary does not establish that tests passed.
 
+Evidence fingerprints cover the names and bytes of every file returned by project discovery, including SQL, non-JavaScript source, configuration, and assets. Generated/dependency directories and symbolic links retain the documented discovery exclusions. Reports and browser captures must be written under `.devmind/`, keeping them outside their own input fingerprint. Rerun older evidence reports after this fingerprint update.
+
+Quality runs bind their evidence to the starting project fingerprint. If project files change while the scripts execute, the run fails even when every script exits successfully. Rerun all checks against the final project state; generated `.devmind/` artifacts do not invalidate the run.
+
+Node evaluations require both a successful exit and a per-run completion signal emitted after the bundled assertions. Early exits, swallowed assertion failures, and ordinary candidate output cannot count as assertion completion. Evaluation reports use version 2; regenerate older baselines before comparing. Candidate execution remains local and is not a security sandbox.
+
 ---
 
 ## Manual Multi-Agent Drop-In (dist/)
