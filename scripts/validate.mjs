@@ -113,11 +113,7 @@ async function validateDist() {
   } else {
     console.log('  ✔ [antigravity:devmind]: Root SKILL.md verified for direct ~/.gemini/config/skills/ copy.');
   }
-  if (!existsSync(join(agDevmind, 'plugin.json'))) {
-    reportError('antigravity:devmind', 'Missing plugin.json on root of universal drop-in folder!');
-  } else {
-    console.log('  ✔ [antigravity:devmind]: Root plugin.json verified for direct plugins/ copy.');
-  }
+  if (existsSync(join(agDevmind, 'skills', 'devmind', 'SKILL.md'))) reportError('antigravity:devmind', 'Duplicate nested master skill must not ship in the standalone skill.');
 
   // 3. Antigravity Plugin validation
   const agPlugin = join(DIST_DIR, 'antigravity', 'plugins', 'devmind', 'plugin.json');

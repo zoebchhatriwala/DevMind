@@ -60,6 +60,9 @@ test('canonical domain entrypoints stay within budget and resolve topic referenc
 test('built adapters have complete reference trees and one compact Cursor baseline', async () => {
   assert.ok(existsSync(join(root, 'dist', 'bundles', 'manifest.json')), 'Build distributions before testing.');
   await checkTree(join(root, 'dist'));
+  for (const packagePath of ['antigravity/devmind', 'agents/.agents/skills/devmind', 'claude-code/.claude/skills/devmind']) {
+    assert.equal(existsSync(join(root, 'dist', packagePath, 'skills/devmind/SKILL.md')), false, `${packagePath}: duplicate master`);
+  }
   const rules = join(root, 'dist', 'cursor', '.cursor', 'rules');
   const alwaysApplied = [];
   for (const entry of await readdir(rules)) {

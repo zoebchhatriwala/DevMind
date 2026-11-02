@@ -1,7 +1,7 @@
 {
   "name": "devmind",
   "version": "1.0.0",
-  "description": "Curated collection of Antigravity and AI coding agent skills for all IDEs (Cursor, Windsurf, Claude Code, GitHub Copilot).",
+  "description": "Pragmatic engineering standards and sanity checks for AI coding agents.",
   "type": "module",
   "main": "dist/bundles/manifest.json",
   "bin": {

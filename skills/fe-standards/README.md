@@ -12,7 +12,7 @@ Bundled JavaScript tools:
 - `scripts/browser-audit.mjs [project] [loopback-url] --plan [plan.json]`: run explicit browser assertions and capture responsive evidence using existing Playwright.
 - `scripts/quality.mjs [project] --run --json`: execute existing project check scripts, without installing a second toolchain.
 - `scripts/review.mjs [project]`: combine current check reports and observation-based assessments.
-- `scripts/eval.mjs --list`: five realistic seeded tasks with behavior checks and review criteria.
+- `scripts/eval.mjs --list`: eight frontend/server seeded tasks with behavior checks and review criteria.
 
 Read [design examples](./references/fe-design-examples.md) for content-specific decisions and [verification](./references/fe-verification.md) for plans, reports, evaluation, and checks proportional to the change.
 

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
-import { mkdir, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 
-import { copyHelperScripts } from '../scripts/lib/helpers.mjs';
+import { beginInstallation, copyInstalledFiles, finishInstallation, parseInstallArgs, removeDuplicateMaster, validateTargets } from '../scripts/lib/install.mjs';
+import { artifactPath } from '../scripts/lib/runtime.mjs';
+import { isMain } from '../scripts/lib/project.mjs';
 import { initDevmind } from '../scripts/init.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -42,135 +43,138 @@ async function ensureBuilt() {
 /**
  * Installs DevMind locally into current project.
  */
-async function installReferences(destination) {
-  await mkdir(destination, { recursive: true });
-  await cp(join(DIST_DIR, 'agents', '.devmind', 'skills'), destination, { recursive: true });
+async function installReferences(destination, state) {
+  await copyInstalledFiles(join(DIST_DIR, 'agents', '.devmind', 'skills'), destination, state);
 }
 
-export async function installLocal(targetDir = '.', targets = ['all'], options = {}) {
+export async function installLocal(targetDir = '.', targets = ['all']) {
+  targets = validateTargets(targets, 'local');
   await ensureBuilt();
   const dest = resolve(targetDir);
   console.log(`\n📦 Installing DevMind (Local) into: ${dest}\n`);
 
-  // 1. Initialize .devmind vault
-  await initDevmind(dest, options);
+  const state = await beginInstallation(dest);
+  await artifactPath(dest, '.gitignore');
+  for (const note of ['task', 'memory', 'rules']) await artifactPath(dest, `.devmind/${note}.md`);
+  await initDevmind(dest);
 
   // 2. Install scripts into .devmind/scripts for AI agents
-  await copyHelperScripts(ROOT_DIR, join(dest, '.devmind'));
+  const tools = join(DIST_DIR, 'antigravity', 'skills', 'devmind');
+  await copyInstalledFiles(join(tools, 'scripts'), join(dest, '.devmind', 'scripts'), state);
+  await copyInstalledFiles(join(tools, 'templates'), join(dest, '.devmind', 'templates'), state);
   console.log('  ✔ Installed DevMind helper scripts (.devmind/scripts/verify.mjs, strata.mjs, init.mjs, handover.mjs)');
-  await installReferences(join(dest, '.devmind', 'skills'));
+  await installReferences(join(dest, '.devmind', 'skills'), state);
 
   const targetSet = new Set(targets.map(t => t.toLowerCase()));
   const isAll = targetSet.has('all');
 
   // Universal AGENTS.md
   if (isAll || targetSet.has('agents') || targetSet.has('openskills') || targetSet.has('antigravity') || targetSet.has('gemini')) {
-    await cp(join(DIST_DIR, 'agents', 'AGENTS.md'), join(dest, 'AGENTS.md'));
+    await copyInstalledFiles(join(DIST_DIR, 'agents', 'AGENTS.md'), join(dest, 'AGENTS.md'), state);
     const agentsSkillDir = join(dest, '.agents', 'skills', 'devmind');
-    await mkdir(agentsSkillDir, { recursive: true });
-    await cp(join(DIST_DIR, 'antigravity', 'devmind'), agentsSkillDir, { recursive: true });
+    await removeDuplicateMaster(tools, agentsSkillDir, state);
+    await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'skills', 'devmind'), agentsSkillDir, state);
     console.log('  ✔ Installed Universal AGENTS.md & OpenSkills (.agents/skills/devmind/)');
   }
 
   // Cursor IDE
   if (isAll || targetSet.has('cursor')) {
     const cursorRulesDir = join(dest, '.cursor', 'rules');
-    await mkdir(cursorRulesDir, { recursive: true });
-    await cp(join(DIST_DIR, 'cursor', '.cursor', 'rules'), cursorRulesDir, { recursive: true });
-    await cp(join(DIST_DIR, 'cursor', '.cursorrules'), join(dest, '.cursorrules'));
+    await copyInstalledFiles(join(DIST_DIR, 'cursor', '.cursor', 'rules'), cursorRulesDir, state);
+    await copyInstalledFiles(join(DIST_DIR, 'cursor', '.cursorrules'), join(dest, '.cursorrules'), state);
     console.log('  ✔ Installed Cursor IDE rules (.cursorrules & .cursor/rules/*.mdc)');
   }
 
   // Claude Code
   if (isAll || targetSet.has('claude') || targetSet.has('claude-code')) {
-    await cp(join(DIST_DIR, 'claude-code', 'CLAUDE.md'), join(dest, 'CLAUDE.md'));
+    await copyInstalledFiles(join(DIST_DIR, 'claude-code', 'CLAUDE.md'), join(dest, 'CLAUDE.md'), state);
     const claudeSkillDir = join(dest, '.claude', 'skills', 'devmind');
-    await mkdir(claudeSkillDir, { recursive: true });
-    await cp(join(DIST_DIR, 'antigravity', 'devmind'), claudeSkillDir, { recursive: true });
+    await removeDuplicateMaster(tools, claudeSkillDir, state);
+    await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'devmind'), claudeSkillDir, state);
     console.log('  ✔ Installed Claude Code rules (CLAUDE.md & .claude/skills/devmind/)');
   }
 
   // Windsurf / Cascade
   if (isAll || targetSet.has('windsurf')) {
     const windsurfRulesDir = join(dest, '.windsurf', 'rules');
-    await mkdir(windsurfRulesDir, { recursive: true });
-    await cp(join(DIST_DIR, 'windsurf', '.windsurf', 'rules'), windsurfRulesDir, { recursive: true });
-    await cp(join(DIST_DIR, 'windsurf', '.windsurfrules'), join(dest, '.windsurfrules'));
+    await copyInstalledFiles(join(DIST_DIR, 'windsurf', '.windsurf', 'rules'), windsurfRulesDir, state);
+    await copyInstalledFiles(join(DIST_DIR, 'windsurf', '.windsurfrules'), join(dest, '.windsurfrules'), state);
     console.log('  ✔ Installed Windsurf / Cascade rules (.windsurfrules & .windsurf/rules/)');
   }
 
   // GitHub Copilot
   if (isAll || targetSet.has('copilot') || targetSet.has('github-copilot')) {
     const copilotDir = join(dest, '.github');
-    await mkdir(copilotDir, { recursive: true });
-    await cp(join(DIST_DIR, 'github-copilot', '.github'), copilotDir, { recursive: true });
+    await copyInstalledFiles(join(DIST_DIR, 'github-copilot', '.github'), copilotDir, state);
     console.log('  ✔ Installed GitHub Copilot instructions (.github/copilot-instructions.md)');
   }
 
   // Cline / Roo Code
   if (isAll || targetSet.has('cline') || targetSet.has('roo')) {
-    await cp(join(DIST_DIR, 'cline', '.clinerules'), join(dest, '.clinerules'));
+    await copyInstalledFiles(join(DIST_DIR, 'cline', '.clinerules'), join(dest, '.clinerules'), state);
     console.log('  ✔ Installed Cline / Roo Code rules (.clinerules)');
   }
 
-  console.log('\n✔ Local installation complete! DevMind is now active in this project.');
+  return finishInstallation(state);
 }
 
 /**
  * Installs DevMind globally across user environment.
  */
-export async function installGlobal(targets = ['all'], options = {}) {
+export async function installGlobal(targets = ['all']) {
+  targets = validateTargets(targets, 'global');
   await ensureBuilt();
   const home = homedir();
   console.log(`\n🌐 Installing DevMind (Global) across user environment (${home})\n`);
 
   const targetSet = new Set(targets.map(t => t.toLowerCase()));
   const isAll = targetSet.has('all');
-  await copyHelperScripts(ROOT_DIR, join(home, '.devmind'));
+  const state = await beginInstallation(home);
+  const tools = join(DIST_DIR, 'antigravity', 'skills', 'devmind');
+  await copyInstalledFiles(join(tools, 'scripts'), join(home, '.devmind', 'scripts'), state);
+  await copyInstalledFiles(join(tools, 'templates'), join(home, '.devmind', 'templates'), state);
   console.log('  Installed shared helper tools in ~/.devmind/scripts/');
-  await installReferences(join(home, '.devmind', 'skills'));
+  await installReferences(join(home, '.devmind', 'skills'), state);
 
   // Antigravity & Gemini CLI (~/.gemini/config/skills/devmind)
   if (isAll || targetSet.has('antigravity') || targetSet.has('gemini')) {
     const geminiSkillsDir = join(home, '.gemini', 'config', 'skills', 'devmind');
-    await mkdir(geminiSkillsDir, { recursive: true });
-    await cp(join(DIST_DIR, 'antigravity', 'devmind'), geminiSkillsDir, { recursive: true });
+    await removeDuplicateMaster(tools, geminiSkillsDir, state);
+    await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'devmind'), geminiSkillsDir, state);
     console.log(`  ✔ Google Antigravity & Gemini: ~/.gemini/config/skills/devmind/`);
   }
 
   // Claude Code (~/.claude/skills/devmind)
   if (isAll || targetSet.has('claude') || targetSet.has('claude-code')) {
     const claudeGlobalSkillsDir = join(home, '.claude', 'skills', 'devmind');
-    await mkdir(claudeGlobalSkillsDir, { recursive: true });
-    await cp(join(DIST_DIR, 'antigravity', 'devmind'), claudeGlobalSkillsDir, { recursive: true });
+    await removeDuplicateMaster(tools, claudeGlobalSkillsDir, state);
+    await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'devmind'), claudeGlobalSkillsDir, state);
     console.log(`  ✔ Claude Code: ~/.claude/skills/devmind/`);
   }
 
   // Universal OpenSkills (~/.agents/skills/devmind)
   if (isAll || targetSet.has('agents') || targetSet.has('openskills')) {
     const agentsGlobalSkillsDir = join(home, '.agents', 'skills', 'devmind');
-    await mkdir(agentsGlobalSkillsDir, { recursive: true });
-    await cp(join(DIST_DIR, 'antigravity', 'devmind'), agentsGlobalSkillsDir, { recursive: true });
+    await removeDuplicateMaster(tools, agentsGlobalSkillsDir, state);
+    await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'devmind'), agentsGlobalSkillsDir, state);
     console.log(`  ✔ Universal OpenSkills: ~/.agents/skills/devmind/`);
   }
 
   // Cursor IDE global rules (~/.cursor/rules/)
   if (isAll || targetSet.has('cursor')) {
     const cursorGlobalDir = join(home, '.cursor', 'rules');
-    await mkdir(cursorGlobalDir, { recursive: true });
-    await cp(join(DIST_DIR, 'cursor', '.cursor', 'rules'), cursorGlobalDir, { recursive: true });
+    await copyInstalledFiles(join(DIST_DIR, 'cursor', '.cursor', 'rules'), cursorGlobalDir, state);
     console.log(`  ✔ Cursor IDE: ~/.cursor/rules/`);
   }
 
   // Windsurf global rules (~/.windsurf/rules/)
   if (isAll || targetSet.has('windsurf')) {
     const windsurfGlobalDir = join(home, '.windsurf', 'rules');
-    await mkdir(windsurfGlobalDir, { recursive: true });
-    await cp(join(DIST_DIR, 'windsurf', '.windsurf', 'rules'), windsurfGlobalDir, { recursive: true });
+    await copyInstalledFiles(join(DIST_DIR, 'windsurf', '.windsurf', 'rules'), windsurfGlobalDir, state);
     console.log(`  ✔ Windsurf / Cascade: ~/.windsurf/rules/`);
   }
 
-  console.log('\n✔ Global installation complete! DevMind is now available to your AI agents across all workspaces.');
+  return finishInstallation(state);
 }
 
 /**
@@ -371,22 +375,17 @@ async function main() {
   }
 
   if (command === 'install') {
-    if (args.includes('--interactive') || (args.length === 1 && process.stdin.isTTY)) {
-      if (args.length > 2 || (args.length === 2 && args[1] !== '--interactive')) {
-        throw new Error('Use --interactive without other install options.');
-      }
+    if (process.env.npm_lifecycle_event === 'install' && !['run', 'run-script'].includes(process.env.npm_command)) {
+      console.log('Package installed. Run npm run install or devmind install --interactive to configure your coding platform.');
+      return;
+    }
+    const selection = args.length === 1 && process.stdin.isTTY ? { interactive: true } : parseInstallArgs(args.slice(1));
+    if (selection.interactive) {
       await runInteractiveWizard({ installOnly: true });
       return;
     }
-    if (args.length === 1) throw new Error('Choose --interactive, or specify --local/--global and --target for a non-interactive install.');
-    const isGlobal = args.includes('-g') || args.includes('--global');
-    const isLocal = args.includes('-l') || args.includes('--local') || !isGlobal;
-    const targetIdx = args.findIndex(a => a === '-t' || a === '--target');
-    const targetArg = targetIdx !== -1 && args[targetIdx + 1] ? args[targetIdx + 1] : 'all';
-    const targets = targetArg.split(',').map(s => s.trim());
-
-    if (isLocal) await installLocal('.', targets);
-    if (isGlobal) await installGlobal(targets);
+    if (selection.local) await installLocal('.', selection.targets);
+    if (selection.global) await installGlobal(selection.targets);
     return;
   }
 
@@ -401,7 +400,7 @@ async function main() {
   printHelp();
 }
 
-main().catch(err => {
+if (isMain(import.meta.url)) main().catch(err => {
   console.error('DevMind CLI error:', err);
   process.exitCode = 2;
 });

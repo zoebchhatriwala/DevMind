@@ -73,10 +73,13 @@ Every merged skill must satisfy:
 ### 2. Structure & Completeness
 
 - **Pre-flight**: Inspect existing conventions. Ask only about consequential unknowns in new architecture, with recommended defaults.
-- Actionable, authoritative rules: "Use X with parameters Y", never vague suggestions.
-- Real, runnable TypeScript/SQL/YAML code examples without placeholders or pseudo-code.
+- Decision criteria and concrete examples matched to the risk. Preserve existing framework choices; examples do not prescribe an unrelated stack.
+- Runnable examples for the supported task; label adaptation points and verify changed behavior.
 - Covers unhappy paths (errors, empty states, rate limits, timeouts).
 - Ends with an **Agent Execution Checklist**.
+- Keep entrypoints within 12 KB and load topic references only when needed. A passing source heuristic does not establish security, accessibility, or model quality.
+- Verify installation against existing user configuration, repeated installs, and npm lifecycle execution in isolated directories.
+- Skill-quality claims need paired model/task/settings evidence and independent review, not just helper-unit tests or byte savings.
 
 ### 3. Modularity & Zero Duplication
 

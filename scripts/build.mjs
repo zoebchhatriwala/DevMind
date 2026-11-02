@@ -3,7 +3,6 @@ import { readdir, readFile, writeFile, mkdir, rm, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { homedir } from 'node:os';
 import { copyHelperScripts } from './lib/helpers.mjs';
 import { isMain } from './lib/project.mjs';
 
@@ -151,7 +150,7 @@ All paths below are relative to this installed skill. Pass the project directory
 | scripts/browser-audit.mjs <project> <loopback-url> --plan <plan.json> | Capture mobile/desktop browser evidence and execute explicit outcome assertions using existing Playwright. |
 | scripts/quality.mjs <project> --run --json | Execute existing named project checks; omit --run for discovery only. |
 | scripts/review.mjs <project> --quality <report> --browser <report> --assessment <assessment> | Combine current evidence; missing checks and observations remain unverified. |
-| scripts/eval.mjs --list | Discover five seeded tasks for testing the skill's actual output. |
+| scripts/eval.mjs --list | Discover eight frontend/server seeded tasks for testing the skill's actual output. |
 | scripts/strata.mjs <project> | Generate the requested architecture map. |
 | scripts/init.mjs <project> | Initialize local task memory when needed. |
 | scripts/handover.mjs <project> | Refresh session continuity notes. |
@@ -278,14 +277,9 @@ export async function build() {
     await cp(join(agSkillsDir, s.name), join(agPluginSkillsDir, s.name), { recursive: true });
   }
 
-  // 1C. Antigravity Universal Drop-in Package (dist/antigravity/devmind/)
-  // This hybrid package works whether copied into ~/.gemini/config/skills/devmind OR plugins/devmind!
+  // 1C. Standalone skill drop-in. Plugin packaging is separate to avoid nested discovery.
   const agUniversalDir = join(agBaseDir, 'devmind');
   await cp(devmindSkillDir, agUniversalDir, { recursive: true });
-  await writeFile(join(agUniversalDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2), 'utf8');
-  await cp(agPluginSkillsDir, join(agUniversalDir, 'skills'), { recursive: true });
-  await mkdir(join(agUniversalDir, 'rules'), { recursive: true });
-  await writeFile(join(agUniversalDir, 'rules', 'AGENTS.md'), baseline(baselineMd, skills, '../references'), 'utf8');
   await writeFile(join(agUniversalDir, 'AGENTS.md'), baseline(baselineMd, skills, './references'), 'utf8');
 
   // 1D. Antigravity Rules Format (dist/antigravity/rules/)
@@ -525,7 +519,7 @@ Copy these configuration files into any project's root directory to immediately 
   console.log('=============================================================');
   console.log('  ✔ Antigravity Skills  -> dist/antigravity/skills/ (each folder has root SKILL.md)');
   console.log('  ✔ Antigravity Plugin  -> dist/antigravity/plugins/devmind/ (plugin.json bundle)');
-  console.log('  ✔ Antigravity Drop-In -> dist/antigravity/devmind/ (universal skills/ or plugins/ copy)');
+  console.log('  ✔ Antigravity Drop-In -> dist/antigravity/devmind/ (standalone skill copy)');
   console.log('  ✔ Antigravity Rules   -> dist/antigravity/rules/ (AGENTS.md & GEMINI.md)');
   console.log('  ✔ Cursor IDE          -> dist/cursor/ (.cursorrules & .cursor/rules/*.mdc)');
   console.log('  ✔ Windsurf            -> dist/windsurf/ (.windsurfrules & .windsurf/rules/)');
@@ -539,49 +533,13 @@ Copy these configuration files into any project's root directory to immediately 
   // Check for CLI flags
   const args = process.argv.slice(2);
   if (args.includes('--install-gemini') || args.includes('--install')) {
-    await installToGemini(agUniversalDir, skills);
+    const { installGlobal } = await import('../bin/devmind.mjs');
+    await installGlobal(['antigravity']);
   }
   if (args.includes('--install-hooks')) {
-    await installHooks(hooksDir);
+    const { installLocal } = await import('../bin/devmind.mjs');
+    await installLocal(process.cwd(), ['all']);
   }
-}
-
-async function installHooks(hooksDir) {
-  const targetDir = process.cwd();
-  console.log(`\nInstalling multi-agent root hooks to current directory: ${targetDir}...`);
-  await cp(hooksDir, targetDir, { recursive: true });
-  console.log('  ✔ Copied AGENTS.md, CLAUDE.md, .cursorrules, .cursor/rules/, .windsurfrules, .clinerules, and .github/ into root.\n');
-}
-
-async function installToGemini(agUniversalDir, skills) {
-  const geminiConfigDir = join(homedir(), '.gemini', 'config');
-  const targetSkillsDir = join(geminiConfigDir, 'skills');
-
-  if (!existsSync(targetSkillsDir)) {
-    console.log(`Creating Gemini skills directory at: ${targetSkillsDir}`);
-    await mkdir(targetSkillsDir, { recursive: true });
-  }
-
-  console.log(`\nInstalling DevMind to Gemini skills: ${targetSkillsDir}...`);
-
-  // Proactively remove any loose direct domain skill folders from previous installs
-  for (const s of skills) {
-    const looseDir = join(targetSkillsDir, s.name);
-    if (existsSync(looseDir)) {
-      await rm(looseDir, { recursive: true, force: true });
-      console.log(`  🧹 Removed loose domain folder: ${s.name}`);
-    }
-  }
-
-  // Install DevMind under a single consolidated devmind/ directory
-  const destDevmind = join(targetSkillsDir, 'devmind');
-  if (existsSync(destDevmind)) {
-    await rm(destDevmind, { recursive: true, force: true });
-  }
-  await cp(agUniversalDir, destDevmind, { recursive: true });
-  console.log(`  ✔ Installed consolidated DevMind skill into: devmind/ (includes master SKILL.md, references/, and skills/)`);
-
-  console.log('\nInstallation complete! DevMind is now installed cleanly under ~/.gemini/config/skills/devmind/\n');
 }
 
 if (isMain(import.meta.url)) {

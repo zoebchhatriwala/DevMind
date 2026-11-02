@@ -7,11 +7,27 @@ import { isMain } from './lib/project.mjs';
 import { artifactPath, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
 import { runVerify } from './verify.mjs';
 import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import { isDeepStrictEqual } from 'node:util';
+import { nodeCases } from './evals/node-cases.mjs';
 import { importEvidence } from './review.mjs';
-import { fingerprint } from './lib/runtime.mjs';
+import { assertKeys, assertObject, fingerprint } from './lib/runtime.mjs';
 
 const CASES_PATH = join(dirname(fileURLToPath(import.meta.url)), 'evals', 'cases.json');
-export async function loadCases() { return (await readJson(CASES_PATH)).cases; }
+export async function loadCases() { return [...(await readJson(CASES_PATH)).cases, ...nodeCases]; }
+
+export function validateModelRun(run) {
+  assertKeys(run, ['model', 'settings', 'condition', 'skillRevision', 'metrics'], 'Model run');
+  if (typeof run.model !== 'string' || !run.model.trim() || !['without-skill', 'with-skill'].includes(run.condition)) throw new Error('Model run requires a model ID and without-skill/with-skill condition.');
+  assertObject(run.settings, 'Model settings');
+  if (run.condition === 'with-skill' && (typeof run.skillRevision !== 'string' || !run.skillRevision.trim())) throw new Error('Record the tested skill revision for a with-skill run.');
+  if (run.metrics !== undefined) {
+    assertKeys(run.metrics, ['durationMs', 'inputTokens', 'outputTokens', 'costUsd'], 'Model metrics');
+    if (Object.values(run.metrics).some(value => typeof value !== 'number' || !Number.isFinite(value) || value < 0)) throw new Error('Model metrics must be observed nonnegative finite numbers.');
+    if (['inputTokens', 'outputTokens'].some(key => run.metrics[key] !== undefined && !Number.isSafeInteger(run.metrics[key]))) throw new Error('Token counts must be safe integers.');
+  }
+  return run;
+}
 
 export async function prepareCase(id, destination, baseDir = process.cwd()) {
   const entry = (await loadCases()).find(entry => entry.id === id);
@@ -31,9 +47,17 @@ export async function prepareCase(id, destination, baseDir = process.cwd()) {
 export async function evaluateCase(id, project, url, options = {}) {
   const entry = (await loadCases()).find(entry => entry.id === id);
   if (!entry) throw new Error('Unknown evaluation case.');
+  const modelRun = options.modelRun ? validateModelRun(options.modelRun) : null;
   const source = await runVerify(project, { strict: true, toolingRoot: options.toolingRoot });
   const checks = [{ id: 'source', status: source.passed ? 'passed' : 'failed', evidence: `${source.counts.total} source findings.` }];
   const scenarios = [];
+  if (entry.runner === 'node') {
+    const assertions = `import assert from 'node:assert/strict'; import {resolve} from 'node:path'; import {pathToFileURL} from 'node:url'; const operation = await import(pathToFileURL(resolve('operation.mjs')).href);\n${entry.assertions}`;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', assertions], { cwd: resolve(project), encoding: 'utf8', shell: false, timeout: 15000, maxBuffer: 1024 * 1024 });
+    const status = result.status === 0 && !result.error ? 'passed' : 'failed';
+    checks.push({ id: 'node-contract', status, exitCode: result.status, reason: result.error?.code === 'ETIMEDOUT' ? 'Candidate exceeded the 15-second limit.' : 'Bundled assertions executed against the candidate module. Output omitted to avoid leaking candidate data.' });
+    scenarios.push({ id: 'node-contract', report: { status, engine: { node: process.version } } });
+  }
   for (const scenario of entry.scenarios) {
     const output = `.devmind/evals/${id}/${scenario.id}`;
     const report = await auditBrowser(project, url, { ...options, plan: scenario.plan, output });
@@ -47,28 +71,34 @@ export async function evaluateCase(id, project, url, options = {}) {
     const review = await importEvidence(source.root, options.review, 'review', await fingerprint(project));
     checks.push({ id: 'reviewer-assessment', status: review.status === 'incomplete' ? 'not-run' : review.status, evidence: options.review });
   } else checks.push({ id: 'reviewer-assessment', status: 'not-run', reason: 'Use the task rubric and review.mjs to record observed visual, code-reuse, and interaction findings.' });
-  return { version: 1, kind: 'evaluation', caseId: id, caseDigest: createHash('sha256').update(JSON.stringify(entry)).digest('hex'), root: resolve(project), createdAt: new Date().toISOString(), checks, scenarios, source, behaviorStatus, status: reportStatus(checks), rubric: entry.review, limitations: ['Compare identical tasks, seed files, model/settings, viewport plans, and review criteria.', 'This tool evaluates the candidate artifacts. It does not invoke an agent or establish a statistical improvement from one run.'] };
+  return { version: 1, kind: 'evaluation', caseId: id, caseDigest: createHash('sha256').update(JSON.stringify(entry)).digest('hex'), root: resolve(project), createdAt: new Date().toISOString(), modelRun, checks, scenarios, source, behaviorStatus, status: reportStatus(checks), rubric: entry.review, limitations: ['Compare identical tasks, seed files, model/settings, viewport plans, and review criteria.', 'Model-run provenance and metrics are supplied by the runner; they are not independently verified by this tool.', 'This tool evaluates the candidate artifacts. It does not invoke an agent or establish a statistical improvement from one run.'] };
 }
 
 export function compareEvaluations(baseline, candidate) {
   if (baseline.kind !== 'evaluation' || candidate.kind !== 'evaluation' || baseline.version !== candidate.version || baseline.caseId !== candidate.caseId || !baseline.caseDigest || baseline.caseDigest !== candidate.caseDigest) throw new Error('Compare reports from the same evaluation case/version, seed, prompt, and plans.');
   const environments = report => report.scenarios.map(scenario => scenario.report.engine ?? null);
-  if (JSON.stringify(environments(baseline)) !== JSON.stringify(environments(candidate))) throw new Error('Browser environments differ between evaluation reports.');
+  if (JSON.stringify(environments(baseline)) !== JSON.stringify(environments(candidate))) throw new Error('Execution environments differ between evaluation reports.');
+  if (baseline.modelRun || candidate.modelRun) {
+    const first = validateModelRun(baseline.modelRun), second = validateModelRun(candidate.modelRun);
+    if (first.model !== second.model || !isDeepStrictEqual(first.settings, second.settings)) throw new Error('Model IDs/settings differ. Keep them fixed for a paired comparison.');
+    if (first.condition !== 'without-skill' || second.condition !== 'with-skill') throw new Error('Compare a without-skill baseline with a with-skill candidate.');
+  }
   const counts = report => ({ passed: report.checks.filter(check => check.status === 'passed').length, failed: report.checks.filter(check => check.status === 'failed').length, unverified: report.checks.filter(check => check.status === 'not-run').length });
-  return { caseId: baseline.caseId, baseline: counts(baseline), candidate: counts(candidate), note: 'Counts describe this case only; visual quality and broad improvement require reviewed, repeated runs.' };
+  return { caseId: baseline.caseId, baseline: counts(baseline), candidate: counts(candidate), modelControl: baseline.modelRun && candidate.modelRun ? 'Declared model/settings match; provenance is runner-supplied.' : 'Unverified: artifact-only comparison without model-run provenance.', note: 'Counts describe this case only; visual quality and broad improvement require reviewed, repeated runs.' };
 }
 
 export async function main(args = process.argv.slice(2)) {
-  const { values, flags, positional } = parseOptions(args, ['--case', '--prepare', '--url', '--channel', '--tooling', '--out', '--baseline', '--review'], ['--list']);
-  if (flags.has('--help')) { console.log('Usage: eval.mjs --list | --case <id> --prepare <empty-child-directory> | <project> --case <id> --url <loopback-url> [--channel chrome|msedge] [--tooling directory] [--baseline report.json] [--json]'); return; }
-  if (flags.has('--list')) { console.log(JSON.stringify((await loadCases()).map(({ id, prompt, review }) => ({ id, prompt, review })), null, 2)); return; }
+  const { values, flags, positional } = parseOptions(args, ['--case', '--prepare', '--url', '--channel', '--tooling', '--out', '--baseline', '--review', '--model-run'], ['--list']);
+  if (flags.has('--help')) { console.log('Usage: eval.mjs --list | --case <id> --prepare <empty-child-directory> | <project> --case <id> [--url <loopback-url>] [--channel chrome|msedge] [--tooling directory] [--model-run run.json] [--baseline report.json] [--json]\nBrowser cases require --url; Node cases execute bundled assertions locally. Use isolated workspaces for candidate code.'); return; }
+  if (flags.has('--list')) { console.log(JSON.stringify((await loadCases()).map(({ id, prompt, review, runner }) => ({ id, prompt, review, runner: runner ?? 'browser' })), null, 2)); return; }
   if (!values['--case']) throw new Error('--case is required.');
   if (values['--prepare']) {
     if (positional.length) throw new Error('--prepare takes its destination as an option value.');
     console.log(JSON.stringify(await prepareCase(values['--case'], values['--prepare']), null, 2)); return;
   }
-  if (positional.length !== 1 || !values['--url']) throw new Error('Expected project directory and --url for evaluation.');
-  const result = await evaluateCase(values['--case'], positional[0], values['--url'], { channel: values['--channel'], toolingRoot: values['--tooling'], review: values['--review'] });
+  const entry = (await loadCases()).find(entry => entry.id === values['--case']);
+  if (positional.length !== 1 || (entry?.runner !== 'node' && !values['--url'])) throw new Error('Expected project directory; browser cases also require --url.');
+  const result = await evaluateCase(values['--case'], positional[0], values['--url'], { channel: values['--channel'], toolingRoot: values['--tooling'], review: values['--review'], modelRun: values['--model-run'] ? await readJson(values['--model-run']) : null });
   if (values['--baseline']) result.comparison = compareEvaluations(await readJson(values['--baseline']), result);
   const file = await writeReport(result.root, values['--out'] ?? `.devmind/evals/${result.caseId}/report.json`, result);
   console.log(flags.has('--json') ? JSON.stringify(result, null, 2) : `${result.status} (behavior: ${result.behaviorStatus}): ${file}`);

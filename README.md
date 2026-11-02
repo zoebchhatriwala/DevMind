@@ -135,6 +135,10 @@ npx devmind
 ```
 From this repository, `npm run install` asks which platform to install for, then whether to install locally, globally, or both. Platforms with only local integration are labeled accordingly. `npx devmind install --interactive` opens the same installation flow. Explicit `--local`/`--global` and `--target` options remain available for automation.
 
+Ordinary npm package installation does not configure your editor or launch this wizard. Installation preserves existing project instructions and reports files needing a manual merge. `.devmind/install.json` records hashes of installed files: later installs update unchanged managed files while preserving local edits. Unknown platforms, unsupported scopes, and malformed options fail before writing project files.
+
+Each skill installation has one master entrypoint. Plugin packages are separate. Reinstalling removes an obsolete duplicate entrypoint only when its content is recognized as unchanged; modified copies are preserved and reported.
+
 The wizard prompts you interactively:
 - **Scope**: Local project workspace (`./.devmind`, `.cursor/`, `CLAUDE.md`, `.agents/`) or Global user environment (`~/.gemini/config/skills/devmind`, `~/.claude/skills/devmind`, `~/.cursor/rules/`).
 - **Target Agents**: Google Antigravity, Cursor, Claude Code, Windsurf, GitHub Copilot, Cline/Roo Code, or All.
@@ -181,12 +185,16 @@ Built skill folders include their tools and shared modules. Rules-only distribut
 | **`scripts/browser-audit.mjs`** | Isolated local browser screenshots, explicit keyboard/pointer assertions, DOM hints, and runtime error counts. Reuses installed Playwright. | `npx devmind browser-audit . http://127.0.0.1:3000 --plan browser-plan.json --json` |
 | **`scripts/quality.mjs`** | Discover existing root package formatting/lint/type/test scripts; execute only with `--run`. Missing scripts remain unverified. | `npx devmind quality . --run --json` |
 | **`scripts/review.mjs`** | Combine current source/check/browser/reviewer evidence. Reject stale source fingerprints, altered screenshots, and missing observations. | `npx devmind review . --quality .devmind/quality.json --browser .devmind/browser/report.json --assessment .devmind/assessment.json --json` |
-| **`scripts/eval.mjs`** | Prepare five isolated tasks and evaluate actual candidate behavior. Compare identical case definitions and browser environments. | `npx devmind eval --list` |
+| **`scripts/eval.mjs`** | Prepare eight isolated frontend/server tasks and evaluate actual candidate behavior. Compare identical case definitions and browser environments. | `npx devmind eval --list` |
 | **`scripts/strata.mjs`** | Behavioral architecture mapper: automatically inspects project across Browser, Server, and Database zones, checks trust boundaries, and generates self-contained `.devmind/strata.html`. | `npx devmind strata` or `node scripts/strata.mjs` |
 | **`scripts/init.mjs`** | Memory Vault bootstrapper: auto-detects tech stack (runtime, framework, DB, styling) and generates `.devmind/task.md`, `memory.md`, and `rules.md` with `.gitignore` safety. | `npx devmind init` or `node scripts/init.mjs` |
 | **`scripts/handover.mjs`** | Session continuity: inspects git diffs and tracked shortcuts (`// devmind:`) to update `.devmind/handover.md`. | `npx devmind handover` or `node scripts/handover.mjs` |
 
 The frontend skill loads [annotated design examples](skills/fe-standards/references/fe-design-examples.md) and [verification/evaluation procedures](skills/fe-standards/references/fe-verification.md) only when relevant. Small patches use affected checks; page/journey changes use fuller evidence. `eval` reports `behaviorStatus` separately from overall reviewed status, so successful functional checks do not hide missing reviewer evidence. The evaluator does not invoke a model itself or claim broad improvement from one case.
+
+The eight evaluation cases include five browser tasks and three Node contracts: pagination validation, tenant authorization, and atomic transfer rollback. Node cases do not require a server URL. Candidate code executes locally, so use an isolated workspace. For a controlled skill experiment, see [the evaluation procedure](skills/ai-standards/references/ai-standards-evaluations.md). `--model-run` records the actual model/settings, skill revision, and observed resource metrics. Comparisons reject differing declared models/settings; missing provenance remains explicitly unverified. No cross-model improvement benchmark is claimed.
+
+The handover helper preserves manual notes and refreshes only its marked repository snapshot. It reports quality as unverified: generating a summary does not establish that tests passed.
 
 ---
 

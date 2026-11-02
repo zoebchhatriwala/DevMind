@@ -165,14 +165,14 @@ test('artifact writes cannot traverse a symlink outside the project', async t =>
   });
 });
 
-test('five realistic cases prepare isolated seeds without overwriting work', async () => {
+test('frontend and server cases prepare isolated seeds without overwriting work', async () => {
   const cases = await loadCases();
-  assert.equal(cases.length, 5);
+  assert.equal(cases.length, 8);
   await fixture({}, async dir => {
     for (const entry of cases) {
       const prepared = await prepareCase(entry.id, entry.id, dir);
       assert.equal(await readFile(join(prepared.root, 'TASK.md'), 'utf8'), entry.prompt + '\n');
-      assert.ok(entry.scenarios.every(scenario => validatePlan(scenario.plan).steps.some(step => step.action.startsWith('expect'))));
+      assert.ok(entry.runner === 'node' ? entry.assertions.includes('assert.') : entry.scenarios.every(scenario => validatePlan(scenario.plan).steps.some(step => step.action.startsWith('expect'))));
       await assert.rejects(prepareCase(entry.id, entry.id, dir), /must be empty/);
     }
     await assert.rejects(prepareCase('accessibility-fix', '../outside', dir), /inside/);
@@ -209,5 +209,5 @@ test('built frontend and adapter references resolve and bundled eval data is exe
   }
   const result = spawnSync(process.execPath, [join(root, 'dist/antigravity/skills/fe-standards/scripts/eval.mjs'), '--list'], { cwd: dirname(root), encoding: 'utf8', shell: false });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).length, 5);
+  assert.equal(JSON.parse(result.stdout).length, 8);
 });
