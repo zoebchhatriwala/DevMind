@@ -2,7 +2,8 @@
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, join, basename } from 'node:path';
-import { buildStrataHtml } from './strata.mjs';
+import { spawnSync } from 'node:child_process';
+import { isMain, parseArgs } from './lib/project.mjs';
 
 /**
  * Detects repository facts and technology stack.
@@ -140,7 +141,7 @@ export async function initDevmind(targetDir = '.', options = {}) {
 
 ## 🚫 Anti-Patterns in this Repo
 - Do not store secrets or tokens in localStorage or client bundles
-- Do not use generic AI purple gradients or em dashes in UI copy
+- Preserve the established design system; use concrete, truthful UI copy
 `;
     await writeFile(memoryPath, memoryContent, 'utf8');
   }
@@ -174,37 +175,39 @@ export async function initDevmind(targetDir = '.', options = {}) {
   // 4. Update .gitignore
   const gitignorePath = join(root, '.gitignore');
   let addedToGitignore = false;
-  if (existsSync(gitignorePath)) {
+  const tracked = spawnSync('git', ['ls-files', '--', '.devmind'], { cwd: root, encoding: 'utf8', shell: false });
+  const ignoreContent = existsSync(gitignorePath) ? await readFile(gitignorePath, 'utf8') : '';
+  const shared = (tracked.status === 0 && Boolean(tracked.stdout.trim())) || /^!\/?\.devmind\/?\s*$/m.test(ignoreContent);
+  if (!shared && existsSync(gitignorePath)) {
     let gi = await readFile(gitignorePath, 'utf8');
-    if (!gi.includes('.devmind')) {
+    if (!/^\/?\.devmind\/?\s*$/m.test(gi)) {
       gi = gi.trimEnd() + '\n\n# DevMind Local Memory & Scratchpad\n.devmind/\n';
       await writeFile(gitignorePath, gi, 'utf8');
       addedToGitignore = true;
     }
-  } else {
+  } else if (!shared) {
     await writeFile(gitignorePath, '# DevMind Local Memory & Scratchpad\n.devmind/\n', 'utf8');
     addedToGitignore = true;
-  }
-
-  // 5. Generate Strata visualizer if template is available
-  try {
-    await buildStrataHtml(root);
-  } catch (error) {
-    console.error(`Strata generation failed: ${error.message}`);
   }
 
   return {
     devmindDir,
     stack,
     addedToGitignore,
+    shared,
   };
 }
 
 // CLI Execution
-async function main() {
-  const args = process.argv.slice(2);
-  const targetDir = args.find(a => !a.startsWith('-')) || '.';
-  const force = args.includes('--force') || args.includes('-f');
+export async function main(args = process.argv.slice(2)) {
+  const { options, positional } = parseArgs(args, ['--force', '-f']);
+  if (options.has('--help')) {
+    console.log('Usage: node init.mjs [directory] [--force]\nInitialize local memory without scanning source or generating a map. Existing notes and shared tracking choices are preserved unless --force resets notes.');
+    return;
+  }
+  if (positional.length > 1) throw new Error('Expected at most one directory.');
+  const targetDir = positional[0] ?? '.';
+  const force = options.has('--force') || options.has('-f');
 
   const result = await initDevmind(targetDir, { force });
 
@@ -214,11 +217,11 @@ async function main() {
   console.log(`Directory:       ${resolve(targetDir)}`);
   console.log(`Detected Stack:  ${result.stack.runtime} | ${result.stack.framework} | ${result.stack.packageManager}`);
   console.log(`Vault Files:     .devmind/task.md, .devmind/memory.md, .devmind/rules.md`);
-  console.log(`Git Tracking:    ${result.addedToGitignore ? 'Added .devmind/ to .gitignore' : 'Already in .gitignore'}\n`);
-  console.log(`[DevMind: Initialized local .devmind/ (added to .gitignore). Ask if you wish to track in git.]\n`);
+  console.log(`Git Tracking:    ${result.shared ? 'Preserved shared memory' : result.addedToGitignore ? 'Added .devmind/ to .gitignore' : 'Already in .gitignore'}\n`);
+  if (result.addedToGitignore) console.log('[DevMind: Initialized local .devmind/ (added to .gitignore). Ask if you wish to track in git.]\n');
 }
 
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'))) {
+if (isMain(import.meta.url)) {
   main().catch(err => {
     console.error('Init script error:', err);
     process.exit(1);

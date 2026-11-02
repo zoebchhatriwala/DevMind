@@ -20,6 +20,10 @@ When activated, this skill instructs the agent to:
 12. Apply **least-privilege database user roles** (migration DDL owner vs runtime DML only vs read-only analytics).
 13. Audit slow queries using `pg_stat_statements` and monitor table bloat / autovacuum health.
 
+## Topic references
+
+Read `SKILL.md` for the concise gates and links. Detailed sections below are preserved in `references/` and loaded only when relevant.
+
 ## Sections
 
 | Sec | Topic |

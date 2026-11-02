@@ -15,6 +15,10 @@ When activated, this skill instructs the agent to:
 7. Configure modern **reverse proxies (Caddy / Nginx)** with automated TLS, HTTP/2 & HTTP/3, and strict security headers (HSTS, CSP).
 8. Enforce **12-Factor App secrets management**, zero secrets in images, and structured JSON logging to `stdout`.
 
+## Topic references
+
+Read `SKILL.md` for the concise gates and links. Detailed sections below are preserved in `references/` and loaded only when relevant.
+
 ## Sections
 
 | Sec | Topic |

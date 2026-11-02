@@ -1,7 +1,7 @@
 ---
 name: strata
 description: >-
-  MANDATORY TRIGGER: Activates when the user asks to "generate code map", "code map", "visualize code", "visualize app", "map architecture", "show what I built", "what did I build", "strata", or asks to inspect application structure, journeys, and trust boundaries without reading code.
+  Activates when the user asks to "generate code map", "code map", "visualize code", "visualize app", "map architecture", "show what I built", "what did I build", "strata", or asks to inspect application structure, journeys, and trust boundaries without reading code.
 ---
 
 # strata: Code Visualization for Vibe Coders & Seniors

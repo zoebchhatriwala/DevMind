@@ -1,7 +1,7 @@
 ---
 name: fe-standards
 description: >-
-  MANDATORY TRIGGER: Build, improve, or review frontend pages, components, forms, styles, and client state. Apply task-specific visual direction, complete interactions, accessibility, responsive layout, and browser verification. Preserve an established design system.
+  Build, improve, or review frontend pages, components, forms, styles, and client state. Apply task-specific visual direction, complete interactions, accessibility, responsive layout, and browser verification. Preserve an established design system.
 ---
 
 # Frontend quality contract

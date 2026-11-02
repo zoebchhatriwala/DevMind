@@ -17,6 +17,10 @@ When activated, this skill instructs the agent to:
 9. Defend against CSRF using **SameSite cookies + custom HTTP header verification** and enforce global session revocation.
 10. Apply **progressive rate limiting** on authentication endpoints and log structured security audit events.
 
+## Topic references
+
+Read `SKILL.md` for the concise gates and links. Detailed sections below are preserved in `references/` and loaded only when relevant.
+
 ## Sections
 
 | Sec | Topic |

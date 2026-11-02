@@ -18,6 +18,10 @@ When activated, this skill instructs the agent to:
 10. Establish a **continuous evaluation and regression test suite** using the RAG triad (Context Relevance, Groundedness, Answer Relevance).
 11. Audit and maintain **official, lightweight SDKs and dependencies** with zero known security vulnerabilities.
 
+## Topic references
+
+Read `SKILL.md` for the concise gates and links. Detailed sections below are preserved in `references/` and loaded only when relevant.
+
 ## Sections
 
 | Sec | Topic |

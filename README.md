@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 [![GitHub Repository](https://img.shields.io/badge/GitHub-zoebchhatriwala%2FDevMind-black?logo=github)](https://github.com/zoebchhatriwala/DevMind)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
-[![Zero-Amnesia Enforced](https://img.shields.io/badge/AI%20Agent-Zero--Amnesia%20Enforced-emerald.svg)](./AGENTS.md)
+[![Engineering Baseline](https://img.shields.io/badge/AI%20Agent-Engineering%20Baseline-emerald.svg)](./AGENTS.md)
 
 > **Pragmatic engineering standards and sanity checks for AI coding agents.**  
 > Keeps Claude Code, Cursor, Windsurf, Cline, and GitHub Copilot from over-engineering, writing sloppy defaults, or drifting off track mid-session.
@@ -65,7 +65,7 @@ To prevent agents from forgetting standards mid-session, they print a single-lin
 ```text
 🧠 [DevMind: db-standards applied | Checked: expand-contract migration, foreign key index added, keyset cursor pagination]
 ```
-This forces the rules directly into the model's immediate context window, preventing context drift across long conversations.
+The receipt records which checks the agent inspected. It does not replace tests or guarantee that an agent retains every earlier decision.
 
 ### 7. Strata: Code Visualization for Vibe Coders & Seniors
 Vibe coders often struggle to read complex AI-generated code, while senior engineers need to review the blast radius of AI edits fast. DevMind includes **Strata**, an interactive visual architecture map generated on demand by your AI agent.
@@ -88,16 +88,33 @@ The automated helper currently inventories observed files and dependency names a
 
 ---
 
+## Instruction loading
+
+Each domain starts with concise gates and links to topic references. Small patches use the gates; substantial work loads the relevant examples. Installed root instructions contain the shared baseline and domain catalog. The complete topic references ship alongside them. The repository's own `AGENTS.md` remains the contributor policy.
+
+Measured UTF-8 instruction sizes before and after this optimization:
+
+| Instructions | Before | After | Reduction |
+| --- | ---: | ---: | ---: |
+| Nine domain entrypoints combined | 257,584 B | 42,425 B | 83.5% |
+| Claude root instructions | 85,921 B | 4,168 B | 95.1% |
+| Windsurf root instructions | 287,051 B | 4,168 B | 98.5% |
+| Cline root instructions | 286,941 B | 4,168 B | 98.5% |
+
+These are text-size measurements, not model token counts or a benchmark of coding quality. Topic references load on demand. Validation caps domain entrypoints at 12 KB and tests compact root baselines, reference resolution, and installation behavior.
+
+The CLI loads command implementations when invoked, and memory initialization does not scan the project or generate Strata. Request the map separately when needed. No runtime dependencies are required.
+
 ## The 9 Skill Domains
 
 DevMind includes specialized, modular rules across the full stack:
 
 | Skill | What it Covers | Key Standards Enforced |
 | :--- | :--- | :--- |
-| **[`ai-standards`](./skills/ai-standards/)** | AI Platforms, RAG & Agents | Hybrid search (BM25 + Dense Vectors + RRF), Cross-Encoder reranking, Prompt-Master XML prompts, Primacy Zone constraints, bounded context & chat compaction, and DeepEval/Ragas CI eval tests. |
+| **[`ai-standards`](./skills/ai-standards/)** | AI Platforms, RAG & Agents | Validated outputs, authorized tool calls, bounded context and spend, permission-scoped retrieval, and measured evaluations. Add retrieval complexity only when needed. |
 | **[`api-design`](./skills/api-design/)** | REST, GraphQL & RPC | Clean RESTful URI semantics, Zod-first OpenAPI schemas, RFC 7807 problem details, IETF `Idempotency-Key` locks, keyset pagination, and weak ETags. |
 | **[`auth-patterns`](./skills/auth-patterns/)** | Auth, Sessions & RBAC | Refresh token rotation, zero tokens in `localStorage` (HttpOnly SameSite cookies), OAuth 2.0 PKCE, WebAuthn Passkeys, TOTP 2FA, and explicit role guards. |
-| **[`be-standards`](./skills/be-standards/)** | Backend Logic & Services | Strict DTO validation, clean service/repository boundaries, Pino structured logging (secrets redacted), collection pagination, and safe graceful shutdowns. |
+| **[`be-standards`](./skills/be-standards/)** | Backend Logic & Services | Runtime boundary validation, framework-aligned architecture, redacted structured logging, bounded work, and tested recovery paths. |
 | **[`db-standards`](./skills/db-standards/)** | Databases & Migrations | Zero-downtime expand-contract migrations, foreign key indexes, N+1 query elimination, keyset cursor pagination, and ACID transaction boundaries. |
 | **[`deployment`](./skills/deployment/)** | Docker, CI/CD & Cloud | Multi-stage rootless Dockerfiles (`USER nonroot`), explicit health probes, SHA-pinned GitHub Actions, Trivy vulnerability scans, and zero hardcoded secrets. |
 | **[`fe-standards`](./skills/fe-standards/)** | UI, Accessibility & Design | Task-specific composition, complete interactions, existing design-system reuse, honest content, WCAG 2.2 AA, and real browser verification. No forced SaaS templates or blanket palette bans. |
@@ -116,6 +133,8 @@ Run with zero installation to launch the interactive terminal setup wizard:
 ```bash
 npx devmind
 ```
+From this repository, `npm run install` asks which platform to install for, then whether to install locally, globally, or both. Platforms with only local integration are labeled accordingly. `npx devmind install --interactive` opens the same installation flow. Explicit `--local`/`--global` and `--target` options remain available for automation.
+
 The wizard prompts you interactively:
 - **Scope**: Local project workspace (`./.devmind`, `.cursor/`, `CLAUDE.md`, `.agents/`) or Global user environment (`~/.gemini/config/skills/devmind`, `~/.claude/skills/devmind`, `~/.cursor/rules/`).
 - **Target Agents**: Google Antigravity, Cursor, Claude Code, Windsurf, GitHub Copilot, Cline/Roo Code, or All.
@@ -178,32 +197,37 @@ Copy the auto-attaching rules into your project:
 ```bash
 # Modular rules that auto-attach based on the files you open (Recommended)
 cp -r dist/cursor/.cursor your-project/
+cp -r dist/cursor/.devmind your-project/
 
 # Or as a single fallback file
 cp dist/cursor/.cursorrules your-project/
+cp -r dist/cursor/.devmind your-project/
 ```
 
 ### Claude Code (Anthropic CLI)
 ```bash
 cp dist/claude-code/CLAUDE.md your-project/
 cp -r dist/claude-code/.claude your-project/
+cp -r dist/claude-code/.devmind your-project/
 ```
 
 ### Windsurf / Cascade
 ```bash
 cp dist/windsurf/.windsurfrules your-project/
 cp -r dist/windsurf/.windsurf your-project/
+cp -r dist/windsurf/.devmind your-project/
 ```
 
 ### Google Antigravity & Gemini CLI
 Install directly into your global Antigravity config:
 ```bash
-npm run install:gemini
+npx devmind install --global --target antigravity
 ```
 
 ### Universal Agents (Cline, Roo Code, OpenHands)
 ```bash
-cp AGENTS.md your-project/
+cp dist/agents/AGENTS.md your-project/
+cp -r dist/agents/.devmind your-project/
 ```
 
 ### One-Command Drop-In for Any Repo
@@ -227,9 +251,11 @@ npm run build
 ```
 
 The test runner validates:
-- YAML frontmatter triggers and natural language keywords.
+- Skill discovery metadata and required protocol sections.
 - Mandatory sections: Pre-Flight Gate, Golden Patterns, Anti-Amnesia Receipt, and Post-Implementation Checklist.
-- Code blocks, token efficiency, and multi-agent distribution integrity.
+- Entrypoint size budgets and relative links across canonical, compiled, and installed guides.
+- Fresh-package installation outside the package directory, preservation of the caller's build output, and idempotent memory initialization.
+- Source heuristics, command dispatch, current evidence reports, and optional real-browser evaluation fixtures. Missing optional tooling is reported explicitly.
 
 ---
 

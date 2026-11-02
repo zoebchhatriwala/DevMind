@@ -201,7 +201,7 @@ test('evaluation runner distinguishes a broken seed from a working keyboard cand
 
 test('built frontend and adapter references resolve and bundled eval data is executable', async t => {
   if (!existsSync(join(root, 'dist'))) { t.skip('Build distributions first.'); return; }
-  for (const path of ['dist/antigravity/skills/fe-standards/SKILL.md', 'dist/antigravity/skills/devmind/references/fe-standards.md', 'dist/cursor/.cursor/rules/fe-standards.mdc', 'dist/claude-code/.claude/skills/fe-standards/SKILL.md', 'dist/windsurf/.windsurfrules', 'dist/github-copilot/.github/instructions/fe-standards.instructions.md', 'dist/cline/.clinerules']) {
+  for (const path of ['dist/antigravity/skills/fe-standards/SKILL.md', 'dist/antigravity/skills/devmind/references/fe-standards.md', 'dist/cursor/.cursor/rules/fe-standards.mdc', 'dist/claude-code/.claude/skills/fe-standards/SKILL.md', 'dist/windsurf/.devmind/skills/fe-standards.md', 'dist/github-copilot/.github/instructions/fe-standards.instructions.md', 'dist/cline/.devmind/skills/fe-standards.md']) {
     const source = await readFile(join(root, path), 'utf8');
     const links = [...source.matchAll(/\]\((\.[^)]*fe-(?:design-examples|verification)\.md)\)/g)];
     assert.equal(links.length, 2, path);

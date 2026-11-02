@@ -16,6 +16,10 @@ When activated, this skill instructs the agent to:
 8. Implement **HMAC-SHA256 timestamped webhook signatures** with replay attack mitigation windows.
 9. Enforce **Relay connection specifications** and query depth limits for GraphQL schemas.
 
+## Topic references
+
+Read `SKILL.md` for the concise gates and links. Detailed sections below are preserved in `references/` and loaded only when relevant.
+
 ## Sections
 
 | Sec | Topic |

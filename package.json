@@ -9,7 +9,7 @@
   },
   "scripts": {
     "devmind": "node bin/devmind.mjs",
-    "install:wizard": "node bin/devmind.mjs install",
+    "install": "node bin/devmind.mjs install --interactive",
     "verify": "node scripts/verify.mjs",
     "inspect": "node scripts/inspect.mjs",
     "contrast": "node scripts/contrast.mjs",
@@ -24,7 +24,6 @@
     "build": "node scripts/build.mjs",
     "validate": "node scripts/validate.mjs",
     "test": "node scripts/test.mjs",
-    "install:gemini": "node scripts/build.mjs --install-gemini",
     "prepack": "npm run build"
   },
   "files": [

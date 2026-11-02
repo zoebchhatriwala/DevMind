@@ -2,9 +2,10 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { HELPER_FILES } from './lib/helpers.mjs';
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT_DIR = resolve('.');
+const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SKILLS_DIR = join(ROOT_DIR, 'skills');
 const DIST_DIR = join(ROOT_DIR, 'dist');
 const AGENTS_MD_PATH = join(ROOT_DIR, 'AGENTS.md');
@@ -40,10 +41,10 @@ async function validateSkillFile(skillName, skillFile) {
   if (!yaml.includes('name:')) reportError(skillName, 'Frontmatter missing "name" field');
   if (!yaml.includes('description:')) reportError(skillName, 'Frontmatter missing "description" field');
 
-  // 1. Mandatory Trigger Check
-  const descMatch = yaml.match(/description:\s*(?:>-\s*)?["']?([^"'\r\n]+)/);
-  if (!descMatch || !descMatch[1].trim().startsWith('MANDATORY TRIGGER:')) {
-    reportError(skillName, 'Frontmatter description MUST begin with "MANDATORY TRIGGER:"');
+  // Discovery metadata describes capability and scope, not prompt priority.
+  const descMatch = yaml.match(/^description:\s*(?:>-\s*)?(.+)/m);
+  if (!descMatch || descMatch[1].trim().length < 20) {
+    reportError(skillName, 'Frontmatter needs a meaningful capability and task description');
   }
 
   // 2. Protocol Sections Check
@@ -73,8 +74,8 @@ async function validateSkillFile(skillName, skillFile) {
   if (words < 100) {
     reportError(skillName, 'SKILL.md content is empty or incomplete');
   }
-  if (words > 15000) {
-    reportError(skillName, `SKILL.md word count (${words}) is excessive; keep concise to avoid context exhaustion`);
+  if (Buffer.byteLength(content) > 12000) {
+    reportError(skillName, 'SKILL.md exceeds the 12 KB entrypoint budget; move topic details to references');
   }
 
   return true;
@@ -128,8 +129,7 @@ async function validateDist() {
 
   // 4. Cursor validation
   if (!existsSync(join(DIST_DIR, 'cursor', '.cursorrules')) || 
-      !existsSync(join(DIST_DIR, 'cursor', '.cursor', 'rules', 'devmind.mdc')) ||
-      !existsSync(join(DIST_DIR, 'cursor', '.cursor', 'rules', '00-agents-baseline.mdc'))) {
+      !existsSync(join(DIST_DIR, 'cursor', '.cursor', 'rules', 'devmind.mdc'))) {
     reportError('cursor', 'Missing Cursor .cursorrules or .cursor/rules/*.mdc');
   } else {
     console.log('  ✔ [cursor]: Rules and devmind.mdc verified.');

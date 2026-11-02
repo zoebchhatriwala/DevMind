@@ -1,28 +1,18 @@
 #!/usr/bin/env node
-import { readdir, readFile, writeFile, mkdir, rm, cp } from 'node:fs/promises';
+import { mkdir, cp } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 
-import { runVerify, main as verifyMain } from '../scripts/verify.mjs';
-import { main as inspectMain } from '../scripts/inspect.mjs';
-import { main as contrastMain } from '../scripts/contrast.mjs';
-import { main as browserMain } from '../scripts/browser-audit.mjs';
-import { main as qualityMain } from '../scripts/quality.mjs';
-import { main as reviewMain } from '../scripts/review.mjs';
-import { main as evalMain } from '../scripts/eval.mjs';
-import { HELPER_FILES } from '../scripts/lib/helpers.mjs';
-import { buildStrataHtml } from '../scripts/strata.mjs';
+import { copyHelperScripts } from '../scripts/lib/helpers.mjs';
 import { initDevmind } from '../scripts/init.mjs';
-import { generateHandover } from '../scripts/handover.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const ROOT_DIR = resolve(__dirname, '..');
 const DIST_DIR = join(ROOT_DIR, 'dist');
-const SKILLS_DIR = join(ROOT_DIR, 'skills');
 
 const VERSION = '1.0.0';
 
@@ -53,14 +43,8 @@ async function ensureBuilt() {
  * Installs DevMind locally into current project.
  */
 async function installReferences(destination) {
-  const entries = await readdir(SKILLS_DIR, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const source = join(SKILLS_DIR, entry.name, 'references');
-    if (!existsSync(source)) continue;
-    await mkdir(destination, { recursive: true });
-    await cp(source, destination, { recursive: true });
-  }
+  await mkdir(destination, { recursive: true });
+  await cp(join(DIST_DIR, 'agents', '.devmind', 'skills'), destination, { recursive: true });
 }
 
 export async function installLocal(targetDir = '.', targets = ['all'], options = {}) {
@@ -72,33 +56,19 @@ export async function installLocal(targetDir = '.', targets = ['all'], options =
   await initDevmind(dest, options);
 
   // 2. Install scripts into .devmind/scripts for AI agents
-  const destScripts = join(dest, '.devmind', 'scripts');
-  await mkdir(destScripts, { recursive: true });
-  const scriptFiles = HELPER_FILES;
-  for (const s of scriptFiles) {
-    const src = join(ROOT_DIR, 'scripts', s);
-    if (existsSync(src)) {
-      await cp(src, join(destScripts, s), { recursive: true });
-    }
-  }
+  await copyHelperScripts(ROOT_DIR, join(dest, '.devmind'));
   console.log('  ✔ Installed DevMind helper scripts (.devmind/scripts/verify.mjs, strata.mjs, init.mjs, handover.mjs)');
-  await installReferences(join(dest, '.devmind', 'references'));
+  await installReferences(join(dest, '.devmind', 'skills'));
 
   const targetSet = new Set(targets.map(t => t.toLowerCase()));
   const isAll = targetSet.has('all');
 
   // Universal AGENTS.md
-  if (isAll || targetSet.has('agents') || targetSet.has('openskills')) {
+  if (isAll || targetSet.has('agents') || targetSet.has('openskills') || targetSet.has('antigravity') || targetSet.has('gemini')) {
     await cp(join(DIST_DIR, 'agents', 'AGENTS.md'), join(dest, 'AGENTS.md'));
     const agentsSkillDir = join(dest, '.agents', 'skills', 'devmind');
     await mkdir(agentsSkillDir, { recursive: true });
     await cp(join(DIST_DIR, 'antigravity', 'devmind'), agentsSkillDir, { recursive: true });
-    // Also copy helper scripts into .agents/skills/devmind/scripts
-    await mkdir(join(agentsSkillDir, 'scripts'), { recursive: true });
-    for (const s of scriptFiles) {
-      const src = join(ROOT_DIR, 'scripts', s);
-      if (existsSync(src)) await cp(src, join(agentsSkillDir, 'scripts', s), { recursive: true });
-    }
     console.log('  ✔ Installed Universal AGENTS.md & OpenSkills (.agents/skills/devmind/)');
   }
 
@@ -117,11 +87,6 @@ export async function installLocal(targetDir = '.', targets = ['all'], options =
     const claudeSkillDir = join(dest, '.claude', 'skills', 'devmind');
     await mkdir(claudeSkillDir, { recursive: true });
     await cp(join(DIST_DIR, 'antigravity', 'devmind'), claudeSkillDir, { recursive: true });
-    await mkdir(join(claudeSkillDir, 'scripts'), { recursive: true });
-    for (const s of scriptFiles) {
-      const src = join(ROOT_DIR, 'scripts', s);
-      if (existsSync(src)) await cp(src, join(claudeSkillDir, 'scripts', s), { recursive: true });
-    }
     console.log('  ✔ Installed Claude Code rules (CLAUDE.md & .claude/skills/devmind/)');
   }
 
@@ -161,27 +126,15 @@ export async function installGlobal(targets = ['all'], options = {}) {
 
   const targetSet = new Set(targets.map(t => t.toLowerCase()));
   const isAll = targetSet.has('all');
-  const scriptFiles = HELPER_FILES;
-  const sharedScripts = join(home, '.devmind', 'scripts');
-  await mkdir(sharedScripts, { recursive: true });
-  for (const file of scriptFiles) {
-    await cp(join(ROOT_DIR, 'scripts', file), join(sharedScripts, file), { recursive: true });
-  }
+  await copyHelperScripts(ROOT_DIR, join(home, '.devmind'));
   console.log('  Installed shared helper tools in ~/.devmind/scripts/');
-  await installReferences(join(home, '.devmind', 'references'));
+  await installReferences(join(home, '.devmind', 'skills'));
 
   // Antigravity & Gemini CLI (~/.gemini/config/skills/devmind)
   if (isAll || targetSet.has('antigravity') || targetSet.has('gemini')) {
     const geminiSkillsDir = join(home, '.gemini', 'config', 'skills', 'devmind');
     await mkdir(geminiSkillsDir, { recursive: true });
     await cp(join(DIST_DIR, 'antigravity', 'devmind'), geminiSkillsDir, { recursive: true });
-    // Bundle scripts into skill
-    const gScripts = join(geminiSkillsDir, 'scripts');
-    await mkdir(gScripts, { recursive: true });
-    for (const s of scriptFiles) {
-      const src = join(ROOT_DIR, 'scripts', s);
-      if (existsSync(src)) await cp(src, join(gScripts, s), { recursive: true });
-    }
     console.log(`  ✔ Google Antigravity & Gemini: ~/.gemini/config/skills/devmind/`);
   }
 
@@ -190,12 +143,6 @@ export async function installGlobal(targets = ['all'], options = {}) {
     const claudeGlobalSkillsDir = join(home, '.claude', 'skills', 'devmind');
     await mkdir(claudeGlobalSkillsDir, { recursive: true });
     await cp(join(DIST_DIR, 'antigravity', 'devmind'), claudeGlobalSkillsDir, { recursive: true });
-    const cScripts = join(claudeGlobalSkillsDir, 'scripts');
-    await mkdir(cScripts, { recursive: true });
-    for (const s of scriptFiles) {
-      const src = join(ROOT_DIR, 'scripts', s);
-      if (existsSync(src)) await cp(src, join(cScripts, s), { recursive: true });
-    }
     console.log(`  ✔ Claude Code: ~/.claude/skills/devmind/`);
   }
 
@@ -204,12 +151,6 @@ export async function installGlobal(targets = ['all'], options = {}) {
     const agentsGlobalSkillsDir = join(home, '.agents', 'skills', 'devmind');
     await mkdir(agentsGlobalSkillsDir, { recursive: true });
     await cp(join(DIST_DIR, 'antigravity', 'devmind'), agentsGlobalSkillsDir, { recursive: true });
-    const aScripts = join(agentsGlobalSkillsDir, 'scripts');
-    await mkdir(aScripts, { recursive: true });
-    for (const s of scriptFiles) {
-      const src = join(ROOT_DIR, 'scripts', s);
-      if (existsSync(src)) await cp(src, join(aScripts, s), { recursive: true });
-    }
     console.log(`  ✔ Universal OpenSkills: ~/.agents/skills/devmind/`);
   }
 
@@ -235,7 +176,7 @@ export async function installGlobal(targets = ['all'], options = {}) {
 /**
  * Runs the interactive terminal wizard.
  */
-async function runInteractiveWizard() {
+async function runInteractiveWizard({ installOnly = false } = {}) {
   console.log(BANNER);
 
   const rl = createInterface({
@@ -244,73 +185,90 @@ async function runInteractiveWizard() {
   });
 
   try {
-    console.log('Select action:');
-    console.log('  1) Install DevMind Standards & Skills');
-    console.log('  2) Initialize .devmind/ Memory Vault in current project');
-    console.log('  3) Run Strata Visualizer (Generate .devmind/strata.html)');
-    console.log('  4) Run DevMind Verify / Lint (10 Quality & Security Checks)');
-    console.log('  5) Generate Session Handover (.devmind/handover.md)');
-    console.log('  6) Build Distribution Artifacts (dist/)');
-    console.log('  0) Exit\n');
+    if (!installOnly) {
+      console.log('Select action:');
+      console.log('  1) Install DevMind Standards & Skills');
+      console.log('  2) Initialize .devmind/ Memory Vault in current project');
+      console.log('  3) Run Strata Visualizer (Generate .devmind/strata.html)');
+      console.log('  4) Run DevMind Verify / Lint (10 Quality & Security Checks)');
+      console.log('  5) Generate Session Handover (.devmind/handover.md)');
+      console.log('  6) Build Distribution Artifacts (dist/)');
+      console.log('  0) Exit\n');
 
-    const action = (await rl.question('Enter choice [1]: ')).trim() || '1';
+      const action = (await rl.question('Enter choice [1]: ')).trim() || '1';
 
-    if (action === '0') {
-      console.log('Goodbye!');
-      return;
+      if (action === '0') {
+        console.log('Goodbye!');
+        return;
+      }
+
+      if (action === '2') {
+        await initDevmind('.');
+        console.log('\n✔ Initialized .devmind/ memory vault.');
+        return;
+      }
+
+      if (action === '3') {
+        const { buildStrataHtml } = await import('../scripts/strata.mjs');
+        await buildStrataHtml('.');
+        return;
+      }
+
+      if (action === '4') {
+        const { runVerify } = await import('../scripts/verify.mjs');
+        await runVerify('.');
+        return;
+      }
+
+      if (action === '5') {
+        const { generateHandover } = await import('../scripts/handover.mjs');
+        await generateHandover('.');
+        return;
+      }
+
+      if (action === '6') {
+        const { build } = await import('../scripts/build.mjs');
+        await build();
+        return;
+      }
+      if (action !== '1') throw new Error('Choose a listed action.');
     }
 
-    if (action === '2') {
-      await initDevmind('.');
-      console.log('\n✔ Initialized .devmind/ memory vault.');
-      return;
-    }
+    const platforms = [
+      ['all', 'All supported platforms'],
+      ['antigravity', 'Google Antigravity & Gemini CLI'],
+      ['cursor', 'Cursor IDE'],
+      ['claude', 'Claude Code'],
+      ['windsurf', 'Windsurf / Cascade'],
+      ['openskills', 'Universal OpenSkills / AGENTS.md'],
+      ['copilot', 'GitHub Copilot (local only)'],
+      ['cline', 'Cline / Roo Code (local only)'],
+    ];
+    console.log('\nWhich platform do you want to install DevMind for?');
+    platforms.forEach(([, label], index) => console.log(`  ${index + 1}) ${label}`));
+    let platform;
+    do {
+      const choice = (await rl.question('Platform [1]: ')).trim() || '1';
+      platform = platforms.find((_, index) => String(index + 1) === choice);
+      if (!platform) console.log('Choose one of the listed platforms.');
+    } while (!platform);
+    const targets = [platform[0]];
 
-    if (action === '3') {
-      await buildStrataHtml('.');
-      return;
-    }
-
-    if (action === '4') {
-      await runVerify('.');
-      return;
-    }
-
-    if (action === '5') {
-      await generateHandover('.');
-      return;
-    }
-
-    if (action === '6') {
-      const { build } = await import('../scripts/build.mjs');
-      await build();
-      return;
-    }
-
-    // Install Action
+    const supportsGlobal = !['copilot', 'cline'].includes(platform[0]);
+    const scopes = supportsGlobal ? ['1', '2', '3'] : ['1'];
     console.log('\nWhere do you want to install DevMind?');
     console.log('  1) Local  (Current project / workspace only - Recommended for repos)');
-    console.log('  2) Global (User profile - Available across all projects on this machine)');
-    console.log('  3) Both   (Install globally and equip current project)');
-    const scopeChoice = (await rl.question('Enter choice [1]: ')).trim() || '1';
-
-    console.log('\nWhich AI coding agents do you want to configure?');
-    console.log('  1) All Supported Agents (Antigravity, Cursor, Claude Code, Windsurf, Copilot, Cline, OpenSkills) [Recommended]');
-    console.log('  2) Google Antigravity & Gemini CLI');
-    console.log('  3) Cursor IDE (.cursorrules & .cursor/rules/*.mdc)');
-    console.log('  4) Claude Code (CLAUDE.md & skills)');
-    console.log('  5) Windsurf / Cascade (.windsurfrules)');
-    console.log('  6) GitHub Copilot (.github/copilot-instructions.md)');
-    console.log('  7) Universal OpenSkills / AGENTS.md (.agents/skills/devmind)');
-    const agentChoice = (await rl.question('Enter choice [1]: ')).trim() || '1';
-
-    let targets = ['all'];
-    if (agentChoice === '2') targets = ['antigravity'];
-    else if (agentChoice === '3') targets = ['cursor'];
-    else if (agentChoice === '4') targets = ['claude'];
-    else if (agentChoice === '5') targets = ['windsurf'];
-    else if (agentChoice === '6') targets = ['copilot'];
-    else if (agentChoice === '7') targets = ['openskills'];
+    if (supportsGlobal) {
+      console.log('  2) Global (User profile - Available across all projects on this machine)');
+      console.log('  3) Both   (Install globally and equip current project)');
+    }
+    let scopeChoice;
+    do {
+      scopeChoice = (await rl.question('Installation scope [1]: ')).trim() || '1';
+      if (!scopes.includes(scopeChoice)) {
+        console.log(supportsGlobal ? 'Choose 1 (local), 2 (global), or 3 (both).' : 'This platform supports local installation only. Choose 1.');
+      }
+    } while (!scopes.includes(scopeChoice));
 
     if (scopeChoice === '1' || scopeChoice === '3') {
       await installLocal('.', targets);
@@ -319,9 +277,12 @@ async function runInteractiveWizard() {
       await installGlobal(targets);
     }
 
-    const runCheck = (await rl.question('\nRun initial DevMind quality check now? [Y/n]: ')).trim().toLowerCase();
-    if (runCheck !== 'n') {
-      await runVerify('.');
+    if (scopeChoice === '1' || scopeChoice === '3') {
+      const runCheck = (await rl.question('\nRun initial DevMind quality check now? [Y/n]: ')).trim().toLowerCase();
+      if (runCheck !== 'n') {
+        const { runVerify } = await import('../scripts/verify.mjs');
+        await runVerify('.');
+      }
     }
   } finally {
     rl.close();
@@ -350,6 +311,7 @@ Commands:
   build                 Compile multi-agent distribution artifacts into dist/
 
 Install Options:
+  --interactive        Choose installation scope and platform in the wizard
   -l, --local           Install locally into current workspace
   -g, --global          Install globally into user home directory
   -t, --target <list>   Comma-separated target agents (all, antigravity, cursor, claude, windsurf, copilot, cline, openskills)
@@ -365,9 +327,17 @@ General Options:
 
 async function main() {
   const args = process.argv.slice(2);
+  const command = args[0] && !args[0].startsWith('-') ? args[0] : null;
+  const scripts = { verify: 'verify', check: 'verify', lint: 'verify', inspect: 'inspect', contrast: 'contrast', 'browser-audit': 'browser-audit', quality: 'quality', review: 'review', eval: 'eval', init: 'init' };
 
-  if (args.includes('-v') || args.includes('--version')) {
+  if (args[0] === '-v' || args[0] === '--version') {
     console.log(`v${VERSION}`);
+    return;
+  }
+
+  if (Object.hasOwn(scripts, command)) {
+    const { main: run } = await import(`../scripts/${scripts[command]}.mjs`);
+    await run(args.slice(1).map(arg => arg === '-h' ? '--help' : arg));
     return;
   }
 
@@ -376,16 +346,9 @@ async function main() {
     return;
   }
 
-  const command = args[0] && !args[0].startsWith('-') ? args[0] : null;
-
-  if (command === 'init') {
-    await initDevmind(args[1] && !args[1].startsWith('-') ? args[1] : '.');
-    return;
-  }
-
   if (command === 'strata') {
+    const { generateStrataData, buildStrataHtml } = await import('../scripts/strata.mjs');
     if (args.includes('--json')) {
-      const { generateStrataData } = await import('../scripts/strata.mjs');
       const data = await generateStrataData(args[1] && !args[1].startsWith('-') ? args[1] : '.');
       console.log(JSON.stringify(data, null, 2));
     } else {
@@ -395,24 +358,8 @@ async function main() {
     return;
   }
 
-  if (command === 'verify' || command === 'check' || command === 'lint') {
-    await verifyMain(args.slice(1));
-    return;
-  }
-  if (command === 'inspect') {
-    await inspectMain(args.slice(1));
-    return;
-  }
-  if (command === 'contrast') {
-    await contrastMain(args.slice(1));
-    return;
-  }
-  if (command === 'browser-audit') { await browserMain(args.slice(1)); return; }
-  if (command === 'quality') { await qualityMain(args.slice(1)); return; }
-  if (command === 'review') { await reviewMain(args.slice(1)); return; }
-  if (command === 'eval') { await evalMain(args.slice(1)); return; }
-
   if (command === 'handover') {
+    const { generateHandover } = await import('../scripts/handover.mjs');
     await generateHandover(args[1] && !args[1].startsWith('-') ? args[1] : '.');
     return;
   }
@@ -424,6 +371,14 @@ async function main() {
   }
 
   if (command === 'install') {
+    if (args.includes('--interactive') || (args.length === 1 && process.stdin.isTTY)) {
+      if (args.length > 2 || (args.length === 2 && args[1] !== '--interactive')) {
+        throw new Error('Use --interactive without other install options.');
+      }
+      await runInteractiveWizard({ installOnly: true });
+      return;
+    }
+    if (args.length === 1) throw new Error('Choose --interactive, or specify --local/--global and --target for a non-interactive install.');
     const isGlobal = args.includes('-g') || args.includes('--global');
     const isLocal = args.includes('-l') || args.includes('--local') || !isGlobal;
     const targetIdx = args.findIndex(a => a === '-t' || a === '--target');

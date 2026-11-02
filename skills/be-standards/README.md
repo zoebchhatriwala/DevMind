@@ -18,6 +18,10 @@ When activated, this skill instructs the agent to:
 10. Generate an **OpenAPI spec** from Zod schemas for every endpoint.
 11. Apply the **backend security checklist** and reference security-standards for cross-cutting controls.
 
+## Topic references
+
+Read `SKILL.md` for the concise gates and links. Detailed sections below are preserved in `references/` and loaded only when relevant.
+
 ## Sections
 
 | Sec | Topic |
