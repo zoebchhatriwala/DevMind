@@ -277,9 +277,10 @@ test('artifact writes cannot traverse a symlink outside the project', async t =>
   });
 });
 
-test('frontend and server cases prepare isolated seeds without overwriting work', async () => {
+test('web, server, and application cases prepare isolated seeds without overwriting work', async () => {
   const cases = await loadCases();
-  assert.equal(cases.length, 8);
+  assert.equal(cases.length, 10);
+  assert.equal(new Set(cases.map(entry => entry.id)).size, cases.length);
   await fixture({}, async dir => {
     for (const entry of cases) {
       const prepared = await prepareCase(entry.id, entry.id, dir);
@@ -321,5 +322,5 @@ test('built frontend and adapter references resolve and bundled eval data is exe
   }
   const result = spawnSync(process.execPath, [join(root, 'dist/antigravity/skills/fe-standards/scripts/eval.mjs'), '--list'], { cwd: dirname(root), encoding: 'utf8', shell: false });
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(JSON.parse(result.stdout).length, 8);
+  assert.deepEqual(JSON.parse(result.stdout).map(entry => entry.id).sort(), (await loadCases()).map(entry => entry.id).sort());
 });

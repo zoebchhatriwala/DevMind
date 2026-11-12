@@ -4,7 +4,7 @@
 
 Use the bundled tools from the installed skill's `scripts/` or this repository's root `scripts/`.
 
-1. List cases with `node <scripts>/eval.mjs --list`. Five browser cases cover frontend behavior; three Node cases cover pagination, tenant authorization, and transactional failure recovery.
+1. List cases with `node <scripts>/eval.mjs --list`. Five browser cases cover frontend behavior; five Node cases cover pagination, tenant authorization, transactional failure recovery, desktop caller authority, and mobile acknowledgment/retry ordering. The application contracts do not replace native runtime, persistence, or release integration checks.
 2. Prepare two empty isolated workspaces from the same case using `--case <id> --prepare <directory>`. Give the same task and seed to the same fixed model/version/settings, once without DevMind and once with it. Record the skill revision. Do not give the baseline the skill's instructions or a corrected solution.
 3. Let the model perform the task. Record actual provider/runner metrics when available. Do not invent missing token, cost, or latency values.
 4. Evaluate each candidate with `node <scripts>/eval.mjs <candidate> --case <id> --model-run <run.json>`. Browser cases also require `--url <loopback-url>` and existing Playwright/browser tooling. Node cases execute bundled contracts against `operation.mjs`; use isolated environments and review the code before executing it.

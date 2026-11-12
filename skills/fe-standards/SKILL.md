@@ -25,6 +25,7 @@ Reject an implementation plan that could apply unchanged to three unrelated prod
 
 For a new page or a substantial redesign, read the nearest [annotated design example](./references/fe-design-examples.md). Use its decision criteria without copying its composition into unrelated products. For a behavior change, page/journey review, or skill evaluation, read [verification and evaluation](./references/fe-verification.md). Small patches need only the affected checks and states.
 
+- For multi-step application workflows, routing, permissions, or persistence across screens, read [web application journeys](./references/fe-app-journeys.md).
 - For slow loading, delayed interactions, layout shifts, or a substantial change to assets/client code, read [frontend performance](./references/fe-performance.md).
 - For multiple languages, locale-sensitive dates/numbers/currencies, or right-to-left content, read [internationalization](./references/fe-internationalization.md). Ordinary copy edits do not require a translation system.
 

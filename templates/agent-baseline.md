@@ -12,13 +12,13 @@ Use the first sufficient option: omit unnecessary work, reuse existing code, use
 
 ## Preserve boundaries
 
-Validate untrusted data with the project's runtime schemas. Keep strict types and server authority over identity, permissions, ownership, and prices. Parameterize queries, encode output, protect secrets, and preserve authentication and redaction. Handle failures without exposing internals. Follow framework idioms rather than imposing a new layering scheme or dependency.
+Validate untrusted data with the project's runtime schemas. Keep strict types and server authority over identity, permissions, ownership, and prices. Desktop hosts own local privileged operations; renderer calls do not grant authority. Parameterize queries, encode output, protect secrets, and preserve authentication and redaction. Handle failures without exposing internals. Follow framework idioms rather than imposing a new layering scheme or dependency.
 
 For UI work, establish the audience, primary task, hierarchy, content, and each action's outcome. Reuse the design system and accessible native controls. Provide meaningful pending, error, empty, and success states. Keep copy concrete, claims truthful, and layouts usable on mobile and desktop. No dead controls, fake progress, or success before persistence.
 
 ## Load only relevant guidance
 
-Use the domain catalog below. Small patches need the entrypoint gates and affected checks. Load deeper references only for the current topic. Security invariants always apply; a dedicated security manual is needed only for the boundary being changed or reviewed. Generate Strata only when the user requests a map.
+Use the domain catalog below. Web UI uses fe-standards; installed desktop/mobile apps use desktop-standards/mobile-standards for native boundaries, lifecycle, and releases. Small patches need the entrypoint gates and affected checks. Load deeper references only for the current topic. Security invariants always apply; a dedicated security manual is needed only for the boundary being changed or reviewed. Generate Strata only when the user requests a map.
 
 Tools are in `.devmind/scripts/` for a rules installation, an installed skill's `scripts/`, or this source repository's root `scripts/`. Verify the path and pass the actual project directory. `inspect.mjs <project> --json` discovers reuse and checks without running them. `verify.mjs <project> --json --strict` reports source findings and coverage, never proof of security or accessibility. `quality.mjs <project> --run --json` runs existing project checks. Do not install tools automatically or rewrite source to satisfy a heuristic.
 

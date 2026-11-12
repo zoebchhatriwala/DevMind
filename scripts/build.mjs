@@ -14,6 +14,8 @@ const AGENTS_MD_PATH = join(ROOT_DIR, 'AGENTS.md');
 // Globs mapping for Cursor rules (.mdc) and Copilot instructions
 const SKILL_GLOBS = {
   'fe-standards': '**/*.{tsx,jsx,css,scss,html,vue,svelte}',
+  'desktop-standards': '**/{electron,desktop,src-tauri}/**,**/tauri.conf.*,**/electron-builder.*,**/forge.config.*',
+  'mobile-standards': '**/{android,ios,mobile}/**,**/*.{swift,kt,kts,dart},**/app.json,**/app.config.*,**/pubspec.yaml',
   'be-standards': '**/*.{ts,js,mjs,cjs,go,py,rs}',
   'security-standards': '**/*',
   'db-standards': '**/{schema,migrations,models,entities}/**,**/*.sql,**/prisma/**,**/drizzle/**',
@@ -127,14 +129,14 @@ Inspect the returned components, tokens, helpers, quality scripts, and dependenc
 | --- | --- |
 ${catalog}
 
-For UI work, start with fe-standards. For a large domain guide, read its pre-flight gate and relevant topic slices rather than loading the entire file.
+For web UI work, start with fe-standards. Installed desktop and mobile applications use desktop-standards and mobile-standards for native boundaries, lifecycle, and delivery. Add shared web guidance only when relevant to a web-based view. For a large domain guide, read its pre-flight gate and relevant topic slices rather than loading the entire file.
 The frontend guide links annotated design examples and verification procedures. Load them for substantial UI work and skill evaluation; use only affected checks for small patches.
 
 ## ⚡ Golden Patterns
 
 - Define the user-visible outcome and its failure/recovery path before implementation. UI work also needs task-specific hierarchy, content, visual direction, and functioning controls. Preserve an established design system.
 - Reuse native controls and existing typed components. Avoid interchangeable hero/card templates, invented claims, fake progress, no-op handlers, and success before persistence.
-- Keep authority on the server. Validate untrusted data, enforce access checks, parameterize queries, and redact secrets. Never infer that one matching string proves a route is protected.
+- Keep authority at the trusted operation: server handlers or privileged desktop hosts. Validate untrusted data, enforce access checks, parameterize queries, and redact secrets. Never infer that one matching string proves a boundary is protected.
 - Use framework idioms. Do not introduce classes, repositories, wrappers, flags, packages, or duplicate state without an actual requirement. Keep changes focused on the shared root cause.
 - Comments explain non-obvious constraints, not compliance with this skill. Product copy names the user's task rather than internal pipelines.
 
@@ -150,7 +152,7 @@ All paths below are relative to this installed skill. Pass the project directory
 | scripts/browser-audit.mjs <project> <loopback-url> --plan <plan.json> | Capture mobile/desktop browser evidence and execute explicit outcome assertions using existing Playwright. |
 | scripts/quality.mjs <project> --run --json | Execute existing named project checks; omit --run for discovery only. |
 | scripts/review.mjs <project> --quality <report> --browser <report> --assessment <assessment> | Combine current evidence; missing checks and observations remain unverified. |
-| scripts/eval.mjs --list | Discover eight frontend/server seeded tasks for testing the skill's actual output. |
+| scripts/eval.mjs --list | Discover ten web/server/application seeded tasks for testing the skill's actual output. |
 | scripts/strata.mjs <project> | Generate the requested architecture map. |
 | scripts/init.mjs <project> | Initialize local task memory when needed. |
 | scripts/handover.mjs <project> | Refresh session continuity notes. |

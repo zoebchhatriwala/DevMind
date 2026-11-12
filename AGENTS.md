@@ -19,6 +19,8 @@ When a user request touches any of the following file globs or task types, you *
 | **`db-standards`** | Database schemas, migrations, ORM models (Prisma/Drizzle/TypeORM/SQL), indexes, transactions, queries | `**/{schema,migrations,models,entities}/**`, `**/*.sql`, `**/prisma/**`, `**/drizzle/**` |
 | **`deployment`** | Dockerfiles, docker-compose, CI/CD workflows (.github/workflows), Kubernetes, Terraform, health probes | `**/{.github,deploy,infra}/**`, `**/Dockerfile*`, `**/docker-compose*`, `**/*.tf` |
 | **`fe-standards`** | UI components, pages, client state, forms, data fetching hooks, CSS/Tailwind, accessibility, frontend performance | `**/*.{tsx,jsx,css,scss,html,vue,svelte}` |
+| **`desktop-standards`** | Installed desktop apps, Electron, Tauri, privileged IPC, local files, native windows, installers, updates | `**/{electron,desktop,src-tauri}/**`, `**/tauri.conf.*`, `**/electron-builder.*`, `**/forge.config.*` |
+| **`mobile-standards`** | iOS/Android apps, React Native, Expo, Flutter, Swift/Kotlin, lifecycle, permissions, offline recovery | `**/{android,ios,mobile}/**`, `**/*.{swift,kt,kts,dart}`, `**/app.json`, `**/app.config.*`, `**/pubspec.yaml` |
 | **`security-standards`** | User input validation, file uploads, secrets/env vars, rate limiting, CORS, CSP headers, encryption, PII/payments | `**/*` |
 | **`strata`** | Visual code map, "generate code map", "visualize code", "show what I built", user journeys, trust boundaries, blast radius | `**/*` |
 

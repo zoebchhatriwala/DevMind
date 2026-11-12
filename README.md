@@ -5,8 +5,11 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](./CONTRIBUTING.md)
 [![Engineering Baseline](https://img.shields.io/badge/AI%20Agent-Engineering%20Baseline-emerald.svg)](./AGENTS.md)
 
-> **Pragmatic engineering standards and sanity checks for AI coding agents.**  
-> Keeps Claude Code, Cursor, Windsurf, Cline, and GitHub Copilot from over-engineering, writing sloppy defaults, or drifting off track mid-session.
+> **Engineering guidance and runnable checks for AI-built web, mobile, and desktop applications.**
+>
+> Helps coding agents inspect existing code, complete user journeys, test recovery paths, and report the evidence behind their changes.
+
+DevMind combines focused domain guides with source checks, browser evidence, project quality gates, and reproducible evaluation tasks. Native app guides cover device and host boundaries separately from browser behavior. Passing a scanner or printing a receipt is never a substitute for testing the application.
 
 ---
 
@@ -105,7 +108,7 @@ These are text-size measurements, not model token counts or a benchmark of codin
 
 The CLI loads command implementations when invoked, and memory initialization does not scan the project or generate Strata. Request the map separately when needed. No runtime dependencies are required.
 
-## The 9 Skill Domains
+## The 11 Skill Domains
 
 DevMind includes specialized, modular rules across the full stack:
 
@@ -118,6 +121,8 @@ DevMind includes specialized, modular rules across the full stack:
 | **[`db-standards`](./skills/db-standards/)** | Databases & Migrations | Zero-downtime expand-contract migrations, foreign key indexes, N+1 query elimination, keyset cursor pagination, and ACID transaction boundaries. |
 | **[`deployment`](./skills/deployment/)** | Docker, CI/CD & Cloud | Multi-stage rootless Dockerfiles (`USER nonroot`), explicit health probes, SHA-pinned GitHub Actions, Trivy vulnerability scans, and zero hardcoded secrets. |
 | **[`fe-standards`](./skills/fe-standards/)** | UI, Accessibility & Design | Task-specific composition, complete interactions, existing design-system reuse, honest content, WCAG 2.2 AA, and real browser verification. No forced SaaS templates or blanket palette bans. |
+| **[`desktop-standards`](./skills/desktop-standards/)** | Installed Desktop Applications | Privileged IPC and command authority, scoped file access, window lifecycle, recoverable saves, packaging, signing, and update verification. |
+| **[`mobile-standards`](./skills/mobile-standards/)** | iOS & Android Applications | Device permissions, secure storage, lifecycle interruptions, offline recovery, stable retry identity, native interactions, and release evidence. |
 | **[`security-standards`](./skills/security-standards/)** | AppSec & Defense-in-Depth | NIST SSDF & OWASP ASVS compliance, Argon2id hashing, AES-256-GCM encryption, magic-byte file validation, rate limiting, and zero-tolerance dependency audit. |
 | **[`strata`](./skills/strata/)** | Code Visualization & Trust Boundaries | Visual app maps for vibe coders, 3 behavioral zones (Browser/Server/Database), 10 high-value security checks with copyable AI fix prompts, animated journey flows, and AI Change Ledger. |
 
@@ -185,14 +190,14 @@ Built skill folders include their tools and shared modules. Rules-only distribut
 | **`scripts/browser-audit.mjs`** | Isolated local browser screenshots, explicit keyboard/pointer assertions, DOM hints, and runtime error counts. Reuses installed Playwright. | `npx devmind browser-audit . http://127.0.0.1:3000 --plan browser-plan.json --json` |
 | **`scripts/quality.mjs`** | Discover existing root package formatting/lint/type/test scripts; execute only with `--run`. Missing scripts remain unverified. | `npx devmind quality . --run --json` |
 | **`scripts/review.mjs`** | Combine current source/check/browser/reviewer evidence. Reject stale source fingerprints, altered screenshots, and missing observations. | `npx devmind review . --quality .devmind/quality.json --browser .devmind/browser/report.json --assessment .devmind/assessment.json --json` |
-| **`scripts/eval.mjs`** | Prepare eight isolated frontend/server tasks and evaluate actual candidate behavior. Compare identical case definitions and browser environments. | `npx devmind eval --list` |
+| **`scripts/eval.mjs`** | Prepare ten isolated web/server/application tasks and evaluate candidate behavior. Compare identical case definitions and environments. | `npx devmind eval --list` |
 | **`scripts/strata.mjs`** | Behavioral architecture mapper: automatically inspects project across Browser, Server, and Database zones, checks trust boundaries, and generates self-contained `.devmind/strata.html`. | `npx devmind strata` or `node scripts/strata.mjs` |
 | **`scripts/init.mjs`** | Memory Vault bootstrapper: auto-detects tech stack (runtime, framework, DB, styling) and generates `.devmind/task.md`, `memory.md`, and `rules.md` with `.gitignore` safety. | `npx devmind init` or `node scripts/init.mjs` |
 | **`scripts/handover.mjs`** | Session continuity: inspects git diffs and tracked shortcuts (`// devmind:`) to update `.devmind/handover.md`. | `npx devmind handover` or `node scripts/handover.mjs` |
 
 The frontend skill loads [annotated design examples](skills/fe-standards/references/fe-design-examples.md) and [verification/evaluation procedures](skills/fe-standards/references/fe-verification.md) only when relevant. Small patches use affected checks; page/journey changes use fuller evidence. `eval` reports `behaviorStatus` separately from overall reviewed status, so successful functional checks do not hide missing reviewer evidence. The evaluator does not invoke a model itself or claim broad improvement from one case.
 
-The eight evaluation cases include five browser tasks and three Node contracts: pagination validation, tenant authorization, and atomic transfer rollback. Node cases do not require a server URL. Candidate code executes locally, so use an isolated workspace. For a controlled skill experiment, see [the evaluation procedure](skills/ai-standards/references/ai-standards-evaluations.md). `--model-run` records the actual model/settings, skill revision, and observed resource metrics. Comparisons reject differing declared models/settings; missing provenance remains explicitly unverified. No cross-model improvement benchmark is claimed.
+The ten evaluation cases include five browser tasks and five Node contracts: pagination validation, tenant authorization, atomic transfer rollback, desktop IPC authority, and mobile outbox retry after a lost acknowledgment. Node cases do not require a server URL. The desktop/mobile cases isolate logic contracts; they do not establish native runtime security, durable storage, or packaged release behavior. Candidate code executes locally, so use an isolated workspace. For a controlled skill experiment, see [the evaluation procedure](skills/ai-standards/references/ai-standards-evaluations.md). `--model-run` records the actual model/settings, skill revision, and observed resource metrics. Comparisons reject differing declared models/settings; missing provenance remains explicitly unverified. No cross-model improvement benchmark is claimed.
 
 The handover helper preserves manual notes and refreshes only its marked repository snapshot. It reports quality as unverified: generating a summary does not establish that tests passed.
 

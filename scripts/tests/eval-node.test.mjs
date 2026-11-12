@@ -6,6 +6,21 @@ import { compareEvaluations, evaluateCase, loadCases, prepareCase, validateModel
 import { fixture } from './helpers.mjs';
 
 const solutions = {
+  'desktop-ipc-authority': `export function createPreferencesHandler(trustedWebContents, store) {
+    return async (event, payload) => {
+      if (!event || event.sender !== trustedWebContents || !event.senderFrame || event.senderFrame !== trustedWebContents.mainFrame || event.senderFrame.origin !== 'app://devmind') throw new Error('Denied');
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload) || Reflect.ownKeys(payload).length !== 1 || !Object.hasOwn(payload, 'theme') || !['light', 'dark', 'system'].includes(payload.theme)) throw new Error('Invalid preferences');
+      return await store.setTheme(payload.theme);
+    };
+  }`,
+  'mobile-outbox-retry': `export async function flushPending(queue, send) {
+    while (queue.length) {
+      const item = queue[0];
+      const ack = await send(item);
+      if (!ack || typeof ack !== 'object' || Array.isArray(ack) || ack.id !== item.id) throw new Error('Invalid acknowledgment');
+      queue.shift();
+    }
+  }`,
   'api-pagination': `export function normalizePage(query) {
     if (!query || typeof query !== 'object' || Array.isArray(query)) throw new Error('Invalid query');
     const number = (value, fallback) => {
@@ -34,7 +49,7 @@ const solutions = {
   }`,
 };
 
-test('server evaluation contracts reject broken seeds and pass real corrected behavior', async () => {
+test('server and application evaluation contracts reject broken seeds and pass corrected behavior', async () => {
   await fixture({}, async directory => {
     for (const entry of (await loadCases()).filter(entry => entry.runner === 'node')) {
       const prepared = await prepareCase(entry.id, entry.id, directory);
@@ -54,6 +69,36 @@ test('server evaluation contracts reject broken seeds and pass real corrected be
       assert.throws(() => compareEvaluations(without, revised), /Model run/);
     }
   });
+});
+
+test('application contracts reject plausible incomplete authority and acknowledgment fixes', async () => {
+  const candidates = [
+    ['desktop-ipc-authority', `export function createPreferencesHandler(trusted, store) {
+      return async (event, payload) => {
+        if (event?.senderFrame?.origin !== 'app://devmind') throw new Error('Denied');
+        if (!payload || typeof payload !== 'object' || Reflect.ownKeys(payload).length !== 1 || !['light','dark','system'].includes(payload.theme)) throw new Error('Invalid');
+        return store.setTheme(payload.theme);
+      };
+    }`],
+    ['desktop-ipc-authority', solutions['desktop-ipc-authority'].replace(" || event.senderFrame.origin !== 'app://devmind'", '')],
+    ['mobile-outbox-retry', `export async function flushPending(queue, send) {
+      while(queue.length) { await send(queue[0]); queue.shift(); }
+    }`],
+    ['mobile-outbox-retry', `export async function flushPending(queue, send) {
+      while(queue.length) {
+        const item = queue[0];
+        const ack = await send({...item, id: item.id + '-retry'});
+        if(!ack || ack.id !== item.id + '-retry') throw new Error('Invalid acknowledgment');
+        queue.shift();
+      }
+    }`],
+  ];
+  for (const [id, candidate] of candidates) {
+    await fixture({'operation.mjs': candidate}, async directory => {
+      const report = await evaluateCase(id, directory);
+      assert.equal(report.checks.find(check => check.id === 'node-contract').status, 'failed', id);
+    });
+  }
 });
 
 test('Node evaluation rejects early success exits, swallowed assertion failures, and fake output', async () => {
