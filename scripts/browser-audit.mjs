@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { join, relative, resolve } from 'node:path';
 import { isMain } from './lib/project.mjs';
 import { artifactPath, assertKeys, evidencePath, fingerprint, optionalPackage, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
+import { WORKSPACE } from './lib/layout.mjs';
 
 const ACTIONS = new Set(['click', 'fill', 'press', 'select', 'check', 'expectVisible', 'expectHidden', 'expectText', 'expectValue', 'expectCount', 'expectFocused']);
 export function validatePlan(plan = {}) {
@@ -91,7 +92,7 @@ export async function auditBrowser(targetDir, value, options = {}) {
   const root = await realpath(resolve(targetDir));
   const url = localUrl(value);
   const plan = validatePlan(options.plan);
-  const output = options.output ?? '.devmind/browser';
+  const output = options.output ?? WORKSPACE.browser;
   const directory = await evidencePath(root, output);
   const sourceDigest = await fingerprint(root);
   const checks = [];
@@ -184,11 +185,11 @@ export async function auditBrowser(targetDir, value, options = {}) {
 
 export async function main(args = process.argv.slice(2)) {
   const { values, flags, positional } = parseOptions(args, ['--plan', '--out', '--channel', '--tooling']);
-  if (flags.has('--help')) { console.log('Usage: browser-audit.mjs <project> <loopback-url> [--plan file.json] [--out .devmind/browser] [--channel chrome|msedge] [--tooling directory] [--json]'); return; }
+  if (flags.has('--help')) { console.log(`Usage: browser-audit.mjs <project> <loopback-url> [--plan file.json] [--out ${WORKSPACE.browser}] [--channel chrome|msedge] [--tooling directory] [--json]`); return; }
   if (positional.length !== 2) throw new Error('Expected project directory and loopback URL.');
   if (values['--channel'] && !['chrome', 'msedge'].includes(values['--channel'])) throw new Error('Supported channels: chrome, msedge.');
   const result = await auditBrowser(...positional, { plan: values['--plan'] ? await readJson(resolve(positional[0], values['--plan'])) : {}, output: values['--out'], channel: values['--channel'], toolingRoot: values['--tooling'] });
-  const file = await writeReport(result.root, join(values['--out'] ?? '.devmind/browser', 'report.json'), result);
+  const file = await writeReport(result.root, join(values['--out'] ?? WORKSPACE.browser, 'report.json'), result);
   console.log(flags.has('--json') ? JSON.stringify(result, null, 2) : `${result.status}: ${file}`);
   process.exitCode = reportExit(result.status);
 }

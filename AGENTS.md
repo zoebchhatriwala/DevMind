@@ -27,7 +27,7 @@ When a user request touches any of the following file globs or task types, you *
 <EXECUTION_RULE>
 ### CRITICAL PROTOCOL FOR ALL CODING AGENTS:
 1. **ASSESS TASK SCOPE & TIER**:
-   - **Tier 1: Targeted Edits & Bug Fixes (Micro-Patches)**: For localized bug fixes, CSS/UI tweaks, or single-function changes in existing files, **DO NOT** dump entire 50KB domain skill files into context. The universal engineering baseline in this document (Simplicity Ladder, Zod runtime boundaries, zero `any`, Pino logging, WCAG 2.2 AA) is already active. Fix root causes directly with the shortest working diff.
+   - **Tier 1: Targeted Edits & Bug Fixes (Micro-Patches)**: For clear localized changes, inspect the target and direct callers, fix the root cause, and run affected checks. Skip interviews, formal plans, brief files, repository-wide scans, and unrelated domain loading. Expand only for observed coupling or risk. The universal baseline and security/accessibility invariants still apply.
    - **Tier 2: Macro-Features & Scaffolding (Architectural Work)**: For new endpoints, database migrations, auth flows, major UI subsystems, or new services:
      a. Identify primary domains via the Mandatory Skill Routing Matrix.
      b. Read the relevant `skills/<domain>/SKILL.md` Pre-Flight Gates and Golden Patterns.
@@ -130,7 +130,9 @@ Once the pre-coding review is complete:
 
 ### Quality Contract: Evidence Before Completion
 
-- **Before building**: Inspect callers, framework conventions, dependencies, and existing helpers. Use the installed skill's `scripts/inspect.mjs [project] --json` for discovery. Reuse the current formatter, linter, schemas, components, and design tokens; do not install competing tools.
+- **Intent and proportional effort**: Preserve the original user request, observable acceptance, constraints, and explicit scope. Treat assumptions as unconfirmed and ask only consequential unresolved questions. Current user steering overrides saved notes. For ambiguous, multi-step, or resumed work, agents may write `.devmind/tasks/brief.json` and run `brief.mjs <project> --spec .devmind/tasks/brief.json` for bounded source context. `--review` flags scope outliers, including pre-existing edits; it does not prove intent/behavior or authorize edits. Clear one-line patches need no brief or planning ceremony. Byte budgets measure text, not model tokens.
+
+- **Before building**: Inspect callers, framework conventions, dependencies, and existing helpers. Use `scripts/inspect.mjs [project] --json` when repository-wide discovery is needed; targeted reads suffice for a localized patch. Reuse the current formatter, linter, schemas, components, and tokens; do not install competing tools.
 - **Before substantial UI work**: Record audience, primary task, content hierarchy, visual direction, and each action's visible outcome in task notes. Use real supplied content or clearly identified demo data. A plan interchangeable across unrelated products needs refinement.
 - **While coding**: Prefer framework primitives and minimum domain code. Do not add passthrough wrappers, speculative flags, duplicate state, no-op event handlers, arbitrary delays, fake progress, or success messages before actual success. Cover meaningful failure and recovery paths. Comments explain constraints, not compliance.
 - **Before finishing**: Run source checks plus existing project quality gates and at least one behavior check for changed non-trivial logic. Trace authorization and validation through real call paths. Review UI in a browser at mobile and desktop widths, using keyboard and pointer and checking pending/error/empty states. Fix observed defects and rerun affected checks.
@@ -211,8 +213,8 @@ Strata provides a visual map of the application designed for vibe coders to unde
      - Scan the project structure across Browser, Server, and Database/Services zones.
      - Evaluate the 10 high-value security & flow checks (`SEC-001` through `SEC-010`).
      - Extract recent AI edit consequences for the Change Ledger.
-     - Generate or update `.devmind/strata.html` in the project root.
-  3. Deliver the direct clickable file link in your response: `file://<project-root>/.devmind/strata.html`.
+     - Generate or update `.devmind/maps/strata.html` in the project root.
+  3. Deliver the direct clickable file link in your response: `file://<project-root>/.devmind/maps/strata.html`.
 
 ### The 3 Visual Overlays (One Map, Three Questions)
 1. **Structure Overlay ("What did I actually build?")**:
@@ -265,15 +267,24 @@ To slash token waste and preserve context across sessions, agents externalize ac
 ├── memory.md      # Persistent repository facts, stack choices & tracked shortcuts
 ├── rules.md       # Project-specific user rules, conventions & constraints
 ├── handover.md    # Session continuity summary for zero-loss resumption
-└── strata.html    # Interactive behavioral map & security boundary visualizer
+├── tasks/         # Working briefs, plans, and task input files
+├── reports/       # Machine evidence; browser and eval outputs stay grouped
+├── notes/         # Human assessments and completed-task notes
+├── logs/          # Build, test, and command output
+├── maps/          # strata.html and other generated visualizations
+└── scratch/       # Temporary scripts and fixtures grouped by task
 ```
 
 ### The 4 Token Optimization Rules
 
 1. **Slice, Don't Dump**: Never read entire 1,000-line files when 30 lines are relevant. Use targeted grep and line-number ranges. Never echo multi-page terminal outputs or bundle files back to the user.
 2. **Externalize Progress**: Update `.devmind/task.md` instead of re-generating lengthy checklists in chat turns. In chat, output a single line: `Updated .devmind/task.md [Step 2/4 complete]`.
-3. **Fast-Boot from Memory**: At the start of a turn or session, read `.devmind/task.md`, `.devmind/memory.md`, and `.devmind/rules.md` (~300 tokens) to immediately rehydrate context and user rules instead of re-analyzing configs and directories (~3,000+ tokens).
+3. **Fast-Boot from Memory**: Read project rules and the active task, then only relevant verified memory facts. Do not reload accumulated historical handovers. A saved brief is a working interpretation; current user messages take precedence. Measure actual context when making savings claims rather than assuming fixed token counts.
 4. **Zero Filler**: Lead directly with code or concrete answers. No pleasantries, preambles, or unsolicited design theory essays.
+
+### Artifact Placement
+
+Keep the four active memory files and installer-owned `install.json` at the root. Store generated files in the folders above, using a task subfolder when several artifacts belong together. Preserve installed `scripts/`, `skills/`, `templates/`, tooling, and cache locations. Create folders on demand; do not scaffold empty task trees. Use stable names for current tool reports. Preview old loose files with `organize.mjs <project>`; use `--apply` only for requested organization. Preserve contents, skip collisions/links, and retain the move journal. Do not rewrite historical report fingerprints after moving files; regenerate evidence when its referenced paths change.
 
 ### Git Tracking Protocol (Sensible Defaults & User Choice)
 
@@ -375,13 +386,14 @@ DevMind provides zero-dependency executable Node.js scripts that AI coding agent
 | Script | Automation Capabilities | Agent Invocation |
 | :--- | :--- | :--- |
 | **`scripts/inspect.mjs`** | Read-only discovery of packages, quality scripts, components, helpers, and tokens. Reports names and paths without running project commands. | `node <skill>/scripts/inspect.mjs [project] --json` or `npx devmind inspect` |
+| **`scripts/brief.mjs`** | Read-only intent brief with explicit acceptance/scope and selected source ranges under a UTF-8 byte budget. Optional Git scope review; no model calls or project-command execution. | `node <skill>/scripts/brief.mjs [project] --spec .devmind/tasks/brief.json` or `npx devmind brief` |
 | **`scripts/verify.mjs`** | Read-only source heuristics with file/line evidence, explicit coverage, and manual review gaps. `--strict` fails on warnings. Does not automatically fix source. | `node <skill>/scripts/verify.mjs [project] --json --strict` or `npx devmind verify` |
 | **`scripts/contrast.mjs`** | Calculate WCAG contrast for opaque hex colors. Default exit threshold is 4.5:1; `--large` or `--non-text` uses 3:1. | `node <skill>/scripts/contrast.mjs "#111827" "#ffffff" --json` or `npx devmind contrast "#111827" "#ffffff"` |
 | **`scripts/browser-audit.mjs`** | Reuse installed Playwright for isolated local browser captures, explicit pointer/keyboard assertions, DOM hints, and runtime error counts. Missing tooling remains not-run. | `node <skill>/scripts/browser-audit.mjs <project> <loopback-url> --plan <plan.json> --json` |
 | **`scripts/quality.mjs`** | Discover existing formatting/lint/type/test scripts. `--run` explicitly executes those project scripts; no new toolchain is installed. | `node <skill>/scripts/quality.mjs <project> --run --json` |
 | **`scripts/review.mjs`** | Combine source, project checks, browser artifacts, and observed reviewer criteria. Reject stale source fingerprints and missing evidence. | `node <skill>/scripts/review.mjs <project> --quality <report> --browser <report> --assessment <assessment> --json` |
 | **`scripts/eval.mjs`** | Prepare eight isolated skill tasks and evaluate actual candidate behavior. Compare identical cases and environments; retain unresolved visual/code review. | `node <skill>/scripts/eval.mjs --list` |
-| **`scripts/strata.mjs`** | Automatically scans codebase into 3 zones, maps trust boundaries, and generates self-contained `.devmind/strata.html`. | `node <skill>/scripts/strata.mjs` or `npx devmind strata` |
+| **`scripts/strata.mjs`** | Automatically scans codebase into 3 zones, maps trust boundaries, and generates self-contained `.devmind/maps/strata.html`. | `node <skill>/scripts/strata.mjs` or `npx devmind strata` |
 | **`scripts/init.mjs`** | Bootstraps `.devmind/` vault (`task.md`, `memory.md`, `rules.md`) with detected stack facts and adds `.devmind/` to `.gitignore`. | `node <skill>/scripts/init.mjs` or `npx devmind init` |
 | **`scripts/handover.mjs`** | Summarizes git diffs, changed files, and `// devmind:` shortcuts into `.devmind/handover.md`. | `node <skill>/scripts/handover.mjs` or `npx devmind handover` |
 

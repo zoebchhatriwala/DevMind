@@ -193,7 +193,7 @@ async function runInteractiveWizard({ installOnly = false } = {}) {
       console.log('Select action:');
       console.log('  1) Install DevMind Standards & Skills');
       console.log('  2) Initialize .devmind/ Memory Vault in current project');
-      console.log('  3) Run Strata Visualizer (Generate .devmind/strata.html)');
+      console.log('  3) Run Strata Visualizer (Generate .devmind/maps/strata.html)');
       console.log('  4) Run DevMind Verify / Lint (10 Quality & Security Checks)');
       console.log('  5) Generate Session Handover (.devmind/handover.md)');
       console.log('  6) Build Distribution Artifacts (dist/)');
@@ -303,9 +303,11 @@ Commands:
   (no args)             Launch interactive installer wizard (TTY)
   install               Install DevMind standards & skills
   init                  Bootstrap .devmind/ memory vault (task, memory, rules, gitignore)
-  strata                Generate interactive .devmind/strata.html architecture visualizer
+  strata                Generate interactive .devmind/maps/strata.html architecture visualizer
   verify, check, lint   Run read-only source heuristics (--json, --strict)
   inspect               Discover existing components, tokens, packages, and quality tools
+  brief                 Preserve task intent with bounded source context and scope review
+  organize              Preview .devmind cleanup; --apply safely moves loose artifacts
   contrast              Check solid hex color contrast (quote both colors)
   browser-audit         Capture local browser evidence and run explicit assertions
   quality               Discover project checks; --run executes existing scripts
@@ -332,7 +334,7 @@ General Options:
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0] && !args[0].startsWith('-') ? args[0] : null;
-  const scripts = { verify: 'verify', check: 'verify', lint: 'verify', inspect: 'inspect', contrast: 'contrast', 'browser-audit': 'browser-audit', quality: 'quality', review: 'review', eval: 'eval', init: 'init' };
+  const scripts = { verify: 'verify', check: 'verify', lint: 'verify', inspect: 'inspect', brief: 'brief', organize: 'organize', contrast: 'contrast', 'browser-audit': 'browser-audit', quality: 'quality', review: 'review', eval: 'eval', init: 'init' };
 
   if (args[0] === '-v' || args[0] === '--version') {
     console.log(`v${VERSION}`);
@@ -356,8 +358,8 @@ async function main() {
       const data = await generateStrataData(args[1] && !args[1].startsWith('-') ? args[1] : '.');
       console.log(JSON.stringify(data, null, 2));
     } else {
-      await buildStrataHtml(args[1] && !args[1].startsWith('-') ? args[1] : '.');
-      console.log(`\n✔ Strata map generated. Click to view: file:///${resolve('.devmind/strata.html').replace(/\\/g, '/')}`);
+      const { destFile } = await buildStrataHtml(args[1] && !args[1].startsWith('-') ? args[1] : '.');
+      console.log(`\n✔ Strata map generated. Click to view: file:///${destFile.replace(/\\/g, '/')}`);
     }
     return;
   }

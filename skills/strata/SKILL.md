@@ -8,9 +8,9 @@ description: >-
 
 You are operating under the **Strata** standard. Strata is a visual map of an application designed for people who didn't write the code (vibe coders) to understand what was built, and for senior engineers to review blast radius and trust boundaries before merging.
 
-When the user asks to **"generate code map"**, **"visualize this app"**, **"show what I built"**, or **"run strata"**, you **MUST NOT** tell the user to run an npm command. The user's project does not have a `strata` npm script. You as the AI coding agent must inspect the repository, run the 10 checks, generate `.devmind/strata.html`, and provide the user with the direct clickable file link.
+When the user asks to **"generate code map"**, **"visualize this app"**, **"show what I built"**, or **"run strata"**, you **MUST NOT** tell the user to run an npm command. The user's project does not have a `strata` npm script. You as the AI coding agent must inspect the repository, run the 10 checks, generate `.devmind/maps/strata.html`, and provide the user with the direct clickable file link.
 
-> **AI Automation Shortcut**: You can execute `node <skill-path>/scripts/strata.mjs` (or `npx devmind strata`) via your terminal tool to automatically scan the project and generate `.devmind/strata.html` without manually hand-authoring 1,000+ lines of HTML!
+> **AI Automation Shortcut**: You can execute `node <skill-path>/scripts/strata.mjs` (or `npx devmind strata`) via your terminal tool to automatically scan the project and generate `.devmind/maps/strata.html` without manually hand-authoring 1,000+ lines of HTML!
 
 The helper inventories observed files and installed dependency names. It leaves runtime connections and journeys empty, traffic unmeasured, and confidence labeled as heuristic. Trace the real source before adding relationships or declaring any of the ten checks verified. Its `checkCoverage` lists checks that still need manual review; a clean verifier does not prove a safe journey. Never invent nodes or metrics to fill an empty map.
 
@@ -18,7 +18,7 @@ The helper inventories observed files and installed dependency names. It leaves 
 
 ## 🚨 Pre-Flight Gate
 
-Before authoring `.devmind/strata.html`:
+Before authoring `.devmind/maps/strata.html`:
 
 1. **Inspect Codebase Structure**:
    - Locate user-facing entry points (Next.js `app/`, `pages/`, components, screens).
@@ -39,7 +39,7 @@ Before authoring `.devmind/strata.html`:
 3. **Summarize AI Consequences (The Change Ledger)**:
    - Identify what recent edits changed in terms of real-world consequences: services added, secrets touched, tables exposed, or blast radius expanded.
 4. **Target Destination**:
-   - Write `.devmind/strata.html` into the project root. Ensure `.devmind/` is added to `.gitignore` if not already tracked.
+   - Write `.devmind/maps/strata.html` into the project root. Ensure `.devmind/` is added to `.gitignore` if not already tracked.
 
 ---
 
@@ -91,18 +91,18 @@ Structure the application into 3 visual zones separated by physical trust bounda
 When the user asks to "generate code map", "visualize this app", or "show what I built":
 1. **Analyze Project Structure**: Map files into Browser (screens, components, buttons), Server (routes, actions), and Database/Services (tables, external APIs).
 2. **Evaluate the 10 Checks**: Scan for leaked secrets, missing RLS, unauthenticated endpoints, SQL injection, unverified webhooks, dead weight, swallowed errors, dead-end buttons, missing Zod validation, and price tampering.
-3. **Generate `.devmind/strata.html`**: Write a standalone, self-contained interactive HTML file (using SVG, CSS, and vanilla JS) into `.devmind/strata.html` in the user's project root.
-4. **Deliver Clickable Link**: Return `file://<project-root>/.devmind/strata.html` with a concise receipt badge.
+3. **Generate `.devmind/maps/strata.html`**: Write a standalone, self-contained interactive HTML file (using SVG, CSS, and vanilla JS) into `.devmind/maps/strata.html` in the user's project root.
+4. **Deliver Clickable Link**: Return `file://<project-root>/.devmind/maps/strata.html` with a concise receipt badge.
 
 ### 4. Output Response Format
 
 Always provide the clickable file link and a compact receipt:
 
 ```text
-🧠 [DevMind: strata | Checked: 3 zones mapped, 10 checks evaluated, .devmind/strata.html generated]
+🧠 [DevMind: strata | Checked: 3 zones mapped, 10 checks evaluated, .devmind/maps/strata.html generated]
 
 Here is your interactive code map:
-👉 file://<absolute-path-to-project>/.devmind/strata.html
+👉 file://<absolute-path-to-project>/.devmind/maps/strata.html
 
 - Overlay 1: What did I build? (Structure & components)
 - Overlay 2: User Journeys (Flow & dead-end detection)
@@ -130,7 +130,7 @@ Every coding agent generating or updating a code map MUST output the receipt bad
 - [ ] Provided exact file:line evidence, confidence scores, and ready-made fix prompts on all red spots.
 - [ ] Included the Change Ledger summarizing recent AI edits by consequences.
 - [ ] Supported both Junior Mode (plain English) and Senior Mode (blast radius & technical IDs).
-- [ ] Generated or updated `.devmind/strata.html` in the target project.
-- [ ] Delivered a direct clickable `file://...` link to `.devmind/strata.html`.
+- [ ] Generated or updated `.devmind/maps/strata.html` in the target project.
+- [ ] Delivered a direct clickable `file://...` link to `.devmind/maps/strata.html`.
 - [ ] Printed the Anti-Amnesia Receipt badge.
 

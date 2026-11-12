@@ -2,7 +2,7 @@ import { cp, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 // Keep installed entrypoints and their shared modules together in every bundle.
-export const HELPER_FILES = ['verify.mjs', 'inspect.mjs', 'contrast.mjs', 'browser-audit.mjs', 'quality.mjs', 'review.mjs', 'eval.mjs', 'strata.mjs', 'init.mjs', 'handover.mjs', 'lib', 'evals'];
+export const HELPER_FILES = ['verify.mjs', 'inspect.mjs', 'brief.mjs', 'organize.mjs', 'contrast.mjs', 'browser-audit.mjs', 'quality.mjs', 'review.mjs', 'eval.mjs', 'strata.mjs', 'init.mjs', 'handover.mjs', 'lib', 'evals'];
 
 export async function copyHelperScripts(sourceRoot, destination) {
   const scripts = join(destination, 'scripts');

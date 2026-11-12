@@ -13,5 +13,5 @@ Activates when the user asks:
 
 ## Output
 Generates or updates a self-contained, offline interactive HTML map at:
-`file://<project-root>/.devmind/strata.html`
+`file://<project-root>/.devmind/maps/strata.html`
 

@@ -115,9 +115,11 @@ Deliver the smallest correct change that completes the user's task. Preserve the
 
 ## 🚨 Pre-Flight Gate
 
-Read local project instructions and memory, then inspect git status and the existing implementation. Preserve unrelated edits. For a patch, infer existing decisions without a stack interview. For new architecture, resolve only consequential unknowns, with recommended defaults, before writing files.
+Read project rules and active task, then inspect git status and relevant code. Load only pertinent memory; preserve unrelated edits. A clear patch needs target/callers and affected checks, without interviews, formal plans, or repository-wide scans. Expand only for observed coupling or risk. For new architecture, resolve consequential unknowns with recommended defaults.
 
-Run the bundled tool against the actual project directory:
+For ambiguous, multi-step, or resumed work, use scripts/brief.mjs <project> --spec .devmind/tasks/brief.json to preserve the original request, acceptance, constraints, explicit scope, and labeled assumptions/questions with bounded source excerpts. The agent writes this working spec from the real request; the tool does not infer intent. Current user steering overrides old briefs. Simple patches need no brief file. --review reports scope outliers, including pre-existing edits, without claiming acceptance passed.
+
+When repository-wide discovery is needed, run the bundled tool against the actual project directory:
 
     node <skill>/scripts/inspect.mjs <project> --json
 
@@ -142,11 +144,13 @@ The frontend guide links annotated design examples and verification procedures. 
 
 ## Tools
 
-All paths below are relative to this installed skill. Pass the project directory explicitly when running from elsewhere. Inspect, verify, and contrast are read-only. Browser audit runs the supplied local interaction plan and writes evidence. Quality executes existing project scripts only with --run. The remaining tools write requested local artifacts. Tools do not install packages automatically.
+All paths are relative to this installed skill; pass the project directory explicitly. Inspect, brief, verify, and contrast are read-only; organize previews moves unless --apply is supplied. Browser audit runs the local interaction plan; quality executes project scripts only with --run. Use .devmind/tasks for briefs, reports for evidence, notes for assessments, logs for command output, maps for visualizations, and scratch/<task> for temporary code/fixtures. Keep active memory and installer metadata at the root. Preserve explicit paths and existing tooling/cache locations. Tools do not install packages automatically.
 
 | Tool | Purpose |
 | --- | --- |
 | scripts/inspect.mjs <project> --json | Discover reuse candidates and existing quality tooling. |
+| scripts/brief.mjs <project> --spec .devmind/tasks/brief.json | Preserve intent with bounded source excerpts; --review flags paths outside recorded scope. |
+| scripts/organize.mjs <project> | Preview loose artifact organization; --apply moves without replacing destinations. |
 | scripts/verify.mjs <project> --json | Source heuristics, file/line findings, coverage, and review gaps. Add --strict to fail on warnings. |
 | scripts/contrast.mjs "#111827" "#ffffff" --json | Check solid color contrast. Large-text/non-text thresholds require --large/--non-text. |
 | scripts/browser-audit.mjs <project> <loopback-url> --plan <plan.json> | Capture mobile/desktop browser evidence and execute explicit outcome assertions using existing Playwright. |

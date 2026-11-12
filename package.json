@@ -12,6 +12,8 @@
     "install": "node bin/devmind.mjs install --interactive",
     "verify": "node scripts/verify.mjs",
     "inspect": "node scripts/inspect.mjs",
+    "brief": "node scripts/brief.mjs",
+    "organize": "node scripts/organize.mjs",
     "contrast": "node scripts/contrast.mjs",
     "browser:audit": "node scripts/browser-audit.mjs",
     "quality": "node scripts/quality.mjs",

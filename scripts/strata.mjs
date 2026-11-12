@@ -6,6 +6,8 @@ import { execFileSync } from 'node:child_process';
 import { runVerify } from './verify.mjs';
 import { fileURLToPath } from 'node:url';
 import { scanProject, SOURCE_EXTENSIONS } from './lib/project.mjs';
+import { artifactPath } from './lib/runtime.mjs';
+import { WORKSPACE } from './lib/layout.mjs';
 
 /**
  * Maps files and project structure into Strata nodes, journeys, and issues.
@@ -175,7 +177,7 @@ export async function generateStrataData(targetDir = '.') {
 }
 
 /**
- * Builds .devmind/strata.html
+ * Builds the map under .devmind/maps/.
  */
 export async function buildStrataHtml(targetDir = '.', outPath = null) {
   const root = resolve(targetDir);
@@ -184,6 +186,7 @@ export async function buildStrataHtml(targetDir = '.', outPath = null) {
   // Locate strata.html template
   const possibleTemplates = [
     join(root, 'templates', '.devmind', 'strata.html'),
+    join(root, WORKSPACE.strata),
     join(root, '.devmind', 'strata.html'),
     join(dirname(fileURLToPath(import.meta.url)), '..', 'templates', '.devmind', 'strata.html'),
     join(dirname(fileURLToPath(import.meta.url)), '..', '.devmind', 'strata.html'),
@@ -207,7 +210,7 @@ export async function buildStrataHtml(targetDir = '.', outPath = null) {
     () => `const STRATA_DATA = ${JSON.stringify(data).replaceAll('<', '\\u003c').replaceAll('\u2028', '\\u2028').replaceAll('\u2029', '\\u2029')};\n`
   );
 
-  const destFile = outPath ? resolve(outPath) : join(root, '.devmind', 'strata.html');
+  const destFile = outPath ? resolve(outPath) : await artifactPath(root, WORKSPACE.strata);
   await mkdir(dirname(destFile), { recursive: true });
   await writeFile(destFile, injected, 'utf8');
 
@@ -234,7 +237,7 @@ async function main() {
   const fileUrl = `file:///${destFile.replace(/\\/g, '/')}`;
   console.log(`\n✔ Generated interactive code map at:`);
   console.log(`  ${fileUrl}\n`);
-  console.log(`🧠 [DevMind: strata | Checked: ${data.nodes.length} nodes mapped, source heuristics evaluated, .devmind/strata.html generated]`);
+  console.log(`🧠 [DevMind: strata | Checked: ${data.nodes.length} nodes mapped, source heuristics evaluated, ${WORKSPACE.strata} generated]`);
 }
 
 if (process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/'))) {

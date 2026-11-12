@@ -104,12 +104,12 @@ test('fresh-package install builds away from cwd without touching caller dist an
     });
     assert.equal(check.status, 0, check.stderr);
     assert.equal(JSON.parse(check.stdout).packages[0].name, 'consumer');
-    assert.equal(existsSync(join(project, '.devmind/strata.html')), false, 'Memory initialization must not scan/render an unrequested map.');
+    assert.equal(existsSync(join(project, '.devmind/maps/strata.html')), false, 'Memory initialization must not scan/render an unrequested map.');
     const map = spawnSync(process.execPath, [join(project, '.devmind/scripts/strata.mjs'), project], {
       cwd: directory, encoding: 'utf8', shell: false,
     });
     assert.equal(map.status, 0, map.stderr);
-    assert.ok(existsSync(join(project, '.devmind/strata.html')), 'An explicitly requested map must work using installed templates.');
+    assert.ok(existsSync(join(project, '.devmind/maps/strata.html')), 'An explicitly requested map must work using installed templates.');
   });
 });
 
@@ -123,13 +123,13 @@ test('memory initialization is idempotent, preserves notes, and handles misleadi
     assert.equal(second.addedToGitignore, false);
     assert.equal(await readFile(join(directory, '.gitignore'), 'utf8'), before);
     assert.equal(await readFile(join(directory, '.devmind/task.md'), 'utf8'), 'Keep this task\n');
-    assert.equal(existsSync(join(directory, '.devmind/strata.html')), false);
+    assert.equal(existsSync(join(directory, '.devmind/maps/strata.html')), false);
   });
 });
 
 test('CLI routes command help and rejects unknown command/module names without writing files', async () => {
   await fixture({}, async directory => {
-    for (const command of ['verify', 'inspect', 'contrast', 'browser-audit', 'quality', 'review', 'eval', 'init']) {
+    for (const command of ['verify', 'inspect', 'brief', 'organize', 'contrast', 'browser-audit', 'quality', 'review', 'eval', 'init']) {
       const result = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), command, '--help'], {
         cwd: directory, encoding: 'utf8', shell: false,
       });

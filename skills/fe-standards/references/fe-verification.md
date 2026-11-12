@@ -66,7 +66,7 @@ Screenshots mask password fields and elements marked data-private. Other private
 ## Evidence report
 
 ```text
-node <skill>/scripts/review.mjs <project> --quality .devmind/quality.json --browser .devmind/browser/report.json --assessment .devmind/assessment.json --scope ui --json
+node <skill>/scripts/review.mjs <project> --quality .devmind/reports/quality.json --browser .devmind/reports/browser/report.json --assessment .devmind/reports/assessment.json --scope ui --json
 ```
 
 Create the assessment only after inspecting the real screenshots and interactions. Copy the sourceDigest from the current browser report. Use version 1, a reviewer name, and criteria entries for task-fit, hierarchy, composition, content, responsive, keyboard, and states. Each reviewed entry needs status (passed/failed/not-run), concrete notes, and evidence paths relative to the project. Omitted criteria remain not-run.
@@ -80,7 +80,7 @@ Create the assessment only after inspecting the real screenshots and interaction
     "id": "responsive",
     "status": "passed",
     "notes": "At 390px, the long client name wraps and the page has no horizontal overflow.",
-    "evidence": [".devmind/browser/1-390x844-final.png"]
+    "evidence": [".devmind/reports/browser/1-390x844-final.png"]
   }]
 }
 ```
@@ -91,8 +91,8 @@ Review rejects mismatched source fingerprints, inconsistent report status, missi
 
 ```text
 node <skill>/scripts/eval.mjs --list
-node <skill>/scripts/eval.mjs --case accessibility-fix --prepare .devmind/evals/candidate
-node <skill>/scripts/eval.mjs .devmind/evals/candidate --case accessibility-fix --url http://127.0.0.1:3000 --json
+node <skill>/scripts/eval.mjs --case accessibility-fix --prepare .devmind/scratch/evals/candidate
+node <skill>/scripts/eval.mjs .devmind/scratch/evals/candidate --case accessibility-fix --url http://127.0.0.1:3000 --json
 ```
 
 Preparation writes only into an empty child directory of the current working directory and never overwrites existing work. Give the agent TASK.md plus the seed files and the skill being evaluated. The five cases cover invoice success/failure, search/reset, a print storefront, keyboard accessibility, and a shared component extension. The runner checks actual candidate artifacts; it does not invoke a model on its own or treat helper-unit tests as skill-quality evidence.

@@ -11,7 +11,60 @@
 
 DevMind combines focused domain guides with source checks, browser evidence, project quality gates, and reproducible evaluation tasks. Native app guides cover device and host boundaries separately from browser behavior. Passing a scanner or printing a receipt is never a substitute for testing the application.
 
+## Build what was asked
+
+Clear patches take the short path: inspect the target and direct callers, make the smallest correction, run affected checks, and finish. No interview, formal plan, task file, or full repository scan is required for a simple change. Expand investigation when the actual coupling or consequence requires it; security boundaries still need their checks.
+
+For ambiguous, multi-step, or resumed work, `brief` turns an agent-written working spec into compact context. The agent records the original user request, observable acceptance checks, constraints, literal edit scope, and explicitly labeled assumptions/questions in `.devmind/tasks/brief.json`. It should ask the user only about consequential unknowns. The user can keep describing the work naturally; they do not need to write JSON. New instructions override an old brief.
+
+Example working spec for a toolbar label patch (shown to illustrate the format, not a requirement for a patch this small):
+
+```json
+{
+  "request": "Rename Save to Save draft. Keep the behavior and styling.",
+  "acceptance": ["The toolbar reads Save draft and uses its existing save handler."],
+  "scope": ["src/editor/Toolbar.tsx"],
+  "constraints": ["Keep the styling and keyboard shortcut."],
+  "context": [{"path": "src/editor/Toolbar.tsx", "from": 1, "to": 25}]
+}
+```
+
+```bash
+npx devmind brief . --spec .devmind/tasks/brief.json --budget 6000
+npx devmind brief . --spec .devmind/tasks/brief.json --review --json
+```
+
+The default mode is `patch`; use `"mode": "feature"` for a complete workflow. Optional `assumptions` and `questions` are text arrays. Scope entries are literal project-relative files or directories ending in `/`, including new files. Context ranges are optional, limited to 12 ranges of 80 lines each. The tool reads only the spec and selected source files, not the whole repository. It does not call a model, run project commands, or edit files.
+
+The default 6,000-byte budget covers rendered brief text; it accepts 512–32,768 UTF-8 bytes. Required intent, acceptance, constraints, assumptions/questions, and scope-review findings are never silently truncated: an insufficient budget fails. Optional source ranges are included whole or explicitly marked omitted. `--json` adds measured byte counts outside that text budget. These are bytes, not tokenizer counts or measured model savings. Input specs are capped at 32 KiB and selected source files at 1 MiB. Credential paths and symlink traversal are rejected; selected ordinary source still needs review before sharing.
+
+`--review` reads Git status and reports paths outside recorded scope, including staged, unstaged, untracked, and renamed paths. It includes pre-existing edits and never attributes them to the agent or authorizes changing them. Exit codes are 0 for paths within scope, 1 for paths needing review, and 2 for unavailable review or invalid input. A path check cannot establish whether the implementation meets the human's intent; verify the acceptance checks and actual behavior separately.
+
 ---
+
+## An organized local workspace
+
+The `.devmind/` root holds active memory and installer metadata. Generated files have predictable homes:
+
+```text
+.devmind/
+  task.md, memory.md, rules.md, handover.md
+  tasks/       working briefs and task inputs
+  reports/     quality/review JSON, browser captures, evaluation reports
+  notes/       assessments and completed-task notes
+  logs/        build/test/command logs
+  maps/        strata.html
+  scratch/     temporary scripts and fixtures, grouped by task
+```
+
+Folders are created as needed. Existing tooling, caches, installed helper folders, and `install.json` keep their locations. Defaults now write under these folders; explicit output paths remain supported.
+
+```bash
+npx devmind organize . --json
+npx devmind organize . --apply
+```
+
+The first command previews moves. Applying preserves active memory, moves recognized loose artifacts, skips links/collisions, and records the old/new paths under `reports/organization/`. It does not delete artifact contents or rewrite historical reports. Archived scripts may retain relative imports and reports may reference old paths; update those deliberately or regenerate current evidence. Unknown folders are left in place. Repeated runs with nothing to move create no extra files.
 
 ## Why DevMind?
 
@@ -57,7 +110,7 @@ No unsolicited essays, no cheerleading, and no robotic filler text. Agents lead 
 ### 5. Token Optimization & The `.devmind/` Memory Vault
 AI coding agents waste thousands of tokens repeating checklists in chat turns, dumping huge file reads, and losing track of project facts across sessions. DevMind solves this by externalizing state into a lightweight `.devmind/` workspace folder:
 - **`task.md`**: Live progress scratchpad. The agent updates this file directly instead of spitting out multi-page checklists in chat.
-- **`memory.md`**: Repository facts, verified stack versions, project conventions, and intentional shortcut markers (`// devmind:`). Booting a fresh turn reads this small file (~150 tokens) instead of re-scanning the entire codebase (~3,000+ tokens).
+- **`memory.md`**: Verified repository facts, conventions, and deliberate shortcuts. Load the relevant facts rather than repeating a whole-project scan or historical handover. File size and token cost depend on the project.
 - **`rules.md`**: Custom project-specific user rules, team conventions, and hard constraints that agents must obey on every turn.
 - **`handover.md`**: Standardized session summary for zero-loss resumption across agent sessions.
 
@@ -78,7 +131,7 @@ Just ask your AI agent in chat:
 > *"Visualize this app"*  
 > *"Show me what I built"*
 
-The agent inspects your codebase, evaluates trust boundaries, and automatically generates an interactive map at `.devmind/strata.html`:
+The agent inspects your codebase, evaluates trust boundaries, and automatically generates an interactive map at `.devmind/maps/strata.html`:
 
 The automated helper currently inventories observed files and dependency names and attaches source-check findings. It does not establish runtime edges, user journeys, traffic scores, or commit blast radius. Those require traced evidence and agent review; missing information stays unknown. The overlays below support manually reviewed map data and the included demo, rather than proving those behaviors from filenames alone.
 - **Structure Overlay**: Visualizes screens, buttons, routes, database tables, and external services arranged by behavior across three zones: Browser, Server, and Database/Services.
@@ -87,7 +140,7 @@ The automated helper currently inventories observed files and dependency names a
 - **Clickable Red Spots with AI Fix Prompts**: Every flagged risk displays exact file:line evidence and provides a 1-click **"Copy Fix Prompt"** button to feed back into your AI tool.
 - **The Change Ledger**: Summarizes AI edits by *consequences* rather than confusing diffs.
 - **Junior & Senior Modes**: Switch between plain-language labels and technical blast radius metrics.
-- Standalone, offline HTML generated at `.devmind/strata.html` (no npm dependencies needed in your project).
+- Standalone, offline HTML generated at `.devmind/maps/strata.html` (no npm dependencies needed in your project).
 
 ---
 
@@ -174,7 +227,7 @@ npx skills add zoebchhatriwala/DevMind
 
 DevMind equips AI agents (and developers) with zero-dependency Node.js automation scripts located in `scripts/` (and `.devmind/scripts/` when installed locally):
 
-Use `inspect` before creating code, `verify` after changes, and the existing project checks plus a browser before declaring UI work complete. The frontend guide now requires a short design brief, domain-specific composition, working controls, and observed mobile/desktop behavior. A clean scanner cannot prove visual quality, security, or accessibility.
+Use targeted reads for localized patches and `inspect` when broader discovery is needed. Use `brief` for intent and selected context when the task warrants it, then verify the affected behavior. Substantial UI work needs task-specific design, complete interactions, and observed mobile/desktop behavior. A clean scanner cannot prove visual quality, security, or accessibility.
 
 `verify` exits 0 when no errors match, 1 for findings, and 2 for usage/scan failures. Add `--strict` to also fail on warnings. JSON includes implemented rules, manual checks, exclusions, and limitations. Automatic `--fix` was removed: the verifier never rewrites source or local preferences. Tests, fixtures, generated folders, and symbolic links are excluded from source checks; scripts are included. Custom gitignore patterns are not interpreted.
 
@@ -185,13 +238,14 @@ Built skill folders include their tools and shared modules. Rules-only distribut
 | Helper Script | Purpose & Capabilities | Terminal Command |
 | :--- | :--- | :--- |
 | **`scripts/inspect.mjs`** | Read-only project discovery: packages, component/helper candidates, tokens, and quality tooling. Does not run discovered commands or print dependency/script values. | `npx devmind inspect . --json` |
+| **`scripts/brief.mjs`** | Preserve the working task contract and selected source excerpts under a byte budget. Optional read-only Git scope review; no LLM, project-command execution, or source edits. | `npx devmind brief . --spec .devmind/tasks/brief.json --budget 6000` |
 | **`scripts/verify.mjs`** | Read-only AST checks using an installed TypeScript parser, plus labeled lexical/review hints for secret exposure, raw SQL, errors, interactions, types, and accessibility. | `npx devmind verify . --json --strict` |
 | **`scripts/contrast.mjs`** | Solid hex color contrast with AA thresholds. Default checks normal text; use `--large` or `--non-text` for the 3:1 threshold. | `npx devmind contrast "#111827" "#ffffff" --json` |
 | **`scripts/browser-audit.mjs`** | Isolated local browser screenshots, explicit keyboard/pointer assertions, DOM hints, and runtime error counts. Reuses installed Playwright. | `npx devmind browser-audit . http://127.0.0.1:3000 --plan browser-plan.json --json` |
 | **`scripts/quality.mjs`** | Discover existing root package formatting/lint/type/test scripts; execute only with `--run`. Missing scripts remain unverified. | `npx devmind quality . --run --json` |
-| **`scripts/review.mjs`** | Combine current source/check/browser/reviewer evidence. Reject stale source fingerprints, altered screenshots, and missing observations. | `npx devmind review . --quality .devmind/quality.json --browser .devmind/browser/report.json --assessment .devmind/assessment.json --json` |
+| **`scripts/review.mjs`** | Combine current source/check/browser/reviewer evidence. Reject stale source fingerprints, altered screenshots, and missing observations. | `npx devmind review . --quality .devmind/reports/quality.json --browser .devmind/reports/browser/report.json --assessment .devmind/reports/assessment.json --json` |
 | **`scripts/eval.mjs`** | Prepare ten isolated web/server/application tasks and evaluate candidate behavior. Compare identical case definitions and environments. | `npx devmind eval --list` |
-| **`scripts/strata.mjs`** | Behavioral architecture mapper: automatically inspects project across Browser, Server, and Database zones, checks trust boundaries, and generates self-contained `.devmind/strata.html`. | `npx devmind strata` or `node scripts/strata.mjs` |
+| **`scripts/strata.mjs`** | Behavioral architecture mapper: automatically inspects project across Browser, Server, and Database zones, checks trust boundaries, and generates self-contained `.devmind/maps/strata.html`. | `npx devmind strata` or `node scripts/strata.mjs` |
 | **`scripts/init.mjs`** | Memory Vault bootstrapper: auto-detects tech stack (runtime, framework, DB, styling) and generates `.devmind/task.md`, `memory.md`, and `rules.md` with `.gitignore` safety. | `npx devmind init` or `node scripts/init.mjs` |
 | **`scripts/handover.mjs`** | Session continuity: inspects git diffs and tracked shortcuts (`// devmind:`) to update `.devmind/handover.md`. | `npx devmind handover` or `node scripts/handover.mjs` |
 

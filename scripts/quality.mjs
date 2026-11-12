@@ -5,6 +5,7 @@ import { spawnSync } from 'node:child_process';
 import { realpath } from 'node:fs/promises';
 import { isMain } from './lib/project.mjs';
 import { evidencePath, fingerprint, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
+import { WORKSPACE } from './lib/layout.mjs';
 
 const GROUPS = {
   format: ['format:check', 'check:format'],
@@ -61,12 +62,12 @@ export async function runQuality(targetDir = '.', options = {}) {
 export async function main(args = process.argv.slice(2)) {
   const { values, flags, positional } = parseOptions(args, ['--out'], ['--run']);
   if (flags.has('--help')) {
-    console.log('Usage: quality.mjs [project] [--run] [--out .devmind/quality.json] [--json]\n--run executes existing project scripts. Without it, only discover checks.'); return;
+    console.log(`Usage: quality.mjs [project] [--run] [--out ${WORKSPACE.quality}] [--json]\n--run executes existing project scripts. Without it, only discover checks.`); return;
   }
   if (positional.length > 1) throw new Error('Expected at most one project directory.');
   if (values['--out']) await evidencePath(positional[0] ?? '.', values['--out']);
   const result = await runQuality(positional[0], { run: flags.has('--run') });
-  const artifact = await writeReport(result.root, values['--out'] ?? '.devmind/quality.json', result);
+  const artifact = await writeReport(result.root, values['--out'] ?? WORKSPACE.quality, result);
   console.log(flags.has('--json') ? JSON.stringify(result, null, 2) : `${result.status}: ${artifact}`);
   process.exitCode = reportExit(result.status);
 }

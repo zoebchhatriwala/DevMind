@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { isMain, scanProject } from './lib/project.mjs';
 import { runVerify } from './verify.mjs';
 import { artifactPath, assertKeys, evidencePath, fingerprint, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
+import { WORKSPACE } from './lib/layout.mjs';
 
 export const VISUAL_CRITERIA = ['task-fit', 'hierarchy', 'composition', 'content', 'responsive', 'keyboard', 'states'];
 
@@ -73,11 +74,11 @@ export async function reviewProject(targetDir = '.', options = {}) {
 
 export async function main(args = process.argv.slice(2)) {
   const { values, flags, positional } = parseOptions(args, ['--quality', '--browser', '--assessment', '--scope', '--out', '--tooling']);
-  if (flags.has('--help')) { console.log('Usage: review.mjs [project] [--quality report.json] [--browser report.json] [--assessment assessment.json] [--scope code|ui] [--out .devmind/review.json] [--tooling directory] [--json]'); return; }
+  if (flags.has('--help')) { console.log(`Usage: review.mjs [project] [--quality report.json] [--browser report.json] [--assessment assessment.json] [--scope code|ui] [--out ${WORKSPACE.review}] [--tooling directory] [--json]`); return; }
   if (positional.length > 1) throw new Error('Expected at most one project directory.');
   if (values['--out']) await evidencePath(positional[0] ?? '.', values['--out']);
   const result = await reviewProject(positional[0], { quality: values['--quality'], browser: values['--browser'], assessment: values['--assessment'], scope: values['--scope'], toolingRoot: values['--tooling'] });
-  const file = await writeReport(result.root, values['--out'] ?? '.devmind/review.json', result);
+  const file = await writeReport(result.root, values['--out'] ?? WORKSPACE.review, result);
   console.log(flags.has('--json') ? JSON.stringify(result, null, 2) : `${result.status}: ${file}`);
   process.exitCode = reportExit(result.status);
 }

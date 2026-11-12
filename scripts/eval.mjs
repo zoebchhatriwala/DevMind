@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { auditBrowser } from './browser-audit.mjs';
 import { isMain } from './lib/project.mjs';
 import { artifactPath, evidencePath, parseOptions, readJson, reportExit, reportStatus, writeReport } from './lib/runtime.mjs';
+import { WORKSPACE } from './lib/layout.mjs';
 import { runVerify } from './verify.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
@@ -63,7 +64,7 @@ export async function evaluateCase(id, project, url, options = {}) {
     scenarios.push({ id: 'node-contract', report: { status, engine: { node: process.version } } });
   }
   for (const scenario of entry.scenarios) {
-    const output = `.devmind/evals/${id}/${scenario.id}`;
+    const output = `${WORKSPACE.evals}/${id}/${scenario.id}`;
     const report = await auditBrowser(project, url, { ...options, plan: scenario.plan, output });
     const file = await writeReport(project, `${output}/report.json`, report);
     scenarios.push({ id: scenario.id, report, file });
@@ -105,7 +106,7 @@ export async function main(args = process.argv.slice(2)) {
   if (values['--out']) await evidencePath(positional[0], values['--out']);
   const result = await evaluateCase(values['--case'], positional[0], values['--url'], { channel: values['--channel'], toolingRoot: values['--tooling'], review: values['--review'], modelRun: values['--model-run'] ? await readJson(values['--model-run']) : null });
   if (values['--baseline']) result.comparison = compareEvaluations(await readJson(values['--baseline']), result);
-  const file = await writeReport(result.root, values['--out'] ?? `.devmind/evals/${result.caseId}/report.json`, result);
+  const file = await writeReport(result.root, values['--out'] ?? `${WORKSPACE.evals}/${result.caseId}/report.json`, result);
   console.log(flags.has('--json') ? JSON.stringify(result, null, 2) : `${result.status} (behavior: ${result.behaviorStatus}): ${file}`);
   process.exitCode = reportExit(result.status);
 }
