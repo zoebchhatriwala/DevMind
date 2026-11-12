@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { lstat, mkdir, readFile, readdir, unlink, writeFile } from 'node:fs/promises';
-import { dirname, join, relative, resolve } from 'node:path';
+import { lstat, mkdir, readFile, readdir, rmdir, unlink, writeFile } from 'node:fs/promises';
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { artifactPath, parseOptions, readJson } from './runtime.mjs';
 
 const TARGETS = new Map([
@@ -98,11 +98,160 @@ export async function copyInstalledFiles(source, destination, state) {
   state.files[key] = hash;
 }
 
+export function finishInstallationSummary(state) {
+  return { created: state.created, updated: state.updated, unchanged: state.unchanged, preserved: state.preserved, removed: state.removed };
+}
+
 export async function finishInstallation(state) {
   await mkdir(dirname(state.manifest), { recursive: true });
   await writeFile(state.manifest, JSON.stringify({ version: 1, files: state.files }, null, 2) + '\n', 'utf8');
   console.log(`Installation complete: ${state.created.length} created, ${state.updated.length} updated, ${state.unchanged.length} unchanged.`);
   for (const path of state.removed) console.log(`Removed unchanged obsolete entrypoint: ${path}`);
   for (const path of state.preserved) console.log(`Preserved existing file: ${path}. Merge the relevant DevMind guidance manually if needed.`);
-  return { created: state.created, updated: state.updated, unchanged: state.unchanged, preserved: state.preserved, removed: state.removed };
+  return finishInstallationSummary(state);
+}
+
+export function parseUninstallArgs(args) {
+  const aliases = { '-l': '--local', '-g': '--global', '-t': '--target', '-y': '--yes' };
+  const parsed = parseOptions(
+    args.map(arg => Object.hasOwn(aliases, arg) ? aliases[arg] : arg),
+    ['--target'],
+    ['--local', '--global', '--interactive', '--dry-run', '--yes'],
+  );
+  if (parsed.positional.length) throw new Error('Unexpected uninstallation argument. Use --target to choose platforms.');
+  if (parsed.flags.has('--interactive')) {
+    if (args.length !== 1) throw new Error('Use --interactive without other uninstall options.');
+    return { interactive: true };
+  }
+  const local = parsed.flags.has('--local'), global = parsed.flags.has('--global');
+  if (!local && !global) throw new Error('Choose --interactive, or specify --local and/or --global to uninstall.');
+  const rawTargets = parsed.values['--target'] ? parsed.values['--target'].split(',') : ['all'];
+  const targets = local ? validateTargets(rawTargets, 'local') : validateTargets(rawTargets, 'global');
+  if (local && global) validateTargets(rawTargets, 'global');
+  return { local, global, targets, dryRun: parsed.flags.has('--dry-run') };
+}
+
+function isSkillSubdir(key, baseDir) {
+  return key.startsWith(`${baseDir}/devmind/`) || key.startsWith(`${baseDir}/devmind-`);
+}
+
+function keyMatchesPlatform(key, platform, scope) {
+  switch (platform) {
+    case 'antigravity':
+      return scope === 'global'
+        ? isSkillSubdir(key, '.gemini/config/skills')
+        : key === 'AGENTS.md' || isSkillSubdir(key, '.agents/skills');
+    case 'openskills':
+      return (scope === 'local' && key === 'AGENTS.md') || isSkillSubdir(key, '.agents/skills');
+    case 'claude':
+      return (scope === 'local' && key === 'CLAUDE.md') || isSkillSubdir(key, '.claude/skills');
+    case 'cursor':
+      return (scope === 'local' && key === '.cursorrules') || key.startsWith('.cursor/rules/') || key.startsWith('.cursor/commands/devmind-');
+    case 'windsurf':
+      return (scope === 'local' && key === '.windsurfrules') || key.startsWith('.windsurf/rules/') || key.startsWith('.windsurf/workflows/devmind-');
+    case 'copilot':
+      return key === '.github/copilot-instructions.md' || key.startsWith('.github/instructions/');
+    case 'cline':
+      return key === '.clinerules';
+    default:
+      return false;
+  }
+}
+
+function isSharedToolKey(key) {
+  return key.startsWith('.devmind/scripts/') || key.startsWith('.devmind/templates/') || key.startsWith('.devmind/skills/');
+}
+
+async function pruneEmptyParents(root, startDir) {
+  let current = startDir;
+  while (true) {
+    const rel = relative(root, current);
+    if (!rel || rel.startsWith('..') || isAbsolute(rel)) break;
+    try {
+      const stat = await lstat(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) break;
+      const entries = await readdir(current);
+      if (entries.length > 0) break;
+      await rmdir(current);
+      current = dirname(current);
+    } catch {
+      break;
+    }
+  }
+}
+
+export async function uninstallFromRoot(directory, { targets = ['all'], scope = 'local', dryRun = false } = {}) {
+  const normalized = validateTargets(targets, scope);
+  const state = await beginInstallation(directory);
+  const previousKeys = Object.keys(state.previous).sort();
+  if (!previousKeys.length) {
+    console.log(`No DevMind managed files recorded in ${relative(process.cwd(), state.manifest) || state.manifest}.`);
+    return { removed: [], preserved: [], missing: [], remaining: 0, dryRun };
+  }
+
+  const isAll = normalized.includes('all');
+  const selected = new Set(previousKeys.filter(key =>
+    isAll || normalized.some(platform => keyMatchesPlatform(key, platform, scope)),
+  ));
+
+  // Remove shared runtime helpers/templates/skills when removing all or when no platform files remain.
+  const anyPlatformLeft = previousKeys.some(key => !isSharedToolKey(key) && !selected.has(key));
+  if (isAll || !anyPlatformLeft) {
+    for (const key of previousKeys) {
+      if (isSharedToolKey(key)) selected.add(key);
+    }
+  }
+
+  const removed = [];
+  const preserved = [];
+  const missing = [];
+
+  for (const key of previousKeys) {
+    if (!selected.has(key)) continue;
+    const target = await artifactPath(state.root, key);
+    let existing;
+    try {
+      existing = await readFile(target);
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        missing.push(key);
+        delete state.files[key];
+        continue;
+      }
+      throw error;
+    }
+
+    if (digest(existing) !== state.previous[key]) {
+      preserved.push(key);
+      if (!dryRun) delete state.files[key];
+      continue;
+    }
+
+    if (!dryRun) {
+      await unlink(target);
+      await pruneEmptyParents(state.root, dirname(target));
+      delete state.files[key];
+    }
+    removed.push(key);
+  }
+
+  const remaining = Object.keys(state.files).length;
+  if (!dryRun) {
+    if (remaining === 0) {
+      try {
+        await unlink(state.manifest);
+        await pruneEmptyParents(state.root, dirname(state.manifest));
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+      }
+    } else {
+      await mkdir(dirname(state.manifest), { recursive: true });
+      await writeFile(state.manifest, JSON.stringify({ version: 1, files: state.files }, null, 2) + '\n', 'utf8');
+    }
+  }
+
+  const prefix = dryRun ? 'Dry-run uninstall' : 'Uninstall complete';
+  console.log(`${prefix}: ${removed.length} removed, ${preserved.length} preserved, ${missing.length} already missing.`);
+  for (const path of preserved) console.log(`Preserved modified file: ${path}`);
+  return { removed, preserved, missing, remaining, dryRun };
 }

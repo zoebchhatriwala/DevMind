@@ -2,6 +2,8 @@
 export const WORKSPACE = Object.freeze({
   quality: '.devmind/reports/quality.json',
   review: '.devmind/reports/review.json',
+  score: '.devmind/reports/score.json',
+  scoreHistory: '.devmind/reports/score-history.json',
   browser: '.devmind/reports/browser',
   evals: '.devmind/reports/evals',
   brief: '.devmind/tasks/brief.json',

@@ -392,13 +392,14 @@ DevMind provides zero-dependency executable Node.js scripts that AI coding agent
 | **`scripts/browser-audit.mjs`** | Reuse installed Playwright for isolated local browser captures, explicit pointer/keyboard assertions, DOM hints, and runtime error counts. Missing tooling remains not-run. | `node <skill>/scripts/browser-audit.mjs <project> <loopback-url> --plan <plan.json> --json` |
 | **`scripts/quality.mjs`** | Discover existing formatting/lint/type/test scripts. `--run` explicitly executes those project scripts; no new toolchain is installed. | `node <skill>/scripts/quality.mjs <project> --run --json` |
 | **`scripts/review.mjs`** | Combine source, project checks, browser artifacts, and observed reviewer criteria. Reject stale source fingerprints and missing evidence. | `node <skill>/scripts/review.mjs <project> --quality <report> --browser <report> --assessment <assessment> --json` |
-| **`scripts/eval.mjs`** | Prepare eight isolated skill tasks and evaluate actual candidate behavior. Compare identical cases and environments; retain unresolved visual/code review. | `node <skill>/scripts/eval.mjs --list` |
+| **`scripts/eval.mjs`** | Prepare ten isolated skill tasks and evaluate actual candidate behavior. Compare identical case definitions and environments; retain unresolved visual/code review. | `node <skill>/scripts/eval.mjs --list` |
+| **`scripts/score.mjs`** | Benchmark project quality (0-100 per domain: `security`, `fe-standards`, `reliability`, `code-quality`), compare saved deltas (`--diff`), and persist history (`--save`). | `node <skill>/scripts/score.mjs . --diff --json` or `npx devmind score` |
 | **`scripts/strata.mjs`** | Automatically scans codebase into 3 zones, maps trust boundaries, and generates self-contained `.devmind/maps/strata.html`. | `node <skill>/scripts/strata.mjs` or `npx devmind strata` |
 | **`scripts/init.mjs`** | Bootstraps `.devmind/` vault (`task.md`, `memory.md`, `rules.md`) with detected stack facts and adds `.devmind/` to `.gitignore`. | `node <skill>/scripts/init.mjs` or `npx devmind init` |
 | **`scripts/handover.mjs`** | Summarizes git diffs, changed files, and `// devmind:` shortcuts into `.devmind/handover.md`. | `node <skill>/scripts/handover.mjs` or `npx devmind handover` |
 
 ### Interactive Installer & Agent Skills Setup
-- **Interactive Terminal Wizard**: Run `npx devmind` or `npm run devmind` to configure local or global environments.
-- **Local Project Setup**: `npx devmind install --local --target all`
-- **Global User Setup**: `npx devmind install --global --target all`
+- **Interactive Terminal Wizard**: Run `npx devmind`, `npm run install`, or `npm run uninstall` to configure or remove local/global environments.
+- **Local Project Setup / Removal**: `npx devmind install --local --target all` / `npx devmind uninstall --local --target all`
+- **Global User Setup / Removal**: `npx devmind install --global --target all` / `npx devmind uninstall --global --target all`
 - **OpenSkills Compatible**: `npx skills add zoebchhatriwala/DevMind`

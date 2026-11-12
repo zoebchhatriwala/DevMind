@@ -5,11 +5,25 @@
   "type": "module",
   "main": "dist/bundles/manifest.json",
   "bin": {
-    "devmind": "./bin/devmind.mjs"
+    "devmind": "./bin/devmind.mjs",
+    "devmind-score": "./bin/devmind.mjs",
+    "devmind-strata": "./bin/devmind.mjs",
+    "devmind-verify": "./bin/devmind.mjs",
+    "devmind-inspect": "./bin/devmind.mjs",
+    "devmind-brief": "./bin/devmind.mjs",
+    "devmind-handover": "./bin/devmind.mjs",
+    "devmind-init": "./bin/devmind.mjs",
+    "devmind-organize": "./bin/devmind.mjs",
+    "devmind-quality": "./bin/devmind.mjs",
+    "devmind-review": "./bin/devmind.mjs",
+    "devmind-eval": "./bin/devmind.mjs",
+    "devmind-contrast": "./bin/devmind.mjs"
   },
   "scripts": {
     "devmind": "node bin/devmind.mjs",
     "install": "node bin/devmind.mjs install --interactive",
+    "uninstall": "node bin/devmind.mjs uninstall --interactive",
+    "score": "node scripts/score.mjs",
     "verify": "node scripts/verify.mjs",
     "inspect": "node scripts/inspect.mjs",
     "brief": "node scripts/brief.mjs",
@@ -24,6 +38,7 @@
     "init": "node scripts/init.mjs",
     "handover": "node scripts/handover.mjs",
     "build": "node scripts/build.mjs",
+    "bundle:agensi": "node scripts/bundle-agensi.mjs",
     "validate": "node scripts/validate.mjs",
     "test": "node scripts/test.mjs",
     "prepack": "npm run build"

@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { copyHelperScripts } from './lib/helpers.mjs';
+import { COMMANDS, renderCommandSkill, renderEditorCommand } from './lib/commands.mjs';
 import { isMain } from './lib/project.mjs';
 
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -107,6 +108,10 @@ function generateMasterSkillMd(skills) {
 name: devmind
 description: >-
   Build, modify, or review application code using existing conventions, task-specific UI design, trust boundaries, and executable verification. Load only the relevant domain guide.
+license: MIT
+metadata:
+  author: devmind contributors
+  version: "1.0.0"
 ---
 
 # DevMind
@@ -157,9 +162,16 @@ All paths are relative to this installed skill; pass the project directory expli
 | scripts/quality.mjs <project> --run --json | Execute existing named project checks; omit --run for discovery only. |
 | scripts/review.mjs <project> --quality <report> --browser <report> --assessment <assessment> | Combine current evidence; missing checks and observations remain unverified. |
 | scripts/eval.mjs --list | Discover ten web/server/application seeded tasks for testing the skill's actual output. |
+| scripts/score.mjs <project> [--diff] [--save] | Compute a 0-100 project benchmark score per domain and compare against saved history. |
 | scripts/strata.mjs <project> | Generate the requested architecture map. |
 | scripts/init.mjs <project> | Initialize local task memory when needed. |
 | scripts/handover.mjs <project> | Refresh session continuity notes. |
+
+## Slash Commands
+
+Invoke any command directly in supported coding agents (or via CLI as \`devmind <command>\` / \`devmind-<command>\`):
+
+${COMMANDS.map(cmd => `- \`/${cmd.slash}\` -> \`${cmd.script}\`: ${cmd.description}`).join('\n')}
 
 Source checks reuse installed TypeScript AST tooling where supported and otherwise report lexical fallback. They cannot establish visual quality, full accessibility, authorization correctness, database access policies, or framework reachability. Review evidence before changing code. The verifier does not support --fix; do not apply heuristic source rewrites.
 
@@ -259,6 +271,13 @@ export async function build() {
     }
   }
 
+  // 1A.3 Individual Slash Command Skills (dist/antigravity/skills/devmind-<cmd>/)
+  for (const cmd of COMMANDS) {
+    const cmdDir = join(agSkillsDir, cmd.slash);
+    await mkdir(cmdDir, { recursive: true });
+    await writeFile(join(cmdDir, 'SKILL.md'), renderCommandSkill(cmd), 'utf8');
+  }
+
   // 1B. Antigravity Plugin Format (dist/antigravity/plugins/devmind/)
   const agPluginDir = join(agBaseDir, 'plugins', 'devmind');
   const agPluginSkillsDir = join(agPluginDir, 'skills');
@@ -270,7 +289,7 @@ export async function build() {
     name: 'devmind',
     version: '1.0.0',
     description: 'Curated Antigravity and AI coding agent skills and engineering baseline.',
-    skills: ['skills/devmind', ...skills.map(s => `skills/${s.name}`)],
+    skills: ['skills/devmind', ...skills.map(s => `skills/${s.name}`), ...COMMANDS.map(cmd => `skills/${cmd.slash}`)],
   };
   await writeFile(join(agPluginDir, 'plugin.json'), JSON.stringify(pluginJson, null, 2), 'utf8');
   await writeFile(join(agPluginDir, 'README.md'), readmeMd, 'utf8');
@@ -281,6 +300,10 @@ export async function build() {
   // Copy all domain skills into plugin skills
   for (const s of skills) {
     await cp(join(agSkillsDir, s.name), join(agPluginSkillsDir, s.name), { recursive: true });
+  }
+  // Copy all slash command skills into plugin skills
+  for (const cmd of COMMANDS) {
+    await cp(join(agSkillsDir, cmd.slash), join(agPluginSkillsDir, cmd.slash), { recursive: true });
   }
 
   // 1C. Standalone skill drop-in. Plugin packaging is separate to avoid nested discovery.
@@ -302,6 +325,7 @@ export async function build() {
     entries: [
       { path: '.agents/skills/devmind' },
       ...skills.map(s => ({ path: `.agents/skills/${s.name}` })),
+      ...COMMANDS.map(cmd => ({ path: `.agents/skills/${cmd.slash}` })),
     ],
   };
   const pluginsJson = {
@@ -347,6 +371,12 @@ ${ruleBody(s)}
     await copyReferences(s.name, join(cursorRulesDir, 'references', s.name));
   }
 
+  const cursorCommandsDir = join(cursorDir, '.cursor', 'commands');
+  await mkdir(cursorCommandsDir, { recursive: true });
+  for (const cmd of COMMANDS) {
+    await writeFile(join(cursorCommandsDir, `${cmd.slash}.md`), renderEditorCommand(cmd), 'utf8');
+  }
+
   // =========================================================================
   // 3. Windsurf / Cascade Build (.windsurfrules & .windsurf/rules/*.md)
   // =========================================================================
@@ -362,6 +392,12 @@ ${ruleBody(s)}
   for (const s of skills) {
     await writeFile(join(windsurfModularDir, `${s.name}.md`), `# ${s.name}\n\n${ruleBody(s)}`, 'utf8');
     await copyReferences(s.name, join(windsurfModularDir, 'references', s.name));
+  }
+
+  const windsurfWorkflowsDir = join(windsurfDir, '.windsurf', 'workflows');
+  await mkdir(windsurfWorkflowsDir, { recursive: true });
+  for (const cmd of COMMANDS) {
+    await writeFile(join(windsurfWorkflowsDir, `${cmd.slash}.md`), renderEditorCommand(cmd), 'utf8');
   }
 
   // =========================================================================
@@ -387,6 +423,11 @@ ${ruleBody(s)}
   // Master devmind skill for Claude Code (.claude/skills/devmind/)
   const claudeDevmindDir = join(claudeSkillsDir, 'devmind');
   await cp(devmindSkillDir, claudeDevmindDir, { recursive: true });
+
+  // Slash command skills for Claude Code (.claude/skills/devmind-<cmd>/)
+  for (const cmd of COMMANDS) {
+    await cp(join(agSkillsDir, cmd.slash), join(claudeSkillsDir, cmd.slash), { recursive: true });
+  }
 
   // =========================================================================
   // 5. GitHub Copilot Build (.github/copilot-instructions.md & scoped instructions)
@@ -431,10 +472,13 @@ ${ruleBody(s)}
   await mkdir(agentsOutDir, { recursive: true });
   await writeFile(join(agentsOutDir, 'AGENTS.md'), agentsMd, 'utf8');
 
-  // OpenSkills format (.agents/skills/devmind/)
+  // OpenSkills format (.agents/skills/devmind/ & .agents/skills/devmind-<cmd>/)
   const agentsOpenSkillsDir = join(agentsOutDir, '.agents', 'skills', 'devmind');
   await mkdir(agentsOpenSkillsDir, { recursive: true });
   await cp(agUniversalDir, agentsOpenSkillsDir, { recursive: true });
+  for (const cmd of COMMANDS) {
+    await cp(join(agSkillsDir, cmd.slash), join(agentsOutDir, '.agents', 'skills', cmd.slash), { recursive: true });
+  }
 
   // =========================================================================
   // 8. Multi-Agent Drop-In Root Hooks (dist/hooks)
@@ -442,8 +486,12 @@ ${ruleBody(s)}
   console.log('8. Building Multi-Agent Drop-In Root Hooks (dist/hooks)...');
   const hooksDir = join(DIST_DIR, 'hooks');
   const hooksCursorRulesDir = join(hooksDir, '.cursor', 'rules');
+  const hooksCursorCommandsDir = join(hooksDir, '.cursor', 'commands');
+  const hooksWindsurfWorkflowsDir = join(hooksDir, '.windsurf', 'workflows');
   const hooksGithubDir = join(hooksDir, '.github');
   await mkdir(hooksCursorRulesDir, { recursive: true });
+  await mkdir(hooksCursorCommandsDir, { recursive: true });
+  await mkdir(hooksWindsurfWorkflowsDir, { recursive: true });
   await mkdir(hooksGithubDir, { recursive: true });
 
   await writeFile(join(hooksDir, 'AGENTS.md'), agentsMd, 'utf8');
@@ -453,6 +501,8 @@ ${ruleBody(s)}
   await writeFile(join(hooksDir, '.clinerules'), clineRules, 'utf8');
   await writeFile(join(hooksGithubDir, 'copilot-instructions.md'), copilotMd, 'utf8');
   await cp(cursorRulesDir, hooksCursorRulesDir, { recursive: true });
+  await cp(cursorCommandsDir, hooksCursorCommandsDir, { recursive: true });
+  await cp(windsurfWorkflowsDir, hooksWindsurfWorkflowsDir, { recursive: true });
 
   const hooksDevmindDir = join(hooksDir, '.devmind');
   await mkdir(hooksDevmindDir, { recursive: true });
@@ -484,7 +534,14 @@ Copy these configuration files into any project's root directory to immediately 
     description: 'Curated Antigravity and AI coding agent skills.',
     updatedAt: new Date().toISOString(),
     skillsCount: skills.length,
+    commandsCount: COMMANDS.length,
     targets: ['antigravity', 'cursor', 'windsurf', 'claude-code', 'github-copilot', 'cline', 'agents'],
+    commands: COMMANDS.map(cmd => ({
+      name: cmd.slash,
+      command: cmd.name,
+      script: cmd.script,
+      description: cmd.description,
+    })),
     skills: [
       {
         name: 'devmind',

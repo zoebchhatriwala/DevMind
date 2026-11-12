@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import { beginInstallation, copyInstalledFiles, finishInstallation, parseInstallArgs, removeDuplicateMaster } from '../lib/install.mjs';
+import { beginInstallation, copyInstalledFiles, finishInstallation, parseInstallArgs, parseUninstallArgs, removeDuplicateMaster, uninstallFromRoot } from '../lib/install.mjs';
 import { generateHandover } from '../handover.mjs';
 import { npmInvocation } from '../quality.mjs';
 import { fixture } from './helpers.mjs';
@@ -136,5 +136,140 @@ test('handover preserves manual evidence and never claims failing or unrun check
   await fixture({}, async directory => {
     await generateHandover(directory);
     assert.ok(existsSync(join(directory, '.devmind/handover.md')));
+  });
+});
+
+test('uninstall removes unchanged managed files, supports target scoping and dry-run, and preserves edited or user files', async () => {
+  await fixture({ '.devmind/task.md': 'User task\n', 'AGENTS.md': 'User agents\n' }, async directory => {
+    const installed = cli(directory, ['install', '--local', '--target', 'cursor,claude']);
+    assert.equal(installed.status, 0, installed.stderr);
+    assert.ok(existsSync(join(directory, '.cursor/rules/devmind.mdc')));
+    assert.ok(existsSync(join(directory, '.cursor/commands/devmind-score.md')));
+    assert.ok(existsSync(join(directory, 'CLAUDE.md')));
+    assert.ok(existsSync(join(directory, '.devmind/scripts/score.mjs')));
+
+    await writeFile(join(directory, 'CLAUDE.md'), '# Custom Claude instructions\n');
+
+    const dryRun = cli(directory, ['uninstall', '--local', '--target', 'cursor', '--dry-run']);
+    assert.equal(dryRun.status, 0, dryRun.stderr);
+    assert.match(dryRun.stdout, /Dry-run uninstall: \d+ removed/);
+    assert.ok(existsSync(join(directory, '.cursor/rules/devmind.mdc')));
+
+    const cursorOnly = cli(directory, ['uninstall', '--local', '--target', 'cursor']);
+    assert.equal(cursorOnly.status, 0, cursorOnly.stderr);
+    assert.equal(existsSync(join(directory, '.cursor/rules/devmind.mdc')), false);
+    assert.equal(existsSync(join(directory, '.cursor/commands/devmind-score.md')), false);
+    assert.ok(existsSync(join(directory, 'CLAUDE.md')));
+    assert.ok(existsSync(join(directory, '.devmind/scripts/score.mjs')));
+    assert.ok(existsSync(join(directory, '.devmind/install.json')));
+
+    const claudeLast = cli(directory, ['uninstall', '--local', '--target', 'claude']);
+    assert.equal(claudeLast.status, 0, claudeLast.stderr);
+    assert.match(claudeLast.stdout, /Preserved modified file: CLAUDE\.md/);
+    assert.equal(await readFile(join(directory, 'CLAUDE.md'), 'utf8'), '# Custom Claude instructions\n');
+    assert.equal(existsSync(join(directory, '.claude/skills/devmind-score/SKILL.md')), false);
+    assert.equal(existsSync(join(directory, '.claude/skills/devmind/SKILL.md')), false);
+    assert.equal(existsSync(join(directory, '.devmind/scripts')), false);
+    assert.equal(existsSync(join(directory, '.devmind/install.json')), false);
+    assert.equal(await readFile(join(directory, '.devmind/task.md'), 'utf8'), 'User task\n');
+    assert.equal(await readFile(join(directory, 'AGENTS.md'), 'utf8'), 'User agents\n');
+  });
+});
+
+test('uninstall never deletes other existing skills, commands, or rules across local and global skill folders', async () => {
+  await fixture({
+    'project/.agents/skills/other-skill/SKILL.md': '# Other Agent Skill\n',
+    'project/.agents/skills/devmind-custom/SKILL.md': '# Custom DevMind Addon\n',
+    'project/.claude/skills/team-skill/SKILL.md': '# Team Claude Skill\n',
+    'project/.cursor/rules/team-rule.mdc': '# Team Cursor Rule\n',
+    'project/.cursor/commands/team-cmd.md': '# Team Cursor Command\n',
+    'project/.windsurf/rules/team-rule.md': '# Team Windsurf Rule\n',
+    'project/.windsurf/workflows/team-flow.md': '# Team Windsurf Workflow\n',
+    'project/.github/instructions/team.instructions.md': '# Team Copilot Instructions\n',
+    'home/.gemini/config/skills/other-skill/SKILL.md': '# Other Gemini Skill\n',
+    'home/.gemini/config/skills/devmind-personal/SKILL.md': '# Personal Skill\n',
+    'home/.claude/skills/other-skill/SKILL.md': '# Other Global Claude Skill\n',
+    'home/.agents/skills/other-skill/SKILL.md': '# Other Global OpenSkill\n',
+  }, async directory => {
+    const project = join(directory, 'project');
+    const home = join(directory, 'home');
+    const env = { ...process.env, USERPROFILE: home, HOME: home };
+
+    const localInstall = cli(project, ['install', '--local', '--target', 'all']);
+    assert.equal(localInstall.status, 0, localInstall.stderr);
+    const globalInstall = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), 'install', '--global', '--target', 'all'], {
+      cwd: project, encoding: 'utf8', shell: false, timeout: 20000, env,
+    });
+    assert.equal(globalInstall.status, 0, globalInstall.stderr);
+
+    assert.ok(existsSync(join(project, '.agents/skills/devmind-score/SKILL.md')));
+    assert.ok(existsSync(join(home, '.gemini/config/skills/devmind-score/SKILL.md')));
+
+    const localUninstall = cli(project, ['uninstall', '--local', '--target', 'all']);
+    assert.equal(localUninstall.status, 0, localUninstall.stderr);
+    const globalUninstall = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), 'uninstall', '--global', '--target', 'all'], {
+      cwd: project, encoding: 'utf8', shell: false, timeout: 20000, env,
+    });
+    assert.equal(globalUninstall.status, 0, globalUninstall.stderr);
+
+    assert.equal(existsSync(join(project, '.agents/skills/devmind/SKILL.md')), false);
+    assert.equal(existsSync(join(project, '.agents/skills/devmind-score/SKILL.md')), false);
+    assert.equal(existsSync(join(home, '.gemini/config/skills/devmind/SKILL.md')), false);
+    assert.equal(existsSync(join(home, '.gemini/config/skills/devmind-score/SKILL.md')), false);
+
+    assert.equal(await readFile(join(project, '.agents/skills/other-skill/SKILL.md'), 'utf8'), '# Other Agent Skill\n');
+    assert.equal(await readFile(join(project, '.agents/skills/devmind-custom/SKILL.md'), 'utf8'), '# Custom DevMind Addon\n');
+    assert.equal(await readFile(join(project, '.claude/skills/team-skill/SKILL.md'), 'utf8'), '# Team Claude Skill\n');
+    assert.equal(await readFile(join(project, '.cursor/rules/team-rule.mdc'), 'utf8'), '# Team Cursor Rule\n');
+    assert.equal(await readFile(join(project, '.cursor/commands/team-cmd.md'), 'utf8'), '# Team Cursor Command\n');
+    assert.equal(await readFile(join(project, '.windsurf/rules/team-rule.md'), 'utf8'), '# Team Windsurf Rule\n');
+    assert.equal(await readFile(join(project, '.windsurf/workflows/team-flow.md'), 'utf8'), '# Team Windsurf Workflow\n');
+    assert.equal(await readFile(join(project, '.github/instructions/team.instructions.md'), 'utf8'), '# Team Copilot Instructions\n');
+    assert.equal(await readFile(join(home, '.gemini/config/skills/other-skill/SKILL.md'), 'utf8'), '# Other Gemini Skill\n');
+    assert.equal(await readFile(join(home, '.gemini/config/skills/devmind-personal/SKILL.md'), 'utf8'), '# Personal Skill\n');
+    assert.equal(await readFile(join(home, '.claude/skills/other-skill/SKILL.md'), 'utf8'), '# Other Global Claude Skill\n');
+    assert.equal(await readFile(join(home, '.agents/skills/other-skill/SKILL.md'), 'utf8'), '# Other Global OpenSkill\n');
+  });
+});
+
+test('uninstall validates flags and rejects symlink escapes before deleting files', async () => {
+  for (const args of [
+    [], ['--local', '--target', 'not-a-platform'], ['--local', '--global', '--target', 'copilot'],
+    ['--local', '--target'], ['--local', '--target', 'cursor', '--unknown'], ['--interactive', '--local'],
+  ]) {
+    await fixture({ '.cursor/rules/devmind.mdc': 'keep\n' }, async directory => {
+      const result = cli(directory, ['uninstall', ...args]);
+      assert.equal(result.status, 2, `${args}: ${result.stderr}`);
+      assert.equal(await readFile(join(directory, '.cursor/rules/devmind.mdc'), 'utf8'), 'keep\n');
+    });
+  }
+  assert.deepEqual(parseUninstallArgs(['-l', '-t', 'cursor', '--dry-run']), {
+    local: true, global: false, targets: ['cursor'], dryRun: true,
+  });
+
+  await fixture({ 'outside/CLAUDE.md': 'keep' }, async directory => {
+    const project = join(directory, 'project');
+    await mkdir(project);
+    const installed = cli(project, ['install', '--local', '--target', 'cursor']);
+    assert.equal(installed.status, 0, installed.stderr);
+    await symlink(join(directory, 'outside'), join(project, 'linked'), process.platform === 'win32' ? 'junction' : 'dir');
+    const manifestPath = join(project, '.devmind/install.json');
+    const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+    manifest.files['linked/CLAUDE.md'] = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
+    await assert.rejects(uninstallFromRoot(project, { targets: ['all'], scope: 'local' }), /symbolic/);
+    assert.equal(await readFile(join(directory, 'outside/CLAUDE.md'), 'utf8'), 'keep');
+  });
+});
+
+test('npm run uninstall opens the interactive uninstall wizard', async () => {
+  const npm = npmInvocation();
+  assert.ok(npm, 'Existing npm is required for uninstall lifecycle coverage.');
+  await fixture({}, async directory => {
+    for (const path of ['package.json', 'bin', 'scripts']) await cp(join(root, path), join(directory, path), { recursive: true });
+    const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/^npm_config_allow[-_]scripts$/i.test(key)));
+    const result = spawnSync(npm.command, [...npm.args, 'run', 'uninstall'], { cwd: directory, encoding: 'utf8', shell: false, input: '', timeout: 20000, env });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Which platform do you want to uninstall DevMind from\?/);
   });
 });

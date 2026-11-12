@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn, spawnSync } from 'node:child_process';
+import { inflateRawSync } from 'node:zlib';
 import { initDevmind } from '../init.mjs';
 import { fixture } from './helpers.mjs';
 
@@ -96,9 +97,13 @@ test('fresh-package install builds away from cwd without touching caller dist an
     for (const file of ['AGENTS.md', 'CLAUDE.md', '.cursorrules', '.windsurfrules', '.clinerules', '.github/copilot-instructions.md']) {
       await checkLinks(join(project, file));
     }
-    for (const directory of ['.devmind/skills', '.cursor/rules', '.windsurf/rules', '.github/instructions', '.agents/skills/devmind', '.claude/skills/devmind']) {
+    for (const directory of ['.devmind/skills', '.cursor/rules', '.cursor/commands', '.windsurf/rules', '.windsurf/workflows', '.github/instructions', '.agents/skills/devmind', '.agents/skills/devmind-score', '.claude/skills/devmind', '.claude/skills/devmind-score']) {
       await checkTree(join(project, directory));
     }
+    assert.ok(existsSync(join(project, '.agents/skills/devmind-strata/SKILL.md')));
+    assert.ok(existsSync(join(project, '.claude/skills/devmind-strata/SKILL.md')));
+    assert.ok(existsSync(join(project, '.cursor/commands/devmind-score.md')));
+    assert.ok(existsSync(join(project, '.windsurf/workflows/devmind-score.md')));
     const check = spawnSync(process.execPath, [join(project, '.devmind/scripts/inspect.mjs'), project, '--json'], {
       cwd: directory, encoding: 'utf8', shell: false,
     });
@@ -129,12 +134,19 @@ test('memory initialization is idempotent, preserves notes, and handles misleadi
 
 test('CLI routes command help and rejects unknown command/module names without writing files', async () => {
   await fixture({}, async directory => {
-    for (const command of ['verify', 'inspect', 'brief', 'organize', 'contrast', 'browser-audit', 'quality', 'review', 'eval', 'init']) {
+    for (const command of ['verify', 'score', 'inspect', 'brief', 'organize', 'contrast', 'browser-audit', 'quality', 'review', 'eval', 'init', 'strata', 'handover']) {
       const result = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), command, '--help'], {
         cwd: directory, encoding: 'utf8', shell: false,
       });
       assert.equal(result.status, 0, result.stderr);
-      assert.match(result.stdout, new RegExp(`Usage: (?:node )?${command === 'verify' ? 'verify' : command}\\.mjs`));
+      assert.match(result.stdout, new RegExp(`Usage: (?:node )?${command}\\.mjs`));
+    }
+    for (const alias of ['devmind-score', '/devmind-score', '/devmind-strata']) {
+      const result = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), alias, '--help'], {
+        cwd: directory, encoding: 'utf8', shell: false,
+      });
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /Usage: (?:node )?(?:score|strata)\.mjs/);
     }
     for (const command of ['__proto__', '../scripts/init']) {
       const result = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), command], {
@@ -235,5 +247,112 @@ test('install without choices refuses unattended installation and creates no fil
     assert.equal(result.status, 2, result.stderr);
     assert.match(result.stderr, /--interactive/);
     assert.deepEqual(await readdir(directory), []);
+  });
+});
+
+test('uninstall script asks platform before scope and removes only the selected local platform', async () => {
+  const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+  const command = pkg.scripts.uninstall.split(' ');
+  assert.equal(command[0], 'node');
+  assert.equal(command[1], 'bin/devmind.mjs');
+  await fixture({}, async directory => {
+    const installed = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), 'install', '--local', '--target', 'cursor,claude'], {
+      cwd: directory, encoding: 'utf8', shell: false,
+    });
+    assert.equal(installed.status, 0, installed.stderr);
+    const result = await answerWizard(directory, command.slice(2), [
+      ['Platform [1]: ', '99'],
+      ['Platform [1]: ', '3'],
+      ['Uninstall scope [1]: ', '9'],
+      ['Uninstall scope [1]: ', '1'],
+    ]);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.answered, 4);
+    assert.ok(result.stdout.indexOf('Platform [1]: ') < result.stdout.indexOf('Uninstall scope [1]: '));
+    assert.equal(existsSync(join(directory, '.cursor/rules/devmind.mdc')), false);
+    assert.ok(existsSync(join(directory, 'CLAUDE.md')));
+  });
+});
+
+test('global uninstall wizard removes isolated home install without touching project files', async () => {
+  await fixture({ 'project/keep.txt': 'untouched' }, async directory => {
+    const home = join(directory, 'home');
+    await mkdir(home);
+    const env = { ...process.env, USERPROFILE: home, HOME: home };
+    const installed = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), 'install', '--global', '--target', 'cursor'], {
+      cwd: join(directory, 'project'), encoding: 'utf8', shell: false, env,
+    });
+    assert.equal(installed.status, 0, installed.stderr);
+    assert.ok(existsSync(join(home, '.cursor/rules/devmind.mdc')));
+    const result = await answerWizard(join(directory, 'project'), ['uninstall', '--interactive'], [
+      ['Platform [1]: ', '3'],
+      ['Uninstall scope [1]: ', '2'],
+    ], env);
+    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.answered, 2);
+    assert.equal(existsSync(join(home, '.cursor/rules/devmind.mdc')), false);
+    assert.deepEqual(await readdir(join(directory, 'project')), ['keep.txt']);
+  });
+});
+
+test('uninstall without choices refuses unattended removal and preserves files', async () => {
+  await fixture({}, async directory => {
+    const installed = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), 'install', '--local', '--target', 'cursor'], {
+      cwd: directory, encoding: 'utf8', shell: false,
+    });
+    assert.equal(installed.status, 0, installed.stderr);
+    const result = spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), 'uninstall'], {
+      cwd: directory, encoding: 'utf8', shell: false,
+    });
+    assert.equal(result.status, 2, result.stderr);
+    assert.match(result.stderr, /--interactive/);
+    assert.ok(existsSync(join(directory, '.cursor/rules/devmind.mdc')));
+  });
+});
+
+function readZipEntries(archive) {
+  const eocdOffset = archive.lastIndexOf(Buffer.from([0x50, 0x4B, 0x05, 0x06]));
+  assert.ok(eocdOffset >= 0, 'Expected ZIP End of Central Directory record.');
+  const count = archive.readUInt16LE(eocdOffset + 10);
+  let cursor = archive.readUInt32LE(eocdOffset + 16);
+  const entries = new Map();
+  for (let i = 0; i < count; i++) {
+    assert.equal(archive.readUInt32LE(cursor), 0x02014B50);
+    const method = archive.readUInt16LE(cursor + 10);
+    const compressedSize = archive.readUInt32LE(cursor + 20);
+    const nameLen = archive.readUInt16LE(cursor + 28);
+    const extraLen = archive.readUInt16LE(cursor + 30);
+    const commentLen = archive.readUInt16LE(cursor + 32);
+    const localOffset = archive.readUInt32LE(cursor + 42);
+    const name = archive.toString('utf8', cursor + 46, cursor + 46 + nameLen);
+    const localNameLen = archive.readUInt16LE(localOffset + 26);
+    const localExtraLen = archive.readUInt16LE(localOffset + 28);
+    const dataStart = localOffset + 30 + localNameLen + localExtraLen;
+    const raw = archive.subarray(dataStart, dataStart + compressedSize);
+    entries.set(name, method === 8 ? inflateRawSync(raw) : raw);
+    cursor += 46 + nameLen + extraLen + commentLen;
+  }
+  return entries;
+}
+
+test('bundle:agensi packages a valid ZIP skill archive with root SKILL.md metadata', async () => {
+  const pkg = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+  assert.equal(pkg.scripts['bundle:agensi'], 'node scripts/bundle-agensi.mjs');
+  await fixture({}, async directory => {
+    const outZip = join(directory, 'devmind.zip');
+    const result = spawnSync(process.execPath, [join(root, 'scripts/bundle-agensi.mjs'), '--out', outZip, '--no-build'], {
+      cwd: root, encoding: 'utf8', shell: false,
+    });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Agensi\.io bundle ready/);
+    const entries = readZipEntries(await readFile(outZip));
+    assert.ok(entries.has('SKILL.md'));
+    assert.ok(entries.has('references/AGENTS.md'));
+    assert.ok(entries.has('scripts/score.mjs'));
+    assert.ok(entries.has('templates/.devmind/task.md'));
+    const skillText = entries.get('SKILL.md').toString('utf8');
+    assert.match(skillText, /^---\r?\n[\s\S]*license: MIT[\s\S]*metadata:[\s\S]*\r?\n---/);
+    assert.deepEqual(entries.get('SKILL.md'), await readFile(join(root, 'dist/antigravity/devmind/SKILL.md')));
+    assert.deepEqual(entries.get('scripts/score.mjs'), await readFile(join(root, 'dist/antigravity/devmind/scripts/score.mjs')));
   });
 });

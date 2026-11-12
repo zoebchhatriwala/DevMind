@@ -213,6 +213,11 @@ npx devmind install --global --target all
 # Install for a specific agent (e.g. Antigravity or Cursor)
 npx devmind install --global --target antigravity
 npx devmind install --local --target cursor
+
+# Uninstall unmodified DevMind-managed files (interactive wizard or scoped CLI)
+npm run uninstall
+npx devmind uninstall --local --target cursor --dry-run
+npx devmind uninstall --global --target all
 ```
 
 ### 3. OpenSkills / Agent Skills Compatible
@@ -245,6 +250,7 @@ Built skill folders include their tools and shared modules. Rules-only distribut
 | **`scripts/quality.mjs`** | Discover existing root package formatting/lint/type/test scripts; execute only with `--run`. Missing scripts remain unverified. | `npx devmind quality . --run --json` |
 | **`scripts/review.mjs`** | Combine current source/check/browser/reviewer evidence. Reject stale source fingerprints, altered screenshots, and missing observations. | `npx devmind review . --quality .devmind/reports/quality.json --browser .devmind/reports/browser/report.json --assessment .devmind/reports/assessment.json --json` |
 | **`scripts/eval.mjs`** | Prepare ten isolated web/server/application tasks and evaluate candidate behavior. Compare identical case definitions and environments. | `npx devmind eval --list` |
+| **`scripts/score.mjs`** | Project benchmark scorer: evaluates `security`, `fe-standards`, `reliability`, and `code-quality` (0-100), tracks deltas (`--diff`), and saves history (`--save`). | `npx devmind score . --diff --json` or `devmind-score` |
 | **`scripts/strata.mjs`** | Behavioral architecture mapper: automatically inspects project across Browser, Server, and Database zones, checks trust boundaries, and generates self-contained `.devmind/maps/strata.html`. | `npx devmind strata` or `node scripts/strata.mjs` |
 | **`scripts/init.mjs`** | Memory Vault bootstrapper: auto-detects tech stack (runtime, framework, DB, styling) and generates `.devmind/task.md`, `memory.md`, and `rules.md` with `.gitignore` safety. | `npx devmind init` or `node scripts/init.mjs` |
 | **`scripts/handover.mjs`** | Session continuity: inspects git diffs and tracked shortcuts (`// devmind:`) to update `.devmind/handover.md`. | `npx devmind handover` or `node scripts/handover.mjs` |

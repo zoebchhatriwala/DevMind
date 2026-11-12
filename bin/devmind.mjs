@@ -1,11 +1,12 @@
 #!/usr/bin/env node
 import { existsSync } from 'node:fs';
-import { resolve, join, dirname } from 'node:path';
+import { resolve, join, dirname, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { createInterface } from 'node:readline/promises';
 import { fileURLToPath } from 'node:url';
 
-import { beginInstallation, copyInstalledFiles, finishInstallation, parseInstallArgs, removeDuplicateMaster, validateTargets } from '../scripts/lib/install.mjs';
+import { beginInstallation, copyInstalledFiles, finishInstallation, parseInstallArgs, parseUninstallArgs, removeDuplicateMaster, uninstallFromRoot, validateTargets } from '../scripts/lib/install.mjs';
+import { COMMANDS, COMMAND_BY_NAME } from '../scripts/lib/commands.mjs';
 import { artifactPath } from '../scripts/lib/runtime.mjs';
 import { isMain } from '../scripts/lib/project.mjs';
 import { initDevmind } from '../scripts/init.mjs';
@@ -47,6 +48,12 @@ async function installReferences(destination, state) {
   await copyInstalledFiles(join(DIST_DIR, 'agents', '.devmind', 'skills'), destination, state);
 }
 
+async function installCommandSkills(skillsSourceDir, skillsDestDir, state) {
+  for (const cmd of COMMANDS) {
+    await copyInstalledFiles(join(skillsSourceDir, cmd.slash), join(skillsDestDir, cmd.slash), state);
+  }
+}
+
 export async function installLocal(targetDir = '.', targets = ['all']) {
   targets = validateTargets(targets, 'local');
   await ensureBuilt();
@@ -62,27 +69,29 @@ export async function installLocal(targetDir = '.', targets = ['all']) {
   const tools = join(DIST_DIR, 'antigravity', 'skills', 'devmind');
   await copyInstalledFiles(join(tools, 'scripts'), join(dest, '.devmind', 'scripts'), state);
   await copyInstalledFiles(join(tools, 'templates'), join(dest, '.devmind', 'templates'), state);
-  console.log('  ✔ Installed DevMind helper scripts (.devmind/scripts/verify.mjs, strata.mjs, init.mjs, handover.mjs)');
+  console.log('  ✔ Installed DevMind helper scripts (.devmind/scripts/verify.mjs, score.mjs, strata.mjs, init.mjs, handover.mjs)');
   await installReferences(join(dest, '.devmind', 'skills'), state);
 
   const targetSet = new Set(targets.map(t => t.toLowerCase()));
   const isAll = targetSet.has('all');
 
-  // Universal AGENTS.md
+  // Universal AGENTS.md & OpenSkills
   if (isAll || targetSet.has('agents') || targetSet.has('openskills') || targetSet.has('antigravity') || targetSet.has('gemini')) {
     await copyInstalledFiles(join(DIST_DIR, 'agents', 'AGENTS.md'), join(dest, 'AGENTS.md'), state);
     const agentsSkillDir = join(dest, '.agents', 'skills', 'devmind');
     await removeDuplicateMaster(tools, agentsSkillDir, state);
     await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'skills', 'devmind'), agentsSkillDir, state);
-    console.log('  ✔ Installed Universal AGENTS.md & OpenSkills (.agents/skills/devmind/)');
+    await installCommandSkills(join(DIST_DIR, 'agents', '.agents', 'skills'), join(dest, '.agents', 'skills'), state);
+    console.log('  ✔ Installed Universal AGENTS.md & OpenSkills (.agents/skills/devmind*)');
   }
 
   // Cursor IDE
   if (isAll || targetSet.has('cursor')) {
     const cursorRulesDir = join(dest, '.cursor', 'rules');
     await copyInstalledFiles(join(DIST_DIR, 'cursor', '.cursor', 'rules'), cursorRulesDir, state);
+    await copyInstalledFiles(join(DIST_DIR, 'cursor', '.cursor', 'commands'), join(dest, '.cursor', 'commands'), state);
     await copyInstalledFiles(join(DIST_DIR, 'cursor', '.cursorrules'), join(dest, '.cursorrules'), state);
-    console.log('  ✔ Installed Cursor IDE rules (.cursorrules & .cursor/rules/*.mdc)');
+    console.log('  ✔ Installed Cursor IDE rules & commands (.cursorrules, .cursor/rules/*.mdc, .cursor/commands/)');
   }
 
   // Claude Code
@@ -91,15 +100,17 @@ export async function installLocal(targetDir = '.', targets = ['all']) {
     const claudeSkillDir = join(dest, '.claude', 'skills', 'devmind');
     await removeDuplicateMaster(tools, claudeSkillDir, state);
     await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'devmind'), claudeSkillDir, state);
-    console.log('  ✔ Installed Claude Code rules (CLAUDE.md & .claude/skills/devmind/)');
+    await installCommandSkills(join(DIST_DIR, 'claude-code', '.claude', 'skills'), join(dest, '.claude', 'skills'), state);
+    console.log('  ✔ Installed Claude Code rules & slash skills (CLAUDE.md & .claude/skills/devmind*)');
   }
 
   // Windsurf / Cascade
   if (isAll || targetSet.has('windsurf')) {
     const windsurfRulesDir = join(dest, '.windsurf', 'rules');
     await copyInstalledFiles(join(DIST_DIR, 'windsurf', '.windsurf', 'rules'), windsurfRulesDir, state);
+    await copyInstalledFiles(join(DIST_DIR, 'windsurf', '.windsurf', 'workflows'), join(dest, '.windsurf', 'workflows'), state);
     await copyInstalledFiles(join(DIST_DIR, 'windsurf', '.windsurfrules'), join(dest, '.windsurfrules'), state);
-    console.log('  ✔ Installed Windsurf / Cascade rules (.windsurfrules & .windsurf/rules/)');
+    console.log('  ✔ Installed Windsurf / Cascade rules & workflows (.windsurfrules, .windsurf/rules/, .windsurf/workflows/)');
   }
 
   // GitHub Copilot
@@ -136,45 +147,112 @@ export async function installGlobal(targets = ['all']) {
   console.log('  Installed shared helper tools in ~/.devmind/scripts/');
   await installReferences(join(home, '.devmind', 'skills'), state);
 
-  // Antigravity & Gemini CLI (~/.gemini/config/skills/devmind)
+  // Antigravity & Gemini CLI (~/.gemini/config/skills/devmind*)
   if (isAll || targetSet.has('antigravity') || targetSet.has('gemini')) {
-    const geminiSkillsDir = join(home, '.gemini', 'config', 'skills', 'devmind');
+    const geminiSkillsRoot = join(home, '.gemini', 'config', 'skills');
+    const geminiSkillsDir = join(geminiSkillsRoot, 'devmind');
     await removeDuplicateMaster(tools, geminiSkillsDir, state);
     await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'devmind'), geminiSkillsDir, state);
-    console.log(`  ✔ Google Antigravity & Gemini: ~/.gemini/config/skills/devmind/`);
+    await installCommandSkills(join(DIST_DIR, 'antigravity', 'skills'), geminiSkillsRoot, state);
+    console.log('  ✔ Google Antigravity & Gemini: ~/.gemini/config/skills/devmind*');
   }
 
-  // Claude Code (~/.claude/skills/devmind)
+  // Claude Code (~/.claude/skills/devmind*)
   if (isAll || targetSet.has('claude') || targetSet.has('claude-code')) {
-    const claudeGlobalSkillsDir = join(home, '.claude', 'skills', 'devmind');
+    const claudeGlobalSkillsRoot = join(home, '.claude', 'skills');
+    const claudeGlobalSkillsDir = join(claudeGlobalSkillsRoot, 'devmind');
     await removeDuplicateMaster(tools, claudeGlobalSkillsDir, state);
     await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'devmind'), claudeGlobalSkillsDir, state);
-    console.log(`  ✔ Claude Code: ~/.claude/skills/devmind/`);
+    await installCommandSkills(join(DIST_DIR, 'claude-code', '.claude', 'skills'), claudeGlobalSkillsRoot, state);
+    console.log('  ✔ Claude Code: ~/.claude/skills/devmind*');
   }
 
-  // Universal OpenSkills (~/.agents/skills/devmind)
+  // Universal OpenSkills (~/.agents/skills/devmind*)
   if (isAll || targetSet.has('agents') || targetSet.has('openskills')) {
-    const agentsGlobalSkillsDir = join(home, '.agents', 'skills', 'devmind');
+    const agentsGlobalSkillsRoot = join(home, '.agents', 'skills');
+    const agentsGlobalSkillsDir = join(agentsGlobalSkillsRoot, 'devmind');
     await removeDuplicateMaster(tools, agentsGlobalSkillsDir, state);
     await copyInstalledFiles(join(DIST_DIR, 'antigravity', 'devmind'), agentsGlobalSkillsDir, state);
-    console.log(`  ✔ Universal OpenSkills: ~/.agents/skills/devmind/`);
+    await installCommandSkills(join(DIST_DIR, 'agents', '.agents', 'skills'), agentsGlobalSkillsRoot, state);
+    console.log('  ✔ Universal OpenSkills: ~/.agents/skills/devmind*');
   }
 
-  // Cursor IDE global rules (~/.cursor/rules/)
+  // Cursor IDE global rules & commands (~/.cursor/rules/ & ~/.cursor/commands/)
   if (isAll || targetSet.has('cursor')) {
     const cursorGlobalDir = join(home, '.cursor', 'rules');
     await copyInstalledFiles(join(DIST_DIR, 'cursor', '.cursor', 'rules'), cursorGlobalDir, state);
-    console.log(`  ✔ Cursor IDE: ~/.cursor/rules/`);
+    await copyInstalledFiles(join(DIST_DIR, 'cursor', '.cursor', 'commands'), join(home, '.cursor', 'commands'), state);
+    console.log('  ✔ Cursor IDE: ~/.cursor/rules/ & ~/.cursor/commands/');
   }
 
-  // Windsurf global rules (~/.windsurf/rules/)
+  // Windsurf global rules & workflows (~/.windsurf/rules/ & ~/.windsurf/workflows/)
   if (isAll || targetSet.has('windsurf')) {
     const windsurfGlobalDir = join(home, '.windsurf', 'rules');
     await copyInstalledFiles(join(DIST_DIR, 'windsurf', '.windsurf', 'rules'), windsurfGlobalDir, state);
-    console.log(`  ✔ Windsurf / Cascade: ~/.windsurf/rules/`);
+    await copyInstalledFiles(join(DIST_DIR, 'windsurf', '.windsurf', 'workflows'), join(home, '.windsurf', 'workflows'), state);
+    console.log('  ✔ Windsurf / Cascade: ~/.windsurf/rules/ & ~/.windsurf/workflows/');
   }
 
   return finishInstallation(state);
+}
+
+export async function uninstallLocal(targetDir = '.', targets = ['all'], options = {}) {
+  const dest = resolve(targetDir);
+  console.log(`\n🧹 Uninstalling DevMind (Local) from: ${dest}\n`);
+  return uninstallFromRoot(dest, { targets, scope: 'local', dryRun: options.dryRun });
+}
+
+export async function uninstallGlobal(targets = ['all'], options = {}) {
+  const home = homedir();
+  console.log(`\n🧹 Uninstalling DevMind (Global) from: ${home}\n`);
+  return uninstallFromRoot(home, { targets, scope: 'global', dryRun: options.dryRun });
+}
+
+async function runUninstallWizard() {
+  console.log(BANNER);
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const platforms = [
+      ['all', 'All installed DevMind platforms'],
+      ['antigravity', 'Google Antigravity & Gemini CLI'],
+      ['cursor', 'Cursor IDE'],
+      ['claude', 'Claude Code'],
+      ['windsurf', 'Windsurf / Cascade'],
+      ['openskills', 'Universal OpenSkills / AGENTS.md'],
+      ['copilot', 'GitHub Copilot (local only)'],
+      ['cline', 'Cline / Roo Code (local only)'],
+    ];
+    console.log('\nWhich platform do you want to uninstall DevMind from?');
+    platforms.forEach(([, label], index) => console.log(`  ${index + 1}) ${label}`));
+    let platform;
+    do {
+      const choice = (await rl.question('Platform [1]: ')).trim() || '1';
+      platform = platforms.find((_, index) => String(index + 1) === choice);
+      if (!platform) console.log('Choose one of the listed platforms.');
+    } while (!platform);
+    const targets = [platform[0]];
+
+    const supportsGlobal = !['copilot', 'cline'].includes(platform[0]);
+    const scopes = supportsGlobal ? ['1', '2', '3'] : ['1'];
+    console.log('\nWhere do you want to uninstall DevMind from?');
+    console.log('  1) Local  (Current project / workspace only)');
+    if (supportsGlobal) {
+      console.log('  2) Global (User profile)');
+      console.log('  3) Both   (Local and global)');
+    }
+    let scopeChoice;
+    do {
+      scopeChoice = (await rl.question('Uninstall scope [1]: ')).trim() || '1';
+      if (!scopes.includes(scopeChoice)) {
+        console.log(supportsGlobal ? 'Choose 1 (local), 2 (global), or 3 (both).' : 'This platform supports local installation only. Choose 1.');
+      }
+    } while (!scopes.includes(scopeChoice));
+
+    if (scopeChoice === '1' || scopeChoice === '3') await uninstallLocal('.', targets);
+    if (scopeChoice === '2' || scopeChoice === '3') await uninstallGlobal(targets);
+  } finally {
+    rl.close();
+  }
 }
 
 /**
@@ -298,75 +376,105 @@ function printHelp() {
   console.log(`Usage:
   npx devmind [command] [options]
   devmind [command] [options]
+  devmind-<command> [options]      (CLI alias; in coding agents use /devmind-<command>)
 
 Commands:
   (no args)             Launch interactive installer wizard (TTY)
   install               Install DevMind standards & skills
-  init                  Bootstrap .devmind/ memory vault (task, memory, rules, gitignore)
-  strata                Generate interactive .devmind/maps/strata.html architecture visualizer
-  verify, check, lint   Run read-only source heuristics (--json, --strict)
-  inspect               Discover existing components, tokens, packages, and quality tools
-  brief                 Preserve task intent with bounded source context and scope review
-  organize              Preview .devmind cleanup; --apply safely moves loose artifacts
-  contrast              Check solid hex color contrast (quote both colors)
+  uninstall             Remove unmodified DevMind-managed files (--local/--global, --dry-run)
+  init                  Bootstrap .devmind/ memory vault (/devmind-init)
+  score                 Benchmark the project: 0-100 score per domain (/devmind-score)
+  strata                Generate interactive .devmind/maps/strata.html architecture map (/devmind-strata)
+  verify, check, lint   Run read-only source heuristics (--json, --strict) (/devmind-verify)
+  inspect               Discover existing components, tokens, packages, and quality tools (/devmind-inspect)
+  brief                 Preserve task intent with bounded source context and scope review (/devmind-brief)
+  organize              Preview .devmind cleanup; --apply safely moves loose artifacts (/devmind-organize)
+  contrast              Check solid hex color contrast (quote both colors) (/devmind-contrast)
   browser-audit         Capture local browser evidence and run explicit assertions
-  quality               Discover project checks; --run executes existing scripts
-  review                Combine current source, check, browser, and reviewer evidence
-  eval                  Prepare and evaluate realistic skill tasks (--list)
-  handover              Generate or update .devmind/handover.md from git status
+  quality               Discover project checks; --run executes existing scripts (/devmind-quality)
+  review                Combine current source, check, browser, and reviewer evidence (/devmind-review)
+  eval                  Prepare and evaluate realistic skill tasks (--list) (/devmind-eval)
+  handover              Generate or update .devmind/handover.md from git status (/devmind-handover)
   build                 Compile multi-agent distribution artifacts into dist/
 
-Install Options:
-  --interactive        Choose installation scope and platform in the wizard
-  -l, --local           Install locally into current workspace
-  -g, --global          Install globally into user home directory
+Install / Uninstall Options:
+  --interactive        Choose scope and platform in the wizard
+  -l, --local           Operate on current workspace
+  -g, --global          Operate on user home directory
   -t, --target <list>   Comma-separated target agents (all, antigravity, cursor, claude, windsurf, copilot, cline, openskills)
+  --dry-run             Preview files that uninstall would remove without deleting them
   -y, --yes             Skip confirmation prompts
 
 General Options:
-  --json                Machine-readable output (verify, inspect, contrast, strata)
+  --json                Machine-readable output (verify, score, inspect, contrast, strata)
+  --diff                Compare score against last saved run (score)
+  --save                Persist score run to history (score)
   --strict              Fail on warnings as well as errors (verify)
   -h, --help            Show this help documentation
   -v, --version         Show DevMind version
 `);
 }
 
-async function main() {
-  const args = process.argv.slice(2);
-  const command = args[0] && !args[0].startsWith('-') ? args[0] : null;
-  const scripts = { verify: 'verify', check: 'verify', lint: 'verify', inspect: 'inspect', brief: 'brief', organize: 'organize', contrast: 'contrast', 'browser-audit': 'browser-audit', quality: 'quality', review: 'review', eval: 'eval', init: 'init' };
+function resolveCliInvocation(argv) {
+  const invokedAs = basename(argv[1] || '').replace(/\.(?:m?js|cmd|ps1|exe)$/i, '').toLowerCase();
+  const userArgs = argv.slice(2);
+  const binMatch = invokedAs.match(/^devmind-([a-z-]+)$/);
+  if (binMatch && Object.hasOwn(COMMAND_BY_NAME, binMatch[1])) {
+    return { command: binMatch[1], commandArgs: userArgs };
+  }
+  const rawFirst = userArgs[0] && !userArgs[0].startsWith('-') ? userArgs[0] : null;
+  if (!rawFirst) return { command: null, commandArgs: userArgs };
+  const slashMatch = rawFirst.match(/^\/?devmind-([a-z-]+)$/);
+  const command = slashMatch && Object.hasOwn(COMMAND_BY_NAME, slashMatch[1]) ? slashMatch[1] : rawFirst;
+  return { command, commandArgs: userArgs.slice(1) };
+}
 
-  if (args[0] === '-v' || args[0] === '--version') {
+async function main() {
+  const { command, commandArgs } = resolveCliInvocation(process.argv);
+  const args = process.argv.slice(2);
+  const scripts = { verify: 'verify', check: 'verify', lint: 'verify', inspect: 'inspect', brief: 'brief', organize: 'organize', contrast: 'contrast', 'browser-audit': 'browser-audit', quality: 'quality', review: 'review', eval: 'eval', init: 'init', score: 'score' };
+
+  if (!command && (args[0] === '-v' || args[0] === '--version')) {
     console.log(`v${VERSION}`);
     return;
   }
 
   if (Object.hasOwn(scripts, command)) {
     const { main: run } = await import(`../scripts/${scripts[command]}.mjs`);
-    await run(args.slice(1).map(arg => arg === '-h' ? '--help' : arg));
+    await run(commandArgs.map(arg => arg === '-h' ? '--help' : arg));
     return;
   }
 
-  if (args.includes('-h') || args.includes('--help')) {
+  if (!command && (args.includes('-h') || args.includes('--help'))) {
     printHelp();
     return;
   }
 
   if (command === 'strata') {
+    if (commandArgs.includes('-h') || commandArgs.includes('--help')) {
+      console.log('Usage: node strata.mjs [directory] [--json]\nGenerates .devmind/maps/strata.html architecture map.');
+      return;
+    }
     const { generateStrataData, buildStrataHtml } = await import('../scripts/strata.mjs');
-    if (args.includes('--json')) {
-      const data = await generateStrataData(args[1] && !args[1].startsWith('-') ? args[1] : '.');
+    const target = commandArgs.find(arg => !arg.startsWith('-')) ?? '.';
+    if (commandArgs.includes('--json')) {
+      const data = await generateStrataData(target);
       console.log(JSON.stringify(data, null, 2));
     } else {
-      const { destFile } = await buildStrataHtml(args[1] && !args[1].startsWith('-') ? args[1] : '.');
+      const { destFile } = await buildStrataHtml(target);
       console.log(`\n✔ Strata map generated. Click to view: file:///${destFile.replace(/\\/g, '/')}`);
     }
     return;
   }
 
   if (command === 'handover') {
+    if (commandArgs.includes('-h') || commandArgs.includes('--help')) {
+      console.log('Usage: node handover.mjs [directory]\nRefreshes .devmind/handover.md from git status and tracked shortcuts.');
+      return;
+    }
     const { generateHandover } = await import('../scripts/handover.mjs');
-    await generateHandover(args[1] && !args[1].startsWith('-') ? args[1] : '.');
+    const target = commandArgs.find(arg => !arg.startsWith('-')) ?? '.';
+    await generateHandover(target);
     return;
   }
 
@@ -388,6 +496,25 @@ async function main() {
     }
     if (selection.local) await installLocal('.', selection.targets);
     if (selection.global) await installGlobal(selection.targets);
+    return;
+  }
+
+  if (command === 'uninstall') {
+    if (process.env.npm_lifecycle_event === 'uninstall' && !['run', 'run-script'].includes(process.env.npm_command)) {
+      console.log('Run npm run uninstall or devmind uninstall --interactive to remove DevMind files.');
+      return;
+    }
+    if (commandArgs.includes('-h') || commandArgs.includes('--help')) {
+      printHelp();
+      return;
+    }
+    const selection = commandArgs.length === 0 && process.stdin.isTTY ? { interactive: true } : parseUninstallArgs(commandArgs);
+    if (selection.interactive) {
+      await runUninstallWizard();
+      return;
+    }
+    if (selection.local) await uninstallLocal('.', selection.targets, { dryRun: selection.dryRun });
+    if (selection.global) await uninstallGlobal(selection.targets, { dryRun: selection.dryRun });
     return;
   }
 

@@ -2,6 +2,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { HELPER_FILES } from './lib/helpers.mjs';
+import { COMMANDS } from './lib/commands.mjs';
 import { resolve, join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -192,6 +193,25 @@ async function validateDist() {
   } else {
     console.log('  ✔ [scripts & bin]: Helper scripts and interactive CLI entry verified.');
   }
+
+  // 12. Slash command skills and editor commands validation
+  for (const cmd of COMMANDS) {
+    for (const skillPath of [
+      join(DIST_DIR, 'antigravity', 'skills', cmd.slash, 'SKILL.md'),
+      join(DIST_DIR, 'antigravity', 'plugins', 'devmind', 'skills', cmd.slash, 'SKILL.md'),
+      join(DIST_DIR, 'claude-code', '.claude', 'skills', cmd.slash, 'SKILL.md'),
+      join(DIST_DIR, 'agents', '.agents', 'skills', cmd.slash, 'SKILL.md'),
+    ]) {
+      if (!existsSync(skillPath)) reportError(cmd.slash, `Missing command skill: ${skillPath}`);
+    }
+    if (!existsSync(join(DIST_DIR, 'cursor', '.cursor', 'commands', `${cmd.slash}.md`))) {
+      reportError(cmd.slash, `Missing Cursor command: .cursor/commands/${cmd.slash}.md`);
+    }
+    if (!existsSync(join(DIST_DIR, 'windsurf', '.windsurf', 'workflows', `${cmd.slash}.md`))) {
+      reportError(cmd.slash, `Missing Windsurf workflow: .windsurf/workflows/${cmd.slash}.md`);
+    }
+  }
+  console.log(`  ✔ [commands]: ${COMMANDS.length} slash command skills and editor commands verified.`);
 }
 
 async function validate() {
