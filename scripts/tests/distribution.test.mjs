@@ -72,6 +72,18 @@ test('built adapters have complete reference trees and one compact Cursor baseli
     if (/^alwaysApply: true$/m.test(source)) alwaysApplied.push(entry);
   }
   assert.deepEqual(alwaysApplied, ['devmind.mdc']);
+  for (const name of ['be-more-ambitious', 'strata']) {
+    const rule = await readFile(join(rules, `${name}.mdc`), 'utf8');
+    const frontmatter = rule.match(/^---\r?\n([\s\S]*?)\r?\n---/)[1];
+    assert.doesNotMatch(frontmatter, /^globs:/m, `${name}: task-based guide must not attach to every file`);
+    assert.match(frontmatter, /^alwaysApply: false$/m);
+    assert.equal(existsSync(join(root, 'dist/github-copilot/.github/instructions', `${name}.instructions.md`)), false);
+    assert.ok(existsSync(join(root, 'dist/github-copilot/.devmind/skills', `${name}.md`)), `${name}: keep guide available through the catalog`);
+  }
+  const ambitious = await readFile(join(root, 'skills/be-more-ambitious/SKILL.md'), 'utf8');
+  for (const target of ['antigravity/skills', 'claude-code/.claude/skills']) {
+    assert.equal(await readFile(join(root, 'dist', target, 'be-more-ambitious/SKILL.md'), 'utf8'), ambitious);
+  }
   for (const file of ['agents/AGENTS.md', 'claude-code/CLAUDE.md', 'windsurf/.windsurfrules', 'cline/.clinerules']) {
     assert.ok(Buffer.byteLength(await readFile(join(root, 'dist', file))) < 6500, `${file}: baseline exceeds 6.5 KB`);
   }

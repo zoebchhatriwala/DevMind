@@ -24,6 +24,7 @@ const SKILL_GLOBS = {
   'deployment': '**/{.github,deploy,infra}/**,**/Dockerfile*,**/docker-compose*,**/*.tf',
   'api-design': '**/{api,routes,controllers,contracts}/**,**/*.openapi.*,**/*.swagger.*',
   'ai-standards': '**/{ai,rag,prompts,llm,embeddings,agents}/**',
+  'be-more-ambitious': '',
   'strata': '',
 };
 
@@ -95,7 +96,7 @@ async function loadSkills() {
       content: rawContent,
       body,
       readme: readmeContent,
-      globs: SKILL_GLOBS[skillName] || '**/*',
+      globs: SKILL_GLOBS[skillName] ?? '**/*',
     });
   }
 
@@ -138,6 +139,7 @@ ${catalog}
 
 For web UI work, start with fe-standards. Installed desktop and mobile applications use desktop-standards and mobile-standards for native boundaries, lifecycle, and delivery. Add shared web guidance only when relevant to a web-based view. For a large domain guide, read its pre-flight gate and relevant topic slices rather than loading the entire file.
 The frontend guide links annotated design examples and verification procedures. Load them for substantial UI work and skill evaluation; use only affected checks for small patches.
+Use be-more-ambitious for requests to think bigger or go deeper on open-ended work. Preserve bounded edits and explicit scope; load this guide only when that task applies.
 
 ## ⚡ Golden Patterns
 

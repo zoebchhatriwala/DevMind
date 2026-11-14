@@ -161,7 +161,7 @@ These are text-size measurements, not model token counts or a benchmark of codin
 
 The CLI loads command implementations when invoked, and memory initialization does not scan the project or generate Strata. Request the map separately when needed. No runtime dependencies are required.
 
-## The 11 Skill Domains
+## Skill Guides
 
 DevMind includes specialized, modular rules across the full stack:
 
@@ -171,6 +171,7 @@ DevMind includes specialized, modular rules across the full stack:
 | **[`api-design`](./skills/api-design/)** | REST, GraphQL & RPC | Clean RESTful URI semantics, Zod-first OpenAPI schemas, RFC 7807 problem details, IETF `Idempotency-Key` locks, keyset pagination, and weak ETags. |
 | **[`auth-patterns`](./skills/auth-patterns/)** | Auth, Sessions & RBAC | Refresh token rotation, zero tokens in `localStorage` (HttpOnly SameSite cookies), OAuth 2.0 PKCE, WebAuthn Passkeys, TOTP 2FA, and explicit role guards. |
 | **[`be-standards`](./skills/be-standards/)** | Backend Logic & Services | Runtime boundary validation, framework-aligned architecture, redacted structured logging, bounded work, and tested recovery paths. |
+| **[`be-more-ambitious`](./skills/be-more-ambitious/SKILL.md)** | Deeper Open-Ended Work | Reframe outcomes, use raw evidence and expert methods, and borrow useful perspectives when the user asks to think bigger. Preserve explicit scope and verify results. |
 | **[`db-standards`](./skills/db-standards/)** | Databases & Migrations | Zero-downtime expand-contract migrations, foreign key indexes, N+1 query elimination, keyset cursor pagination, and ACID transaction boundaries. |
 | **[`deployment`](./skills/deployment/)** | Docker, CI/CD & Cloud | Multi-stage rootless Dockerfiles (`USER nonroot`), explicit health probes, SHA-pinned GitHub Actions, Trivy vulnerability scans, and zero hardcoded secrets. |
 | **[`fe-standards`](./skills/fe-standards/)** | UI, Accessibility & Design | Task-specific composition, complete interactions, existing design-system reuse, honest content, WCAG 2.2 AA, and real browser verification. No forced SaaS templates or blanket palette bans. |

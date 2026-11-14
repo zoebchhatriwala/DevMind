@@ -24,6 +24,8 @@ For UI work, establish the audience, primary task, hierarchy, content, and each 
 
 Use the domain catalog below. Web UI uses fe-standards; installed apps use desktop-standards/mobile-standards for native boundaries and delivery. Load gates/topic slices only when needed for the change. Security invariants always apply; load a dedicated manual only for the boundary being changed/reviewed. Generate Strata only on request.
 
+Use be-more-ambitious when the user asks to think bigger or go deeper on open-ended work. Preserve bounded edits and explicit scope; ambition does not grant authorization for additional actions.
+
 Tools are in `.devmind/scripts/` for a rules installation, an installed skill's `scripts/`, or this source repository's root `scripts/`. Verify the path and pass the actual project directory. `inspect.mjs <project> --json` discovers reuse and checks without running them. `verify.mjs <project> --json --strict` reports source findings and coverage, never proof of security or accessibility. `quality.mjs <project> --run --json` runs existing project checks. Do not install tools automatically or rewrite source to satisfy a heuristic.
 
 ## Verify and report

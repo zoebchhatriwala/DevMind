@@ -13,6 +13,7 @@ When a user request touches any of the following file globs or task types, you *
 | Domain & Skill | Triggering Task Types & Keywords | File Globs |
 | :--- | :--- | :--- |
 | **`ai-standards`** | LLM integration, prompt templates, agent workflows, RAG pipelines, embeddings, tool calls, model routing | `**/{ai,rag,prompts,llm,embeddings,agents}/**` |
+| **`be-more-ambitious`** | User asks to be more ambitious, go deeper, level up, or think bigger on open-ended work; skip bounded edits and preserve explicit scope | Task-based only; no file glob |
 | **`api-design`** | REST/GraphQL/RPC routes, OpenAPI spec, controllers, DTOs, endpoint pagination, error payloads, webhooks | `**/{api,routes,controllers,contracts}/**`, `**/*.openapi.*`, `**/*.swagger.*` |
 | **`auth-patterns`** | Login, signup, JWT, OAuth, sessions, RBAC/ABAC permissions, guards, password hashing, CSRF, refresh tokens | `**/{auth,middleware,session,security}/**` |
 | **`be-standards`** | Backend services, business logic, background jobs, queues, caching, logging, dependency injection, server errors | `**/*.{ts,js,mjs,cjs,go,py,rs}` |
