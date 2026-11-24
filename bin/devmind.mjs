@@ -221,6 +221,7 @@ async function runUninstallWizard() {
       ['openskills', 'Universal OpenSkills / AGENTS.md'],
       ['copilot', 'GitHub Copilot (local only)'],
       ['cline', 'Cline / Roo Code (local only)'],
+      ['codex', 'OpenAI Codex'],
     ];
     console.log('\nWhich platform do you want to uninstall DevMind from?');
     platforms.forEach(([, label], index) => console.log(`  ${index + 1}) ${label}`));
@@ -325,6 +326,7 @@ async function runInteractiveWizard({ installOnly = false } = {}) {
       ['openskills', 'Universal OpenSkills / AGENTS.md'],
       ['copilot', 'GitHub Copilot (local only)'],
       ['cline', 'Cline / Roo Code (local only)'],
+      ['codex', 'OpenAI Codex'],
     ];
     console.log('\nWhich platform do you want to install DevMind for?');
     platforms.forEach(([, label], index) => console.log(`  ${index + 1}) ${label}`));
@@ -401,7 +403,7 @@ Install / Uninstall Options:
   --interactive        Choose scope and platform in the wizard
   -l, --local           Operate on current workspace
   -g, --global          Operate on user home directory
-  -t, --target <list>   Comma-separated target agents (all, antigravity, cursor, claude, windsurf, copilot, cline, openskills)
+  -t, --target <list>   Comma-separated target agents (all, antigravity, cursor, claude, codex, windsurf, copilot, cline, openskills)
   --dry-run             Preview files that uninstall would remove without deleting them
   -y, --yes             Skip confirmation prompts
 

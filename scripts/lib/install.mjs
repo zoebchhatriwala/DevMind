@@ -6,7 +6,7 @@ import { artifactPath, parseOptions, readJson } from './runtime.mjs';
 const TARGETS = new Map([
   ['all', 'all'], ['antigravity', 'antigravity'], ['gemini', 'antigravity'],
   ['cursor', 'cursor'], ['claude', 'claude'], ['claude-code', 'claude'],
-  ['windsurf', 'windsurf'], ['agents', 'openskills'], ['openskills', 'openskills'],
+  ['windsurf', 'windsurf'], ['agents', 'openskills'], ['openskills', 'openskills'], ['codex', 'openskills'],
   ['copilot', 'copilot'], ['github-copilot', 'copilot'], ['cline', 'cline'], ['roo', 'cline'],
 ]);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');

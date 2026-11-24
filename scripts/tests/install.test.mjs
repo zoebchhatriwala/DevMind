@@ -65,6 +65,40 @@ test('real installer preserves project rules and creates a single discoverable m
   });
 });
 
+test('Codex installs and uninstalls shared skills in local and global scopes while preserving user files', async () => {
+  for (const scope of ['local', 'global']) {
+    await fixture({
+      'project/AGENTS.md': '# User instructions\n',
+      'home/keep.txt': 'keep',
+    }, async directory => {
+      const project = join(directory, 'project');
+      const home = join(directory, 'home');
+      const destination = scope === 'local' ? project : home;
+      const env = { ...process.env, USERPROFILE: home, HOME: home };
+      const run = command => spawnSync(process.execPath, [join(root, 'bin/devmind.mjs'), command, `--${scope}`, '--target', 'codex'], {
+        cwd: project, encoding: 'utf8', shell: false, timeout: 20000, env,
+      });
+      const installed = run('install');
+      assert.equal(installed.status, 0, installed.stderr);
+      const master = join(destination, '.agents/skills/devmind/SKILL.md');
+      const commandSkill = join(destination, '.agents/skills/devmind-score/SKILL.md');
+      assert.ok(existsSync(master));
+      assert.ok(existsSync(commandSkill));
+      assert.equal(existsSync(join(destination, '.claude')), false);
+      const repeated = run('install');
+      assert.equal(repeated.status, 0, repeated.stderr);
+      assert.match(repeated.stdout, /0 created, 0 updated/);
+      await writeFile(master, '# User edits\n');
+      const removed = run('uninstall');
+      assert.equal(removed.status, 0, removed.stderr);
+      assert.equal(existsSync(commandSkill), false);
+      assert.equal(await readFile(master, 'utf8'), '# User edits\n');
+      assert.equal(await readFile(join(project, 'AGENTS.md'), 'utf8'), '# User instructions\n');
+      assert.equal(await readFile(join(home, 'keep.txt'), 'utf8'), 'keep');
+    });
+  }
+});
+
 test('invalid platforms, scopes, and flags fail before any project mutation', async () => {
   for (const args of [
     ['--local', '--target', 'not-a-platform'], ['--local', '--global', '--target', 'copilot'],

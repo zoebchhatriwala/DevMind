@@ -200,7 +200,7 @@ Each skill installation has one master entrypoint. Plugin packages are separate.
 
 The wizard prompts you interactively:
 - **Scope**: Local project workspace (`./.devmind`, `.cursor/`, `CLAUDE.md`, `.agents/`) or Global user environment (`~/.gemini/config/skills/devmind`, `~/.claude/skills/devmind`, `~/.cursor/rules/`).
-- **Target Agents**: Google Antigravity, Cursor, Claude Code, Windsurf, GitHub Copilot, Cline/Roo Code, or All.
+- **Target Agents**: Google Antigravity, Cursor, Claude Code, OpenAI Codex, Windsurf, GitHub Copilot, Cline/Roo Code, or All.
 - **Helper Scripts**: Installs executable JS helper scripts directly into `.devmind/scripts/` for your AI agents to use.
 
 ### 2. Fast Non-Interactive Installation
@@ -215,11 +215,17 @@ npx devmind install --global --target all
 npx devmind install --global --target antigravity
 npx devmind install --local --target cursor
 
+# Install for OpenAI Codex in the current project or for all projects
+npx devmind install --local --target codex
+npx devmind install --global --target codex
+
 # Uninstall unmodified DevMind-managed files (interactive wizard or scoped CLI)
 npm run uninstall
 npx devmind uninstall --local --target cursor --dry-run
 npx devmind uninstall --global --target all
 ```
+
+The `codex` target uses the shared OpenSkills integration: project skills go in `.agents/skills/`, and global skills go in `~/.agents/skills/`, matching [Codex skill discovery](https://developers.openai.com/codex/skills/). Local installation also installs `AGENTS.md`, preserving existing instructions for manual merging. Use `npx devmind uninstall --local --target codex` or `--global` to remove unchanged managed files. Codex and OpenSkills share these files, so uninstalling either target removes the shared integration.
 
 ### 3. OpenSkills / Agent Skills Compatible
 Install directly via the open-source `skills` CLI:
